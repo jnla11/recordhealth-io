@@ -15,6 +15,7 @@ Enable end-users to be more educated, "doctor-ready" healthcare consumers using 
 3. **Accessible language** — All AI output targets 5th-grade reading level without stating so.
 4. **Vibe-code workable** — Architecture stays simple enough for a non-professional programmer to maintain.
 5. **Incremental compliance** — HIPAA/GDPR/NIST readiness phased in over time, not all at once.
+6. **Server-side secrets** — API keys and sensitive credentials live on the server, never on the device.
 
 ## File Organization
 
@@ -26,23 +27,25 @@ RecordHealth/
 │   ├── ConversationModels.swift    # Chat messages, prompts, follow-ups
 │   └── SourceFormat.swift          # Import source types (pdf, audio, photo, etc.)
 ├── Services/
-│   ├── KeychainService.swift       # Consolidated keychain (single source)
+│   ├── AuthManager.swift           # Auth0 login/logout/token management (Sprint 18)
+│   ├── KeychainService.swift       # Consolidated keychain (apiKey, accessToken, refreshToken)
 │   ├── RecordsStore.swift          # Record CRUD + encrypted index management
 │   ├── FileStorageManager.swift    # File I/O for records/originals/processed dirs
 │   ├── FileStorageManager+AI.swift # AI text + conversation file paths
 │   ├── EncryptionService.swift     # AES-256-GCM encryption, Keychain-stored key
 │   ├── Anonymizer.swift            # PHI redaction engine
-│   ├── AuditLogger.swift           # AI interaction logging
+│   ├── AuditLogger.swift           # AI interaction logging (local)
 │   ├── RecordTextPreparer.swift    # OCR text cleaning + confidence
 │   ├── SpeechRecognizer.swift      # Live transcription + audio file recording
 │   └── CanonicalRecordParserV2.swift
 ├── LLM/
 │   ├── AIContextBuilder.swift      # System prompts + context assembly
 │   ├── ChatMessage.swift           # ChatMessage struct (role + content)
-│   ├── LLMClient.swift             # Base HTTP client
-│   ├── LLMClient+Chat.swift        # Chat completions extension
+│   ├── LLMClient.swift             # Base HTTP client (routes through worker when authenticated)
+│   ├── LLMClient+Chat.swift        # Chat completions extension (same worker routing)
 │   └── RecordAskAIView.swift       # Chat UI (includes KeyboardObserver, ChatFlowLayout)
 ├── Views/
+│   ├── LoginView.swift             # Auth0 sign-in screen (Sprint 18)
 │   ├── RecordDetailView.swift      # Document viewer + AI overlay host (PDF, photo, audio, text)
 │   ├── AudioPlayerView.swift       # Audio playback (play/pause, scrub, skip, time)
 │   ├── VoiceRecorderView.swift     # Voice recording UI + transcript + save
@@ -50,10 +53,132 @@ RecordHealth/
 │   ├── RecordEditView.swift        # Metadata editor
 │   └── SettingsView.swift          # API key, endpoint, model config
 └── App/
-    ├── RecordHealth.swift           # App entry point
+    ├── RecordHealth.swift           # App entry point (auth-gated — Sprint 18)
     ├── AppSettings.swift            # ObservableObject for settings
     └── SchemaMigration.swift        # V1 → V2 migration
 ```
+
+## Backend Architecture (Sprint 18)
+
+### Overview
+
+```
+iOS App → Auth0 (Sign in with Apple / email) → JWT
+       → Cloudflare Worker (edge) → verifies JWT via JWKS
+                                   → Neon Postgres (user data, audit log)
+                                   → OpenAI API (AI summaries, store: false)
+```
+
+The Cloudflare Worker is the sole entry point for all API calls. The OpenAI API key lives on the server and never touches the device. Every request is authenticated, user-scoped, and audit logged.
+
+### Backend Stack
+
+| Layer | Service | Purpose |
+|-------|---------|---------|
+| Runtime | Cloudflare Workers | Edge serverless API |
+| Database | Neon | Serverless Postgres via WebSocket |
+| AI | OpenAI Chat Completions API | Health record summarization |
+| Auth | Auth0 | Identity management, JWT issuance |
+| Auth method | Email/password (Sign in with Apple pending) | Primary login |
+
+### Worker Project
+
+```
+recordhealth-api/
+├── src/
+│   └── index.js          ← Worker entry point (all routes and logic)
+├── schema.sql            ← Database schema (run in Neon SQL Editor)
+├── wrangler.toml         ← Cloudflare Worker configuration
+├── package.json          ← Dependencies (@neondatabase/serverless, jose)
+├── SECRETS.md            ← Local-only secrets reference (gitignored)
+├── .gitignore
+└── README.md
+```
+
+**Worker URL:** `https://recordhealth-api.jason-nolte.workers.dev`
+
+### Worker Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /health | No | Service health check |
+| GET | /health/db | No | Database connectivity check |
+| GET | /debug/secrets | No | Confirms loaded secrets (remove before production) |
+| GET | /me | Yes | Current user profile |
+| GET | /records | Yes | List health records (user-scoped) |
+| GET | /records/:id | Yes | Get single record |
+| POST | /records | Yes | Create record |
+| PUT | /records/:id | Yes | Update record |
+| DELETE | /records/:id | Yes | Delete record |
+| POST | /ai/chat | Yes | Chat Completions relay (used by iOS app) |
+| POST | /ai/query | Yes | AI query against stored records |
+| POST | /ai/test | Yes | Standalone OpenAI test |
+
+### Worker Secrets (Cloudflare)
+
+| Secret | Description |
+|--------|-------------|
+| DATABASE_URL | Neon Postgres connection string (?sslmode=require) |
+| OPENAI_API_KEY | OpenAI API key |
+| JWT_SIGNING_SECRET | JWT signing secret |
+| RELAY_AUTH_TOKEN | Dev/testing bypass token |
+
+### Database Schema (Neon)
+
+- **users** — App users. Linked to Auth0 via `auth0_sub`. Email is nullable. Auto-created on first authenticated request.
+- **health_records** — Health data. `content` is JSONB, flexible per `record_type`. Scoped to user via `user_id`.
+- **audit_log** — Every read, create, update, delete, and AI query is logged with timestamp, user, action, and metadata.
+
+### Auth0 Configuration
+
+| Setting | Value |
+|---------|-------|
+| Tenant domain | dev-br2xi1kdn6smgx7p.us.auth0.com |
+| Application type | Native/Mobile |
+| Application name | RecordHealth |
+| API identifier (audience) | https://recordhealth-api |
+| Signing algorithm | RS256 |
+| Bundle ID / callback URL scheme | com.recordhealth.app |
+
+Config file: `Auth0.plist` in Xcode project root (keys: `Domain`, `ClientId`).
+
+## Authentication Architecture (Sprint 18)
+
+### Login Flow
+1. User taps "Sign In" on LoginView
+2. Auth0 SDK opens browser sheet with Universal Login
+3. User authenticates (email/password, or Sign in with Apple when configured)
+4. Auth0 returns JWT credentials to the app
+5. AuthManager stores access token + refresh token in Keychain
+6. RecordHealth.swift observes `isAuthenticated` → shows AppRootView
+
+### API Request Flow (Authenticated)
+1. LLMClient.resolveAuth() checks Keychain for Auth0 access token
+2. If token exists → routes to `https://recordhealth-api.jason-nolte.workers.dev/ai/chat`
+3. Worker verifies JWT against Auth0 JWKS public keys
+4. Worker finds/creates user in Neon (ensureUser)
+5. Worker forwards chat request to OpenAI with `store: false`
+6. Worker logs the request to audit_log
+7. Response returned to app in standard Chat Completions format
+
+### API Request Flow (Dev/Fallback)
+1. No Auth0 token in Keychain
+2. LLMClient falls back to Keychain API key + configured endpoint from AppSettings
+3. Direct call to OpenAI (no worker, no audit log)
+
+### Token Management
+- Access token: stored in Keychain as `.accessToken`, read directly by LLMClient (avoids MainActor issues)
+- Refresh token: stored in Keychain as `.refreshToken`, used for silent renewal
+- On 401 response: LLMClient calls AuthManager.renewToken(), retries once
+- On app launch: AuthManager loads stored tokens, attempts background renewal
+
+### Keychain Keys
+
+| Key | Raw Value | Purpose |
+|-----|-----------|---------|
+| .apiKey | llm_api_key | OpenAI key for dev/fallback mode |
+| .accessToken | auth0_access_token | Auth0 JWT for worker authentication |
+| .refreshToken | auth0_refresh_token | Auth0 refresh token for silent renewal |
 
 ## Data Model (RecordV2)
 
@@ -96,8 +221,8 @@ RecordHealth/
 2. RecordAskAIView calls `sendPrompt()` (shows label) or `sendMessage()` (shows typed text)
 3. Record text loaded → cleaned via RecordTextPreparer → anonymized via Anonymizer
 4. AIContextBuilder assembles: system prompt + history (6-turn window) + user question
-5. LLMClient.chat() sends to configured endpoint
-6. Response stored in ConversationStore, audit event logged
+5. LLMClient.chat() resolves auth → routes to worker or direct API
+6. Response stored in ConversationStore, audit event logged (local + server-side)
 
 ### Prompt Architecture
 - **Suggested prompts:** 4 per category, defined in SuggestedPrompts.forRecord()
@@ -125,6 +250,15 @@ RecordHealth/
 
 | Decision | Rationale |
 |----------|-----------|
+| Cloudflare Worker as API gateway | OpenAI key never touches device; all requests audited; user-scoped data |
+| Auth0 for identity | Handles Sign in with Apple, token issuance, refresh — no custom auth code |
+| JWT verification via JWKS | Worker verifies tokens against Auth0 public keys; no shared secrets needed |
+| Keychain-based token read in LLMClient | Avoids MainActor concurrency issues; direct Keychain read is thread-safe |
+| Worker URL hardcoded in LLMClient | Single source of truth; no dependency on actor-isolated state |
+| Dev fallback (Settings endpoint + API key) | Allows direct OpenAI calls without auth for development/testing |
+| Relay token for terminal testing | Bypasses JWT verification; dev-only, removed before production |
+| `store: false` on all OpenAI calls | HIPAA: health data not retained by OpenAI |
+| Nullable email in users table | Auth0 access tokens don't always include email claim |
 | Separate AI metadata from RecordV2 index | Avoids forced migration on AI feature changes |
 | KeychainService consolidation | Was two implementations; unified to prevent drift |
 | RecordV2 as standalone file | Prevents circular dependency issues |
@@ -136,6 +270,18 @@ RecordHealth/
 | BodySection not in AI prompt | Dumping 19 categories confused the AI; keep as code-level enum for future selective injection |
 | Ask AI button matches modal bar style | Consistent visual language across floating UI elements |
 
+## Account Information
+
+| Service | Account | Tier |
+|---------|---------|------|
+| Apple Developer | Personal Apple ID (jasonnolte@instamatic.org) | Paid ($99/yr) |
+| Cloudflare | Personal @hotmail.com | Free (100K requests/day) |
+| Neon | Personal @hotmail.com | Free (0.5GB storage) |
+| OpenAI | Personal @hotmail.com | Paid (API usage) |
+| Auth0 | Personal @hotmail.com | Free (25K MAU) |
+
+**Migration plan:** Create fresh accounts under dedicated project email when approaching handoff. Redeploy worker from Git, re-set secrets, transfer Auth0 tenant.
+
 ## Conventions
 
 - **Complete file replacements** — Developer works by replacing entire files, not manual patches
@@ -143,3 +289,5 @@ RecordHealth/
 - **One type per file** — Avoid defining multiple public types in one file (prevents redeclaration errors)
 - **Sprint-based iteration** — Each sprint has a focused scope with changelog
 - **Commit after each sprint** — Detailed commit messages documenting feature additions
+- **Auth0.plist** — Keys must be exactly `Domain` and `ClientId` (case-sensitive)
+- **Bundle ID** — `com.recordhealth.app` (also the URL scheme for Auth0 callback)

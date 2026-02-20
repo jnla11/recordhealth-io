@@ -12,16 +12,20 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 
 **Key guardrails:** No medical advice. No treatment suggestions. PHI anonymized before any AI call. Mandatory doctor-review disclaimer on every AI response.
 
-## Current State (as of Sprint 17 — 2026-02-18)
+## Current State (as of Sprint 18 — 2026-02-19)
 
 ### What Works
+- Auth0 authentication (email/password login, JWT-based)
+- Cloudflare Worker API gateway (JWT verification, audit logging, OpenAI relay)
+- AI calls routed through worker (OpenAI key never on device, `store: false`)
+- Automatic token renewal on 401
 - File-based record storage (RecordV2 + encrypted index)
 - PDF, text, and image import with OCR
 - Voice memo recording with live transcription + audio file storage (.m4a)
 - Audio playback (play/pause, scrub, ±15s skip, time display)
 - Multi-page PDF viewer with floating modal nav bars
 - Per-record AI chat with conversation persistence
-- PHI anonymization + audit logging
+- PHI anonymization + audit logging (local + server-side)
 - Suggested prompts + contextual follow-ups with dedup
 - AI responses: emoji sections (👤🏥🔍📋💡), accessible language, no filler openers
 - Chat panel: slides from right, keyboard-aware, rounded card UI
@@ -31,11 +35,23 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 - BodySection emoji vocabulary (21 cases, code-level data model)
 
 ### Known Issues
-- None currently — builds clean as of Sprint 17
+- No logout button in app UI yet
+- Settings view still shows API key field when authenticated
+- Sign in with Apple not yet configured (Auth0 social connection pending)
+- ~200-500ms added latency from worker relay
 
-### Key Files
+### Backend
+- **Worker:** https://recordhealth-api.jason-nolte.workers.dev
+- **Database:** Neon Postgres (users, health_records, audit_log)
+- **Auth0 tenant:** dev-br2xi1kdn6smgx7p.us.auth0.com
+- **Worker repo:** ~/Projects/RecordHealth.IO/recordhealth-api/
+
+### Key Files (iOS)
 | File | Contains |
 |------|----------|
+| AuthManager.swift | Auth0 login/logout/token management |
+| LoginView.swift | Sign-in screen |
+| RecordHealth.swift | App entry point (auth-gated) |
 | AIContextBuilder.swift | System prompts, context assembly |
 | ChatMessage.swift | ChatMessage struct (role + content for API) |
 | RecordAskAIView.swift | Chat UI, KeyboardObserver, ChatFlowLayout |
@@ -45,14 +61,25 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 | VoiceRecorderView.swift | Voice recording UI + transcript + save |
 | SpeechRecognizer.swift | AVAudioEngine + SFSpeech + audio file recording |
 | BodySection.swift | Medical section emoji vocabulary enum |
-| LLMClient.swift | Base HTTP client |
-| LLMClient+Chat.swift | Chat completions extension |
-| KeychainService.swift | Consolidated keychain access |
+| LLMClient.swift | Base HTTP client (routes through worker when authenticated) |
+| LLMClient+Chat.swift | Chat completions extension (same routing) |
+| KeychainService.swift | Consolidated keychain (apiKey, accessToken, refreshToken) |
 | EncryptionService.swift | AES-256-GCM encryption |
 | RecordV2.swift | Core record model |
 | SourceFormat.swift | Import source types (pdf, audio, photo, etc.) |
 
+### Key Files (Worker)
+| File | Contains |
+|------|----------|
+| src/index.js | All routes: auth, CRUD, /ai/chat, /ai/query, audit logging |
+| schema.sql | Neon database schema |
+| wrangler.toml | Cloudflare Worker config |
+
 ### Architecture Notes
+- LLMClient.resolveAuth() reads Auth0 token from Keychain (avoids MainActor issues)
+- Worker URL hardcoded in LLMClient, not dependent on actor-isolated state
+- Auth0.plist keys must be exactly `Domain` and `ClientId` (case-sensitive)
+- Bundle ID / URL scheme: com.recordhealth.app
 - AI prompts: chips show short label in chat, send full detailed prompt to AI
 - Keyboard: KeyboardObserver tracks height, `.padding(.bottom, keyboard.height)` pushes input above keyboard
 - Follow-up dedup: intent-based classification, filters already-asked intents from suggestions

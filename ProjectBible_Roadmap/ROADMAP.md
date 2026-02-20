@@ -39,26 +39,51 @@
 - [x] Ask AI button restyled to match modal bar aesthetic
 - [x] BodySection emoji vocabulary (code-level, future prompt integration)
 
-## Phase 4 — Input Expansion 🔧 (Current)
+## Phase 4 — Input Expansion 🔧 (In Progress)
 - [x] Voice memo recording + transcription + audio file storage + playback
 - [ ] Text message / iMessage screenshot import
 - [ ] Camera capture with real-time OCR
 - [ ] Bulk import from Files app
 - [ ] Apple Health integration (HealthKit)
 
-## Phase 5 — Multi-Record Intelligence
+## Phase 5 — Authentication & API Gateway ✅ (Complete)
+- [x] Apple Developer Program enrollment
+- [x] Auth0 tenant + application + API configuration
+- [x] Auth0 SDK integration (Swift Package Manager)
+- [x] Login/logout flow (AuthManager)
+- [x] Login screen (LoginView)
+- [x] App entry gated on authentication (RecordHealth.swift)
+- [x] Cloudflare Worker API gateway
+- [x] Neon Postgres database (users, health_records, audit_log)
+- [x] JWT verification via JWKS
+- [x] /ai/chat endpoint (Chat Completions relay)
+- [x] LLMClient rerouted through worker when authenticated
+- [x] Token persistence in Keychain (access + refresh)
+- [x] Automatic token renewal on 401
+- [x] Server-side audit logging
+- [x] OpenAI `store: false` on all health data requests
+- [ ] Sign in with Apple (Auth0 social connection)
+- [ ] Logout button in app UI
+- [ ] Clean up Settings view when authenticated
+- [ ] Remove relay token before production
+- [ ] Remove /debug/secrets endpoint before production
+- [ ] Lock down CORS to production domain
+
+## Phase 6 — Multi-Record Intelligence
 - [ ] Cross-record AI analysis ("What's trending across my labs?")
 - [ ] Timeline view (records on a date axis)
 - [ ] Appointment prep mode (synthesize recent records into doctor visit summary)
 - [ ] Record tagging improvements (auto-suggest based on content)
 - [ ] Embeddings for semantic search across records
 
-## Phase 6 — Compliance & Security Hardening
+## Phase 7 — Compliance & Security Hardening
 - [ ] HIPAA readiness audit
   - [x] Encryption at rest (AES-256-GCM field-level + iOS file protection)
+  - [x] Server-side audit logging (Cloudflare Worker → Neon)
   - [ ] Access controls (biometric lock)
   - [ ] Audit trail export
   - [ ] Data retention policies
+  - [ ] Auth0 BAA (Business Associate Agreement)
 - [ ] GDPR readiness
   - [ ] Data export (all records as ZIP)
   - [ ] Right to deletion
@@ -68,13 +93,13 @@
   - [ ] Key rotation
   - [ ] Secure enclave usage for API keys
 
-## Phase 7 — Sync & Sharing
+## Phase 8 — Sync & Sharing
 - [ ] iCloud sync (CloudKit)
 - [ ] Family sharing (multiple patients per account)
 - [ ] Secure record sharing (time-limited links)
 - [ ] Provider portal (share summary with doctor before visit)
 
-## Phase 8 — Analytics & Insights
+## Phase 9 — Analytics & Insights
 - [ ] Personal health dashboard (trends, charts)
 - [ ] Lab value tracking over time
 - [ ] Medication list management

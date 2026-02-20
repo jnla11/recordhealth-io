@@ -2,6 +2,75 @@
 
 ---
 
+## Sprint 18 — Auth0 Integration + Cloudflare Worker API Gateway
+**Date:** 2026-02-19
+**Status:** ✅ Complete
+
+### Changes
+
+#### Cloudflare Worker API (recordhealth-api)
+- Serverless API gateway on Cloudflare Workers
+- Neon Postgres database (users, health_records, audit_log tables)
+- Auth0 JWT verification via JWKS (jose library)
+- Auto-creates user on first Auth0 login (ensureUser)
+- /ai/chat endpoint: relays Chat Completions format to OpenAI with `store: false`
+- /ai/query endpoint: AI queries against stored health records
+- Full CRUD for health_records (user-scoped when authenticated)
+- Audit logging on every data access
+- Relay token fallback for dev/terminal testing
+- Deployed: https://recordhealth-api.jason-nolte.workers.dev
+
+#### Auth0 Authentication (iOS)
+- Auth0 SDK integrated via Swift Package Manager (Auth0 2.17.1)
+- Auth0.plist with tenant domain and client ID
+- Sign in with Apple capability added (Apple Developer Program enrolled)
+- URL scheme registered: com.recordhealth.app
+- AuthManager.swift: login, logout, token storage, silent renewal
+- LoginView.swift: sign-in screen shown when not authenticated
+- RecordHealth.swift: gates on authManager.isAuthenticated
+
+#### LLM Client Rerouting
+- LLMClient.resolveAuth() reads Auth0 token directly from Keychain
+- Worker URL hardcoded in LLMClient (avoids MainActor concurrency issues)
+- When authenticated: routes all AI calls through Cloudflare Worker
+- When not authenticated: falls back to Settings endpoint + Keychain API key
+- Automatic token renewal on 401 response (retry once)
+
+#### KeychainService Updates
+- Added .accessToken key (auth0_access_token)
+- Added .refreshToken key (auth0_refresh_token)
+
+#### Database Schema Updates
+- users.email changed to nullable (Auth0 tokens don't always include email)
+
+### Files Created (iOS)
+- AuthManager.swift (Auth0 integration)
+- LoginView.swift (sign-in screen)
+- Auth0.plist (Auth0 configuration)
+
+### Files Modified (iOS)
+- LLMClient.swift (worker routing via resolveAuth)
+- LLMClient+Chat.swift (same worker routing)
+- KeychainService.swift (added accessToken, refreshToken keys)
+- RecordHealth.swift (auth gating)
+
+### Files Created (Worker)
+- src/index.js (complete API with /ai/chat endpoint)
+- schema.sql (database schema)
+- wrangler.toml (worker config)
+- package.json (dependencies)
+- README.md (setup documentation)
+- SECRETS.md (local reference, gitignored)
+- .gitignore
+
+### Known Issues
+- No logout button in app UI yet
+- Settings view still shows API key field when authenticated
+- Sign in with Apple not yet configured (Auth0 social connection pending)
+- Debug print statements in login() need removal
+
+---
+
 ## Sprint 17 — Voice Recording Audio Storage + Playback
 **Date:** 2026-02-18
 **Status:** ✅ Complete
