@@ -1,6 +1,6 @@
 # Record Health — Project State
 
-**Last Updated:** 2026-02-19 (Sprint 18 complete)
+**Last Updated:** 2026-02-19 (Sprint 19 complete)
 **Platform:** iOS 26.3 / SwiftUI / Xcode
 **Test Device:** iPhone 13 Pro Max
 **Bundle ID:** com.recordhealth.app
@@ -9,7 +9,7 @@
 
 ## Current Scope (POC Phase)
 
-- Auth0 authentication (email/password; Sign in with Apple pending)
+- Auth0 authentication (email/password; Sign in with Apple pending propagation)
 - Cloudflare Worker API gateway (JWT verification, audit logging, OpenAI relay)
 - Local-only document storage (Documents/records/)
 - .txt, text-based .pdf, and image (.jpg/.png) import
@@ -24,6 +24,8 @@
 - AI-powered field classification (AIFieldClassifier)
 - Encrypted index (AES-256-GCM) + iOS file protection
 - Single LLM endpoint via Cloudflare Worker (fallback to direct API for dev)
+- Logout button with confirmation dialog
+- Settings view hides API key when authenticated
 - No sync, no analytics, no HIPAA claims yet
 
 ## Architecture
@@ -58,6 +60,7 @@
 - API routing: LLMClient reads token from Keychain → routes to worker
 - Token renewal: automatic on 401, uses refresh token
 - App gating: RecordHealth.swift checks AuthManager.isAuthenticated → LoginView or AppRootView
+- Logout: AuthManager clears tokens → isAuthenticated flips → LoginView shown
 - Dev fallback: no Auth0 token → uses Keychain API key + Settings endpoint
 
 ## Backend
@@ -110,6 +113,7 @@
 - **VoiceRecorderView:** Record button, live transcript, title/category, save with audio
 - **TapToTagView:** Visual field tagging on OCR text blocks
 - **PagedPDFView:** Multi-page PDF renderer with page controls
+- **SettingsView:** Logout button (authenticated), API key hidden when authenticated
 
 ## BodySection Emoji Vocabulary
 
@@ -120,6 +124,8 @@
 
 ## Known Limitations
 
+- Sign in with Apple pending Auth0 Apple connection propagation
+- ~200-500ms added latency from worker relay
 - No token-level counting (char-based estimation)
 - No background task cancellation
 - No multi-record cross-analysis (placeholder exists)
@@ -129,7 +135,10 @@
 - No Apple Health integration yet
 - No embeddings or vector search
 - No sync / cloud backup
-- No Sign in with Apple yet (Auth0 social connection pending configuration)
-- No logout button in app UI yet
-- Settings view still shows API key field when authenticated
-- ~200-500ms added latency from worker relay
+- Settings view still shows endpoint/model fields when authenticated (dev fallback, intentional)
+- Remove relay token before production
+- Remove /debug/secrets endpoint before production
+- Lock down CORS to production domain
+- OCRService MainActor isolation warnings (pre-existing)
+- SpeechRecognizer iOS 18 deprecation warnings (pre-existing)
+- TapToTagView UIScreen.main iOS 26 deprecation warnings (pre-existing)

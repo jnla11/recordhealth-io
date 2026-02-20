@@ -2,6 +2,36 @@
 
 ---
 
+## Sprint 19 — Logout + Settings Cleanup + Sign in with Apple Config
+**Date:** 2026-02-19
+**Status:** ✅ Complete
+
+### Changes
+
+#### SettingsView
+- Sign Out button added (Account section, visible when authenticated only)
+- Confirmation dialog before logout ("Your records stay on this device")
+- API key field hidden when authenticated
+- LLM Configuration footer is contextual (worker vs. direct mode)
+
+#### AppRootView
+- Fixed SettingsView initializer to pass settings: AppSettings.shared
+
+#### Sign in with Apple
+- Key created in Apple Developer portal
+- Apple social connection configured in Auth0 (Team ID, Services ID, Key ID, .p8)
+- Connection enabled on RecordHealth (Native) application
+- Will appear in Universal Login browser sheet once propagated
+
+### Files Modified
+- SettingsView.swift
+- AppRootView.swift
+
+### Known Issues
+- Sign in with Apple pending Auth0 Apple connection propagation
+
+---
+
 ## Sprint 18 — Auth0 Integration + Cloudflare Worker API Gateway
 **Date:** 2026-02-19
 **Status:** ✅ Complete

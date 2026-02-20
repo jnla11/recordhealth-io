@@ -1,56 +1,23 @@
-Sprint 18: Auth0 Authentication + Cloudflare Worker API Gateway
+Sprint 19: Logout Button + Settings Cleanup + Sign in with Apple Configuration
 
-BACKEND (recordhealth-api):
-- Cloudflare Worker API gateway deployed
-  JWT verification via Auth0 JWKS (jose library)
-  Auto user creation on first Auth0 login (ensureUser)
-  Neon Postgres: users, health_records, audit_log tables
-- /ai/chat endpoint: Chat Completions relay for iOS app
-  Accepts standard OpenAI messages format
-  Forwards to OpenAI with store: false (HIPAA)
-  Audit logs every request with user ID + metadata
-- Full CRUD for health_records (user-scoped)
-- Relay token fallback for dev/terminal testing
-- Database: users.email changed to nullable
+iOS CHANGES:
+- SettingsView: Added Sign Out button (Account section, authenticated only)
+  Confirmation dialog before logout ("Your records stay on this device")
+  API key field hidden when authenticated
+  LLM Configuration footer contextual (worker mode vs. direct mode)
+- AppRootView: Fixed SettingsView(settings: AppSettings.shared) call
 
-NEW FEATURES (iOS):
-- Auth0 SDK integration (Swift Package Manager, Auth0 2.17.1)
-  Auth0.plist with tenant domain + client ID
-  URL scheme registered: com.recordhealth.app
-- AuthManager (login, logout, token storage, silent renewal)
-  Stores access + refresh tokens in Keychain
-  Publishes isAuthenticated for SwiftUI
-- LoginView (sign-in screen, shown when not authenticated)
-- App entry gated on authentication (RecordHealth.swift)
+AUTH0 / APPLE DEVELOPER:
+- Created Key in Apple Developer portal (RecordHealth Sign In with Apple)
+- Configured Apple social connection in Auth0 (Team ID, Services ID, Key ID, .p8)
+- Enabled Apple connection on RecordHealth (Native) application in Auth0
+- Sign in with Apple will appear in Universal Login once propagated
 
-MODIFIED (iOS):
-- LLMClient.swift: resolveAuth() reads Auth0 token from Keychain
-  Routes through worker when authenticated, direct API fallback
-  Automatic token renewal on 401 (retry once)
-  Worker URL hardcoded (avoids MainActor concurrency issues)
-- LLMClient+Chat.swift: same worker routing via resolveAuth()
-- KeychainService.swift: added .accessToken, .refreshToken keys
-- RecordHealth.swift: @StateObject authManager, auth gating
-
-AUTH FLOW:
-  Login → Auth0 Universal Login → JWT → Keychain
-  AI Request → Keychain token → Worker → JWT verify → OpenAI
-  401 → renewToken() → retry once → or show login
-
-FILES CREATED:
-- AuthManager.swift (Auth0 integration)
-- LoginView.swift (sign-in screen)
-- Auth0.plist (Auth0 configuration)
-
-FILES MODIFIED:
-- LLMClient.swift (worker routing)
-- LLMClient+Chat.swift (worker routing)
-- KeychainService.swift (new token keys)
-- RecordHealth.swift (auth gating)
+FILES MODIFIED (iOS):
+- SettingsView.swift (logout button, API key conditional, settings parameter)
+- AppRootView.swift (SettingsView initializer fix)
 
 FILES UNCHANGED:
-- AIContextBuilder.swift (system prompts preserved)
-- RecordAskAIView.swift, ConversationModels.swift
-- AudioPlayerView.swift, VoiceRecorderView.swift, SpeechRecognizer.swift
-- RecordV2.swift, RecordsStore.swift, SourceFormat.swift
-- EncryptionService.swift, Anonymizer.swift, AuditLogger.swift
+- AuthManager.swift, LoginView.swift, RecordHealth.swift
+- LLMClient.swift, LLMClient+Chat.swift
+- All other app files

@@ -62,9 +62,9 @@
 - [x] Automatic token renewal on 401
 - [x] Server-side audit logging
 - [x] OpenAI `store: false` on all health data requests
-- [ ] Sign in with Apple (Auth0 social connection)
-- [ ] Logout button in app UI
-- [ ] Clean up Settings view when authenticated
+- [x] Logout button in app UI
+- [x] Clean up Settings view when authenticated
+- [x] Sign in with Apple (Auth0 social connection configured, pending propagation)
 - [ ] Remove relay token before production
 - [ ] Remove /debug/secrets endpoint before production
 - [ ] Lock down CORS to production domain

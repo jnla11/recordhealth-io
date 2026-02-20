@@ -12,13 +12,15 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 
 **Key guardrails:** No medical advice. No treatment suggestions. PHI anonymized before any AI call. Mandatory doctor-review disclaimer on every AI response.
 
-## Current State (as of Sprint 18 — 2026-02-19)
+## Current State (as of Sprint 19 — 2026-02-19)
 
 ### What Works
 - Auth0 authentication (email/password login, JWT-based)
+- Logout button with confirmation dialog ("Your records stay on this device")
 - Cloudflare Worker API gateway (JWT verification, audit logging, OpenAI relay)
 - AI calls routed through worker (OpenAI key never on device, `store: false`)
 - Automatic token renewal on 401
+- Settings view hides API key field when authenticated
 - File-based record storage (RecordV2 + encrypted index)
 - PDF, text, and image import with OCR
 - Voice memo recording with live transcription + audio file storage (.m4a)
@@ -35,10 +37,11 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 - BodySection emoji vocabulary (21 cases, code-level data model)
 
 ### Known Issues
-- No logout button in app UI yet
-- Settings view still shows API key field when authenticated
-- Sign in with Apple not yet configured (Auth0 social connection pending)
+- Sign in with Apple pending Auth0 Apple connection propagation
 - ~200-500ms added latency from worker relay
+- OCRService MainActor isolation warnings (pre-existing, non-blocking)
+- SpeechRecognizer iOS 18 deprecation warnings (pre-existing, non-blocking)
+- TapToTagView UIScreen.main iOS 26 deprecation warnings (pre-existing, non-blocking)
 
 ### Backend
 - **Worker:** https://recordhealth-api.jason-nolte.workers.dev
@@ -52,6 +55,8 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 | AuthManager.swift | Auth0 login/logout/token management |
 | LoginView.swift | Sign-in screen |
 | RecordHealth.swift | App entry point (auth-gated) |
+| AppRootView.swift | Tab view root (passes AppSettings.shared to SettingsView) |
+| SettingsView.swift | Logout button, API key hidden when authenticated |
 | AIContextBuilder.swift | System prompts, context assembly |
 | ChatMessage.swift | ChatMessage struct (role + content for API) |
 | RecordAskAIView.swift | Chat UI, KeyboardObserver, ChatFlowLayout |
@@ -67,6 +72,7 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 | EncryptionService.swift | AES-256-GCM encryption |
 | RecordV2.swift | Core record model |
 | SourceFormat.swift | Import source types (pdf, audio, photo, etc.) |
+| AppSettings.swift | ObservableObject: endpointURL, model |
 
 ### Key Files (Worker)
 | File | Contains |
@@ -80,6 +86,9 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 - Worker URL hardcoded in LLMClient, not dependent on actor-isolated state
 - Auth0.plist keys must be exactly `Domain` and `ClientId` (case-sensitive)
 - Bundle ID / URL scheme: com.recordhealth.app
+- AppSettings has `endpointURL` and `model` properties (not `modelName`)
+- API key lives in Keychain only, not in AppSettings — read via KeychainService.shared.load(.apiKey)
+- SettingsView requires `settings: AppSettings.shared` passed at init (see AppRootView)
 - AI prompts: chips show short label in chat, send full detailed prompt to AI
 - Keyboard: KeyboardObserver tracks height, `.padding(.bottom, keyboard.height)` pushes input above keyboard
 - Follow-up dedup: intent-based classification, filters already-asked intents from suggestions
@@ -94,6 +103,7 @@ I'm building **Record Health**, an iOS SwiftUI app that digitizes and organizes 
 - **Sprint-based** — Focused scope per sprint, changelog after each
 - **Test on device** — iPhone 13 Pro Max, iOS 26.3
 - **When things break** — I share build errors and screenshots; I need clear instructions on what to fix
+- **Always provide full files** — Never partial edits or snippets
 
 ## What I Need Next
 [Describe your next task here]
