@@ -1,0 +1,1053 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SearchIndexes Version="1.0">
+    <Documents>
+        <Document ID="353BA134-8841-4A50-82E6-978DA95761B4">
+            <Title>synthesis + search</Title>
+            <Text>To power retrieval and citations:
+	•	Parse each document into chunks (page/section level).
+	•	Store:
+	◦	chunk text (encrypted)
+	◦	chunk metadata (non-sensitive minimal metadata, also preferably encrypted)
+	◦	hash/provenance pointers to raw doc + page range
+Embeddings / semantic index options
+	•	Option 1 (privacy-max): embeddings generated and stored on-device; cloud only syncs encrypted index.
+	•	Option 2 (balanced): embeddings generated in cloud inside your secure compute boundary; store embeddings encrypted at rest.
+	•	Option 3 (simple): store embeddings plaintext in cloud (not ideal for PHI).
+I’d aim for Option 1 or 2.
+</Text>
+        </Document>
+        <Document ID="EB44C9AF-0096-4C82-A421-F0E49E8EA86A">
+            <Text>Implementing multi-prong approach with record ingest meta-tagging, including: 
+
+What Local Can Do Well:
+Field
+Method
+Accuracy
+Dates
+Regex + NaturalLanguage
+~90%
+Phone/Fax
+Regex
+~95%
+Provider names
+"Dr." / "MD" / "NP" patterns
+~70%
+Facility names
+NER (organization entities)
+~60%
+MRN/Account #
+Regex patterns
+~85%
+What Local Struggles With:
+	•	Document type classification (is this a lab result or a radiology report?)
+	•	Distinguishing "report date" vs "visit date" vs "printed date"
+	•	Understanding context ("Quest Diagnostics" = lab facility)
+	•	Extracting provider specialty
+	•	Handling varied layouts
+Hybrid Approach (Recommended):
+
+
+┌─────────────────────────────────────────────┐
+│  Layer 1: Local (instant, always runs)      │
+│  - Regex: dates, phones, MRN, SSN           │
+│  - NLP NER: names, organizations            │
+│  - Keywords: "Lab Results" → labResults     │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│  Layer 2: On-Device AI (iOS 26+)            │
+│  - Apple Foundation Models                   │
+│  - Runs locally, no network                 │
+│  - Better context understanding             │
+└─────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────┐
+│  Layer 3: Cloud AI (optional, user-invoked) │
+│  - "Smart Fill" button                      │
+│  - Uses your existing anonymization         │
+│  - Most accurate, handles edge cases        │
+└─────────────────────────────────────────────┘
+My recommendation: Start with Layer 1 (local regex + Apple NaturalLanguage NER) — it's free, fast, and gets you 70% there. You already have the anonymization pipeline for Layer 3 when you want it.
+</Text>
+        </Document>
+        <Document ID="F57C7EC8-D905-40A7-AE0C-249DA92390EE">
+            <Title>13. Phase 1 POC</Title>
+        </Document>
+        <Document ID="D494A3CD-BD2B-438B-B062-5ADB72D917EB">
+            <Title>Legal</Title>
+            <Text>1) Language discipline
+	•	“For informational use”
+	•	“Patient-managed”
+	•	“Not a medical record”
+	•	“Not intended for diagnosis or treatment”
+Boring but legally powerful.
+2) Provenance &amp; citation everywhere
+	•	Every AI summary links to source documents
+	•	Clear “derived vs original” labeling
+	•	No black-box conclusions
+This reinforces “assistive, not authoritative.”
+
+3) Export, don’t integrate
+	•	PDF summaries
+	•	Human-readable timelines
+	•	No write-back into EHRs
+	•	No HL7/FHIR ingestion into provider systems unless HIPAA-ready
+4) User-mediated sharing
+	•	Patient initiates sharing
+	•	Time-limited access
+	•	View-only
+	•	No clinician accounts by default
+This keeps control with the individual.
+5) Clear product posture
+You’re a personal organizer, not a clinical system.
+The moment you:
+	•	Sell to hospitals
+	•	Add clinician dashboards
+	•	Automate care workflows
+…you should flip to HIPAA mode intentionally.
+Important nuance
+A clinician choosing to trust a patient’s personal record does not automatically impose HIPAA obligations on you.
+HIPAA attaches through:
+	•	Contractual relationships
+	•	Operational reliance
+	•	Delegated functions
+Not casual use.
+
+Practical guidance for your hybrid architecture
+If you expect this edge case (and you should):
+	•	Keep cloud AI outputs clearly labeled “informational”
+	•	Require explicit patient consent for sharing
+	•	Make clinician access read-only and ephemeral
+	•	Never store clinician notes or decisions
+	•	Avoid anything that looks like clinical decision support
+One-line takeaway
+Clinicians informally leaning on patient-managed records is common and acceptable; it becomes a HIPAA issue only when your system starts acting for clinicians rather than for patients.
+If you want, next we can:
+	•	Draft product language that holds this boundary
+	•	Design a “HIPAA switch” architecture for future expansion
+	•	Map edge-case risk to concrete mitigations (table format)
+
+Three common real-world scenarios (and how they’re treated)
+1) Patient shows records during a visit
+Example
+	•	Patient opens an app or PDF
+	•	Doctor glances at lab history or timeline
+	•	Uses it as context while still relying on their own EHR
+HIPAA impact
+	•	Your product remains consumer-only
+	•	Clinician is viewing patient-provided information
+	•	No BA relationship
+	•	No HIPAA obligation for your platform
+This is very common and generally safe.
+
+2) Clinician “leans on it” informally
+Example
+	•	Doctor says: “This timeline is helpful”
+	•	Uses it to ask better questions
+	•	Does not import it into their EHR
+	•	Does not depend on it as authoritative
+HIPAA impact
+	•	Still consumer-only
+	•	Clinician judgment remains primary
+	•	Your system is contextual, not authoritative
+This is the gray-but-accepted zone.
+
+3) Clinician relies on it operationally (danger zone)
+Example
+	•	Clinician documents decisions based on your app’s summaries
+	•	Uses it as the primary longitudinal record
+	•	Imports structured data directly into EHR
+	•	Tells patient “this is your official record”
+	•	Clinic instructs patients to use your system
+HIPAA impact 🚨 You are likely now a business associate
+	•	You’re supporting clinical decision-making
+	•	Covered entity reliance is present
+	•	HIPAA obligations attach (BAA, audits, safeguards)
+This is where platforms accidentally cross the line.
+
+What regulators look for
+They evaluate signals, not single events:
+	•	Is the product marketed to clinicians?
+	•	Is there bidirectional EHR integration?
+	•	Are clinicians encouraged to rely on outputs?
+	•	Are summaries framed as clinical or diagnostic?
+	•	Does the system replace or supplement EHR workflows?
+	•	Are providers contractually involved?
+If the answers tilt “yes,” you’re moving into HIPAA land.
+</Text>
+        </Document>
+        <Document ID="2878DE26-FC88-402B-BE83-673E20ADF64A">
+            <Text>Phase 1: Local-First PHR + Minimal LLM Integration (POC)
+Goal
+Prove that a user can:
+	1	Store personal health records locally
+	2	Ask natural-language questions about them
+	3	Get useful synthesized responses from an LLM
+	4	With clear boundaries around privacy and scope
+Not to be HIPAA-ready. Not to scale. Not to impress compliance officers.
+Just: does the thing work?
+
+Core assumptions
+	•	Single user
+	•	Single device
+	•	No multi-device sync
+	•	No provider integration
+	•	Consumer-only posture
+	•	Plain-text documents only
+
+What Phase 1 includes (and nothing more)
+1) Local document store
+	•	Folder-based or lightweight local database
+	•	Plain-text files only (.txt, .md)
+	•	Each document is:
+	◦	One record (visit note, lab summary, discharge note, etc.)
+	◦	User-imported or pasted
+Example structure:
+
+/records/
+  2023-06-14_primary_care_visit.txt
+  2023-08-02_lab_results.txt
+  meds_current.txt
+No PDFs. No OCR. No parsing. No FHIR.
+
+2) Minimal metadata
+Each document gets:
+	•	Title
+	•	Date (manual or filename-derived)
+	•	Optional tags
+Store this in:
+	•	A simple JSON file or SQLite table
+Example:
+
+{
+  "id": "doc_001",
+  "title": "Primary care visit",
+  "date": "2023-06-14",
+  "tags": ["primary care"]
+}
+
+3) Naive chunking
+	•	Split documents into fixed-size chunks (e.g., 500–800 tokens)
+	•	Keep:
+	◦	chunk_id
+	◦	document_id
+	◦	chunk_text
+No embeddings yet. No semantic index.
+
+4) Basic retrieval (dumb but effective)
+For a user question:
+	•	Load all documents or
+	•	Load documents filtered by date or tag
+Yes, this is inefficient. That’s fine for Phase 1.
+
+5) Minimal LLM integration
+Use a single LLM API call.
+Prompt structure:
+
+System:
+You are helping a person understand their own medical records.
+Do not give medical advice.
+Summarize and explain only what appears in the provided text.
+
+User:
+Here is my question:
+&lt;question&gt;
+
+Here are my personal health records:
+&lt;concatenated_chunks&gt;
+That’s it.
+No RAG framework. No agents. No tools. No memory.
+
+6) Output rules
+	•	Plain-text response
+	•	No diagnosis
+	•	No recommendations
+	•	No hallucinated facts
+	•	Explicit disclaimer line at the end: “This is informational only and based solely on the provided records.”
+
+7) Simple UI (or CLI)
+Anything that lets you:
+	•	Add a text file
+	•	List documents
+	•	Ask a question
+	•	See the answer
+Examples:
+	•	Minimal web UI (React + textarea)
+	•	Desktop app shell
+	•	CLI script
+UI does not matter in Phase 1.
+
+What Phase 1 explicitly does NOT include
+This is important.
+	•	No encryption
+	•	No cloud sync
+	•	No embeddings
+	•	No vector DB
+	•	No multi-user
+	•	No auth system
+	•	No provider sharing
+	•	No OCR
+	•	No PDF support
+	•	No structured medical models
+	•	No compliance claims
+If you add these now, you slow yourself down.
+
+What this proves
+If Phase 1 works, you’ve proven:
+	•	People can meaningfully query their own records
+	•	LLMs add real value over raw documents
+	•	The synthesis layer is useful
+	•	The consumer-only model is viable
+	•	The core UX loop is sound
+That’s the hard part.
+Everything else is engineering.
+
+What to look for during testing
+You’re not testing performance. You’re testing utility.
+Ask:
+	•	Does this reduce cognitive load?
+	•	Does it surface things I’d miss?
+	•	Does it help me prepare for a doctor visit?
+	•	Does it feel trustworthy?
+	•	Where does it hallucinate or confuse context?
+These answers guide Phase 2.
+
+Phase 1 → Phase 2 natural evolution
+Only after Phase 1 works do you add:
+	•	Encryption
+	•	Cloud sync
+	•	Chunk-level retrieval
+	•	Embeddings
+	•	Redaction
+	•	Consent controls
+But Phase 1 should stand alone.
+
+One-sentence Phase 1 summary
+A single-user, local, plain-text personal health record store with a direct LLM prompt that can answer questions using only the user’s documents.
+If you want next, I can:
+	•	Write the exact Phase 1 prompt
+	•	Sketch a file layout + pseudocode
+	•	Help you choose the least annoying LLM for this use case
+</Text>
+        </Document>
+        <Document ID="818B4414-E6DA-4693-85DE-369D94B4DF47">
+            <Title>9. User controls</Title>
+        </Document>
+        <Document ID="44709B0F-E0E1-4080-AAB1-C1D06F2436DA">
+            <Title>1. Data Model</Title>
+            <Text>Data model: store “raw,” plus an “AI-ready” layer
+Raw records (immutable source of truth)
+	•	PDFs, CCDA/CCD, FHIR JSON, lab results, imaging reports, visit notes, invoices.
+	•	Keep originals intact for legal/medical fidelity.
+Normalized layer (structured)
+	•	Parse into FHIR-like objects (even if you don’t fully implement FHIR): Medications, Problems, Allergies, Labs, Encounters, Immunizations.
+	•	This powers reliable search, timelines, and alerts.
+Derived AI layer (non-authoritative)
+	•	Summaries, extracted entities, timelines, “questions to ask your doctor,” etc.
+	•	Always label as derived; keep provenance pointers back to raw sources.
+</Text>
+        </Document>
+        <Document ID="A5035255-A149-486E-9ADE-BC416E32A486">
+            <Title>Sprint Summary 02/16/26</Title>
+            <Text>Sprint Summary
+Sprint
+Status
+Focus
+1-3
+✅ Complete
+Core app: records, patients, text import, PDF viewing
+4
+✅ Complete
+v2 schema, multi-patient, PHI classification (3-tier)
+5
+✅ Complete
+HIPAA/GDPR audit logging, anonymization pipeline
+6
+✅ Complete
+Voice recording + transcription, OCR, searchable PDFs
+7
+✅ Complete
+Photo import, VisionKit document scanner
+8
+✅ Complete
+Local metadata extraction with confidence scoring
+8b
+✅ Complete
+Visual RefinementView, OCR bounding boxes, deferred refinement
+9
+🔄 In Progress
+AI usage tracking, privacy-safe AI classifier (OpenAI/Anthropic)
+
+Current State
+What works:
+	•	Scan/import documents (camera, photos, PDFs, text, voice)
+	•	OCR with searchable PDF creation
+	•	Local metadata extraction (regex, NER, keywords)
+	•	AI classification API calls (usage tracked)
+	•	Multi-patient records with PHI tiers
+	•	Audit logging for compliance
+What's broken:
+	•	AI classification results not mapping back to UI correctly (debugging now)
+
+Next Sprints
+Sprint
+Focus
+Value
+9b
+Fix AI → UI mapping, improve prompts
+AI actually helps
+10
+Unify import paths
+Same refinement flow for PDF, voice, text imports
+11
+Visual bounding boxes
+Tap field → highlight on document
+12
+"Ask" with anonymized context
+Query records without exposing PHI
+13
+Export &amp; sharing
+HIPAA-compliant sharing with providers
+14
+Apple Health integration
+Import immunizations, vitals
+15
+Local AI (Apple Foundation Models)
+On-device classification, no API needed
+
+Architecture Gaps to Address
+Area
+Current
+Target
+AI Accuracy
+~50% field matching
+85%+ with AI
+Import UX
+Different flows per type
+Unified: Import → Refine Later
+Billing
+Tracking only
+Quota enforcement, tier limits
+Sync
+Local only
+Optional encrypted cloud backup
+Compliance
+Audit logs exist
+HIPAA BAA-ready, GDPR export
+
+Recommended Priority
+	1		1	Fix AI mapping (current debug session)
+	2	Unify import flows (consistency)
+	3	Visual bounding boxes (user trust)
+	4	Anonymized Ask (core value prop)
+</Text>
+        </Document>
+        <Document ID="CD58A06E-44B0-414A-8613-88CE0BFE5FDA">
+            <Title>8. Secure cloud “LLM gateway”</Title>
+        </Document>
+        <Document ID="2B7667DB-E075-426F-B0A1-F92E1F2A1BEA">
+            <Title>Git</Title>
+            <Text>✅ 5. Version Control (Very Important)
+If you’re not already:
+Initialize git now.
+In your project folder:
+
+git init
+git add .
+git commit -m "Phase 1 working baseline"
+Then every feature:
+
+git add .
+git commit -m "Add PDF import"
+Now your memory lives in git history.
+This is your real “context preservation”.
+
+✅ 6. Optional: Branching for Safety
+When experimenting:
+
+git checkout -b feature/pdf-import
+If we break something, you can go back instantly.
+</Text>
+        </Document>
+        <Document ID="E8280F6B-EF92-424B-BD6B-198C9A9EF9E6">
+            <Text>
+Product UX that keeps you out of trouble
+	•	Always present the AI output as informational, not medical advice.
+	•	Always show sources/citations and allow “open the original.”
+	•	Provide an “Export for clinician” packet: timeline + meds + problems + key labs with citations.
+</Text>
+        </Document>
+        <Document ID="DD88C6D0-692A-45CD-9A87-EF036281311D">
+            <Title>14. AI API usage metering</Title>
+        </Document>
+        <Document ID="AB1D41C1-46BB-4EA6-8E0F-07C342159A7C">
+            <Title>Deletions</Title>
+            <Text>On the deleted folder — soft delete with 30-day retention is the right pattern. Flag records as deleted with a timestamp, filter them from normal views, and purge after 30 days. We'll build that in a future sprint.
+
+</Text>
+        </Document>
+        <Document ID="F812CA49-DF24-4982-91D4-B5E7CA86CCFF">
+            <Title>1. Storage</Title>
+        </Document>
+        <Document ID="057C63BA-4FA3-4EA6-8FE4-F61778E38DB1">
+            <Text>“Minimum viable” implementation plan (so it ships)
+Phase 1
+	•	Encrypted local vault
+	•	Encrypted cloud sync (raw + metadata)
+	•	Full-text search local
+	•	Cloud LLM gateway with RAG over a limited set of chunk types
+Phase 2
+	•	Normalized health graph + timeline UI
+	•	Embeddings index (local or secure cloud)
+	•	Redaction mode + per-record consent
+Phase 3
+	•	Provider export packs, audit trails, advanced trend analysis
+	•	Confidential compute / stronger isolation if needed
+</Text>
+        </Document>
+        <Document ID="75BCFFAF-6941-4287-BB8B-7A8D072FFE3D">
+            <Text>User controls (these matter as much as crypto)
+Make these first-class:
+	•	“Store on device only” per record
+	•	“Allow cloud sync” per record
+	•	“Allow AI processing” per record (and per category: labs vs notes)
+	•	“Redact before AI” toggle
+	•	“Offline mode” toggle (local LLM only)
+This gives the user meaningful boundaries.
+</Text>
+        </Document>
+        <Document ID="2ED58F03-038B-4766-92EF-32F9F70AF928">
+            <Text>1) Data minimization first
+Before you even redact, ask: do you need to send this at all?
+	•	Send only the excerpt needed for the task (not the whole record).
+	•	Prefer summaries you generate locally (or with a non-sensitive pass) over raw documents.
+	•	Avoid sending attachments, filenames, provider names, MRNs, exact dates, phone numbers, emails, addresses, screenshots, full PDFs, etc.
+Practical pattern: “smallest necessary context” + “short retention.”
+2) On-device redaction and normalization
+Do a privacy pass on-device before the network call.
+Redact or generalize common identifiers:
+	•	Names, emails, phones, addresses
+	•	Medical record numbers, account IDs, insurance IDs
+	•	Full dates (convert to month/year or relative time like “3 months ago”)
+	•	Locations (convert ZIP to 3-digit ZIP region or county, or remove entirely)
+	•	Free-text that includes “my wife Betsy” type relationships, employers, schools, etc.
+Replace with consistent placeholders so the model can still reason:
+	•	NAME_1, CLINIC_1, MEDICATION_1, DATE_1
+If you need continuity across a single conversation, keep the mapping in-memory on device for that session only, then discard it.
+Important reality: perfect anonymization of free text is hard. Treat it as “risk reduction,” not a guarantee.
+3) Pseudonymization for app-level linking (not identity)
+If you need to associate requests with a user for rate-limits or quotas, do it without sending user identity to the AI provider.
+	•	Use a random app-scoped UUID that never leaves your system as “real identity.”
+	•	If you must send an identifier at all, send a rotating, short-lived pseudonymous token (daily or per-session), not a stable user ID.
+	•	Do not hash emails/phones and call it anonymous. Hashes are reversible by dictionary attack if the input space is guessable.
+4) Strip metadata you do not control on-device (use a relay)
+If your iPhone app calls an AI provider directly, the provider will still see metadata like IP address, timing, user agent-ish details, and your API key must live in the app (bad idea).
+For most serious privacy goals, use a minimal backend “relay”:
+	•	App sends redacted text to your relay over TLS
+	•	Relay removes or avoids logging payloads
+	•	Relay calls the AI API server-to-server
+	•	Relay returns the response
+This helps with:
+	•	Hiding user IP from the AI provider
+	•	Keeping API keys off the device
+	•	Centralized policy enforcement (redaction rules, allow-lists, rate limits)
+	•	Auditing without storing sensitive content
+5) Do not store sensitive prompts or outputs in logs
+This is where privacy often fails.
+	•	Disable request/response body logging in production (client and server).
+	•	Ensure crash reporting tools are not capturing prompts (Sentry, Firebase Crashlytics, OSLog).
+	•	If you need analytics, collect only aggregate counters (token counts, latency buckets, feature usage), not text.
+6) Encrypt, segment, and expire
+Even if you redact, assume residual sensitivity exists.
+	•	Encrypt in transit (TLS) and at rest (Keychain, file protection classes).
+	•	Segment data by record and by session.
+	•	Use short-lived identifiers and expiring caches.
+	•	If you store conversation history, give users a “delete” control and honor it.
+7) Protect against “linkage attacks”
+Even “anonymous” fields can re-identify when combined (classic example: age + ZIP + rare condition).
+So generalize:
+	•	Age → range (20–29, 30–39)
+	•	ZIP → 3-digit ZIP or remove
+	•	Dates → relative or month/year
+	•	Rare events → consider suppressing details unless needed
+8) Give the user an explicit control surface
+Especially for a health-record context:
+	•	“Send to AI” should be a deliberate action with a clear preview.
+	•	Show the exact redacted text that will be sent.
+	•	Provide toggles like:
+	◦	Include dates: Off by default
+	◦	Include location: Off by default
+	◦	Include medications: On, but redacted brand names if needed
+	•	“Local-only mode” for users who never want cloud AI.
+9) Choose an AI mode that matches the privacy bar
+You have three broad options:
+	1	On-device model (best privacy, harder engineering, weaker capability depending on model)
+	2	Private cloud with strong controls (relay + minimal logs + contractual terms)
+	3	Direct-to-provider (fastest to build, hardest to truly anonymize)
+For a consumer health records app, a relay is usually the minimum serious baseline.
+10) What this looks like as a simple implementation plan
+	•	Client
+	◦	Build a “privacy scrubber” that transforms text → redacted text
+	◦	Show a preview of redacted text
+	◦	Send only redacted text + ephemeral session token to your relay
+	•	Relay
+	◦	Validate request shape, block disallowed fields
+	◦	Do not log bodies
+	◦	Call AI provider with your server-held API key
+	◦	Return response
+	•	Storage
+	◦	Store only what you must (and ideally store redacted versions)
+	◦	Expire anything AI-related quickly unless user explicitly saves it
+</Text>
+        </Document>
+        <Document ID="F444A027-A9AC-418D-B1CE-05A3F8EB0403">
+            <Title>AI layer HIPPA blocking refinement</Title>
+        </Document>
+        <Document ID="A488A9E3-4F43-449A-AF4A-25A6F6F9D1F2">
+            <Title>2FA password</Title>
+            <Text>Apple managed login?</Text>
+        </Document>
+        <Document ID="162D0644-D549-4683-9EE5-5B21899E5C16">
+            <Title>Deletion backup</Title>
+            <Text>‘Recently deleted’</Text>
+        </Document>
+        <Document ID="A720C941-C8A9-45EB-BE93-7AA924297167">
+            <Title>Obfuscate API</Title>
+            <Text>Do not do this
+	•		•	Put OPENAI_API_KEY (or Azure key) in the app bundle, plist, or source.
+	•	Even if “obfuscated,” it will be extracted.
+Do this instead
+iPhone app → Your backend → OpenAI/Azure
+	•	Backend can be: Cloudflare Workers, Vercel/Netlify functions, AWS Lambda, Firebase Functions, etc.
+	•	Your backend adds:
+	◦	rate limiting
+	◦	abuse prevention
+	◦	user auth (Sign in with Apple, etc.)
+	◦	logging and spend controls
+</Text>
+        </Document>
+        <Document ID="30847531-EAEC-49C0-8329-430F97EEB309">
+            <Title>Derived / synthesized layer</Title>
+            <Text>Summaries, timelines, “key takeaways,” topic collections.
+Can exist locally, cloud, or both.
+Always points back to source docs/chunks.
+</Text>
+        </Document>
+        <Document ID="9FD22654-9853-4ACF-BC28-77392F975AD3">
+            <Title>3. Security</Title>
+        </Document>
+        <Document ID="3F5C4855-BB2C-4938-85C3-1C09A774B685">
+            <Title>Normalized “health graph”</Title>
+            <Text>A structured model (FHIR-ish) for meds, problems, labs, encounters.
+Lives locally; cloud has a synced copy (also encrypted / access-controlled).
+</Text>
+        </Document>
+        <Document ID="D2B74D70-4358-44E6-83D9-5BF80ABB511A">
+            <Text>Option C: “Other” APIs (if you want alternatives)
+If you mean “a real LLM API provider besides OpenAI/Azure,” common choices are:
+	•	Anthropic (Claude)
+	•	Google (Gemini)
+	•	AWS Bedrock (multiple models)
+	•	Groq (fast inference for some open models)
+	•	Together / Fireworks / Replicate (open-model hosting)
+If your main requirement is “ship an iPhone app safely + reliably,” the architecture advice below stays the same.
+The iOS-safe architecture (what Apple reviewers and attackers both expect)
+Do not do this
+	•		•	Put OPENAI_API_KEY (or Azure key) in the app bundle, plist, or source.
+	•	Even if “obfuscated,” it will be extracted.
+Do this instead
+iPhone app → Your backend → OpenAI/Azure
+	•	Backend can be: Cloudflare Workers, Vercel/Netlify functions, AWS Lambda, Firebase Functions, etc.
+	•	Your backend adds:
+	◦	rate limiting
+	◦	abuse prevention
+	◦	user auth (Sign in with Apple, etc.)
+	◦	logging and spend controls
+Apple policy / UX note
+Apple’s HIG for generative AI emphasizes transparency about data use and user expectations; this is especially relevant if you send user text off-device. 
+
+Quick “which should I pick?”
+	•		•	OpenAI API: fastest setup, clean docs, straightforward.
+	•	Azure OpenAI: best if you’re already in Azure, need enterprise controls, private networking, or org procurement wants Microsoft billing.
+
+If you tell me 2 things, I’ll recommend an exact setup (and a starter snippet)
+	1		1	Are you doing text chat only, or also voice / realtime?
+	2	Do you already have a backend (AWS/Firebase/etc.), or do you want serverless?
+(Meanwhile, if you just want to start today: pick OpenAI API + a tiny serverless proxy. That’s the quickest path to a “real API” in an iPhone app.)
+</Text>
+        </Document>
+        <Document ID="5E5DB7EB-0C3B-416C-BA59-685852258730">
+            <Title>Cloud Vault</Title>
+            <Text>Cloud vault is an encrypted sync + compute adjunct (backup, multi-device, heavy lifting).</Text>
+        </Document>
+        <Document ID="57C6FFD5-3BAB-4464-B11F-0E4FC19E0728">
+            <Text>Retrieval-Augmented Generation (RAG): keep prompts small and auditable
+Instead of sending the entire record set:
+Pipeline
+	1	User asks a question
+	2	Local (or secure server) retrieval pulls top relevant chunks
+	3	Only those chunks (minimal necessary) are sent to the LLM
+	4	Response includes citations (links back to exact source docs/pages)
+Why it matters
+	•	Minimizes PHI exposure
+	•	Makes answers defensible (especially in healthcare)
+	•	Helps you implement “right to be forgotten” because derived content can be recomputed
+</Text>
+        </Document>
+        <Document ID="FD0B8079-FBC6-44D6-B488-84598EC552F9">
+            <Title>No internet / NO AI functionality</Title>
+            <Text>Dummy- local only mode</Text>
+        </Document>
+        <Document ID="DC876AF2-8BA6-4261-A519-B0960205FEE4">
+            <Title>Compliance</Title>
+            <Text>Need:
+1. Full enterprise SOC 2
+2. Full HIPAA compliance stack
+3. Mature security operations
+We are architected for HIPAA readiness, and here’s our compliance plan.
+
+
+Sending PHI to an LLM vendor → That vendor must be a Business Associate and sign a BAA.
+	A BAA is a Business Associate Agreement.
+	It is a legally binding contract required under HIPAA when a company (like your app or a vendor you use) 	handles Protected Health Information (PHI) on behalf of a covered healthcare entity
+
+Could an LLM Be Technically HIPAA-Capable?
+Yes.
+An LLM platform could be built with:
+	•	Encryption at rest
+	•	TLS in transit
+	•	Access controls
+	•	Audit logging
+	•	Data retention controls
+	•	Dedicated infrastructure
+	•	No training on customer data
+	•	Regional isolation
+	•	Signed BAAs
+That would support HIPAA-compliant usage.
+Some enterprise cloud AI offerings are structured this way.
+But the critical piece is: They must contractually accept HIPAA obligations via a BAA.
+HIPAA Safe Harbor requires removing 18 specific identifiers, including:
+	•	Names
+	•	Geographic subdivisions smaller than a state
+	•	All dates (except year)
+	•	Phone numbers
+	•	Email
+	•	SSN
+	•	Medical record numbers
+	•	Biometric identifiers
+	•	Full face photos
+	•	Any other unique identifying number or characteristic
+
+HIPAA (United States)
+The Health Insurance Portability and Accountability Act governs protected health information (PHI) in the US. It has two main rules: the Privacy Rule, which controls how PHI can be used and disclosed, and the Security Rule, which mandates administrative, physical, and technical safeguards for electronic PHI. HIPAA applies to "covered entities" (healthcare providers, insurers, clearinghouses) and their business associates. There's no formal "HIPAA certification" from the government—compliance is self-assessed and enforced through audits and penalties by the Office for Civil Rights.
+European Data Compliance
+GDPR (General Data Protection Regulation) is the overarching framework for all personal data in the EU/EEA. It emphasizes consent, data minimization, the right to erasure, and data portability. For healthcare specifically, GDPR classifies health data as a "special category" requiring additional protections. Organizations must appoint Data Protection Officers and conduct Data Protection Impact Assessments for high-risk processing. Fines can reach 4% of global annual revenue.
+Some EU countries layer additional health-specific regulations on top of GDPR—France has requirements through CNIL, Germany has federal and state-level health data laws, etc.
+Healthcare-Specific Certifications and Standards
+HITRUST CSF is probably the most recognized certification in US healthcare. It's a certifiable framework that harmonizes requirements from HIPAA, NIST, ISO, and other standards into a single assessment. Many healthcare organizations require HITRUST certification from their vendors.
+SOC 2 (Service Organization Control 2) isn't healthcare-specific but is widely used by health tech companies. It audits controls around security, availability, processing integrity, confidentiality, and privacy. A SOC 2 Type II report demonstrates that controls were operating effectively over time.
+ISO 27001 is the international standard for information security management systems. It's not healthcare-specific but provides a rigorous framework that many healthcare organizations use as a foundation, sometimes alongside healthcare-specific certifications.
+ISO 27799 specifically provides guidance on implementing ISO 27001 within healthcare environments, addressing the unique requirements of health informatics.
+Other Notable Frameworks
+NIST Cybersecurity Framework is often referenced by US healthcare organizations as a security baseline. FedRAMPmatters if you're working with US government healthcare programs. In the UK, NHS Data Security and Protection Toolkit is required for organizations handling NHS data.
+
+The practical reality is that most healthcare technology companies pursue a combination—typically HITRUST or SOC 2 as a baseline certification, HIPAA compliance documentation, and GDPR compliance if serving European markets. The trend has been toward HITRUST because it maps across multiple frameworks and reduces audit fatigue.
+</Text>
+        </Document>
+        <Document ID="02B80B3D-4004-415E-B279-698B60512F1A">
+            <Title>Synthesis</Title>
+            <Text>Synthesis (summaries/timelines/insights) is treated as derived data that can be regenerated.</Text>
+            <Comments>Clarify?</Comments>
+        </Document>
+        <Document ID="156EF6D5-DD28-480F-98E7-8EF6D7DB978E">
+            <Title>Broad Strokes</Title>
+            <Text>A “broad strokes” reference architecture
+Mobile App
+	•	Encrypted vault (raw + normalized + derived)
+	•	Local search + optional local embeddings
+	•	Redaction module
+	•	Key management + biometric unlock
+	•	Consent + privacy controls UI
+Cloud
+	•	Encrypted object storage (records)
+	•	Encrypted database (metadata, indexes if you must—prefer local)
+	•	Key service (HSM/KMS, split-key workflows, device enrollment)
+	•	Audit/event service (privacy-preserving logs: who accessed what, not the content)
+AI Layer
+	•	Retrieval service (local-first, fallback cloud)
+	•	LLM gateway (policy enforcement)
+	◦	PII/PHI detectors
+	◦	Prompt scrubbing
+	◦	Rate limits
+	◦	Tenant isolation
+	◦	“No training/no retention” enforcement (contract + tech)
+	•	Optional: model hosting (your own weights) inside your VPC
+</Text>
+        </Document>
+        <Document ID="2F16C935-DCBE-4A27-A885-E3E181107919">
+            <Title>Storage</Title>
+            <Text>Two copies, one source of truth, and clear rules:
+	•	Local vault is the user’s primary workspace (fast, offline, private).
+	•	Cloud vault is an encrypted sync + compute adjunct (backup, multi-device, heavy lifting).
+	•	Synthesis (summaries/timelines/insights) is treated as derived data that can be regenerated.
+</Text>
+        </Document>
+        <Document ID="665D7282-58C6-460F-8A37-E0058DDBF701">
+            <Text>Security and privacy controls you’ll want (even in consumer mode)
+	•	E2EE for stored data (client-side encryption)
+	•	Least-privilege access everywhere (service roles, scoped tokens)
+	•	No plaintext logs (ever)
+	•	Short retention for transient AI requests (minutes, not days)
+	•	User consent controls
+	◦	Per-document permission to use in AI
+	◦	“Never send to cloud” toggle
+	◦	“Only redact mode” toggle
+	•	Data deletion
+	◦	Delete raw, derived, and indexes
+	◦	Cryptographic erasure (destroy keys) as a fast “nuke switch”
+</Text>
+        </Document>
+        <Document ID="B399772B-884B-4CC7-BBFE-C0713B70AE42">
+            <Title>7. Synthesis</Title>
+        </Document>
+        <Document ID="92094528-75A3-463B-97EC-C52AA0505F04">
+            <Title>2. On-device storage</Title>
+            <Text>On-device storage (primary privacy anchor)
+On-device vault
+	•	Encrypt everything at rest with a vault key stored in:
+	◦	iOS: Keychain + Secure Enclave
+	◦	Android: Keystore / StrongBox if available
+	•	Optional: user unlocks with biometrics + passcode.
+On-device indexing
+	•	Full-text index (local) for PDFs/text.
+	•	Embedding index (local) for semantic search (optional but powerful).
+On-device LLM option (good fallback)
+	•	For some tasks, run a small local model for:
+	◦	Quick Q&amp;A over a single document
+	◦	Redaction
+	◦	Lightweight summarization
+	•	Keeps “no cloud” mode viable.
+</Text>
+        </Document>
+        <Document ID="54762E06-D746-4E90-91AA-3455FD9C9549">
+            <Title>Summary visit prep</Title>
+            <Text>RecordHealth App store QR code in bottom</Text>
+        </Document>
+        <Document ID="C1ECFE2B-41CE-4712-8DBC-ED21924B0AC1">
+            <Title>12. Costs</Title>
+            <Text>Quick cost intuition (very rough, but useful)
+	•	On-device heavy (local storage/index + occasional cloud LLM): cheapest cloud bill, best privacy.
+	•	Cloud RAG + private LLM gateway: moderate cost (you’re paying for secure infra + ops).
+	•	Full private model hosting (GPU always-on): most expensive, only worth it at scale or high sensitivity.
+</Text>
+        </Document>
+        <Document ID="9D66D50A-5FA0-4073-A43C-39D591926632">
+            <Text>Concrete end-to-end flows
+Upload / import
+	1	User imports PDF/CCDA/FHIR → device
+	2	Device encrypts raw + parses to chunks
+	3	Device writes local indexes
+	4	If sync enabled:
+	◦	uploads encrypted raw + encrypted chunks + event log updates
+Ask a question (cloud synthesis path)
+	1	User question → app
+	2	App sends query to gateway (no docs yet, or only a minimal query embedding)
+	3	Gateway retrieves relevant encrypted chunks (from cloud vault)
+	4	Gateway decrypts inside secure compute boundary (per policy)
+	5	LLM call with minimal context
+	6	Response + citations returned
+	7	Derived artifacts saved back (encrypted) and synced to devices
+Multi-device
+	•	New phone signs in → device enrollment
+	•	Key unwrap flow (split-key) grants access
+	•	Device downloads encrypted vault + replays events
+</Text>
+        </Document>
+        <Document ID="687D79B0-9319-4754-B3BF-8DC17DEC9C91">
+            <Title>Security Gameplan</Title>
+            <Text>There are three tiers of encryption on iOS, and they stack:
+Tier 1 — iOS Data Protection (do this now, it's free). Set NSFileProtectionComplete on your records directory. The OS encrypts every file at rest using the device passcode and Secure Enclave. Files are unreadable when the device is locked. Zero code changes to your read/write logic, zero processing overhead, and it's what Apple recommends for health data. This alone is legally meaningful — it's hardware-backed AES-256.
+Tier 2 — Keychain for secrets + encrypted index (do this now, small effort). You're already using Keychain for the API key. Move any sensitive metadata (patient names, record titles) in index.json to an encrypted blob using CryptoKit's AES.GCM with a key stored in the Keychain. The record files themselves are already protected by Tier 1. This gives you field-level protection for the metadata that ties records to real people.
+Tier 3 — Full record-level encryption with CryptoKit (defer to later). Encrypt each record's content with its own key, wrap those keys with a master key in Keychain/Secure Enclave. This is the HIPAA/NIST-grade approach but it changes your entire read/write pipeline and makes debugging much harder. Save this for when your data model is stable.
+So concretely for this sprint, the work would be:
+	1	Set file protection on the Documents/records directory (5 lines of code)
+	2	Create a small EncryptionService using CryptoKit for the index
+	3	Wrap your existing index.json read/write in encrypt/decrypt calls
+	4	Document the encryption architecture for future HIPAA audit trail
+This gives you a defensible encryption posture now without slowing down feature development. When you're ready for Tier 3 later, the EncryptionService is already there — you just expand its scope.
+</Text>
+        </Document>
+        <Document ID="ECC4F779-D1BC-44C7-B9ED-E436D1E3F5F4">
+            <Title>Voice recording</Title>
+            <Text>Whisper API — much better accuracy, but requires sending audio to server
+Audio file storage — keep the original recording alongside transcript for reference
+Manual editing — let user correct transcript before saving
+</Text>
+        </Document>
+        <Document ID="493495E8-61D5-4784-9365-AEA699E2D609">
+            <Title>Local Vault</Title>
+            <Text>Local vault is the user’s primary workspace (fast, offline, private).</Text>
+        </Document>
+        <Document ID="1091E117-C3F1-4927-A0D9-C70570A3C9B4">
+            <Title>11. Viable Ship plan</Title>
+        </Document>
+        <Document ID="49DAD835-19CE-49EE-A917-FAB3EC1556BC">
+            <Text>The secure cloud “LLM gateway” (your control plane)
+This is the part that makes it credibly private:
+Gateway responsibilities
+	•	Receives user query + retrieves minimal necessary chunks
+	•	Enforces user consent rules (which records are allowed for AI)
+	•	Redacts if user selects “redaction-only mode”
+	•	Sends context to:
+	◦	a private managed LLM endpoint, or
+	◦	a model you host inside your VPC
+	•	Returns response with citations to chunks/pages
+	•	Writes derived artifacts (summary objects) back into derived layer
+Hard rules
+	•	No training on customer data
+	•	No persistent prompt logging (or heavily redacted logs only)
+	•	Short TTL for transient data
+	•	Tenant isolation + per-tenant encryption keys
+</Text>
+        </Document>
+        <Document ID="2AB2963F-5701-4659-BC52-10DA92EC53A2">
+            <Title>Note tagging</Title>
+            <Text>Be able to add notes / corrections</Text>
+        </Document>
+        <Document ID="B651C68B-4ED1-4EB4-A3BC-B40F977C1B42">
+            <Title>Record Health QR code share</Title>
+        </Document>
+        <Document ID="BF50199C-BF97-4896-ACFC-2DA487EF7BD9">
+            <Title>iPAD VERSION</Title>
+        </Document>
+        <Document ID="DCD37590-FD3D-4DCA-81AA-6B1499C86417">
+            <Title>App</Title>
+        </Document>
+        <Document ID="4AD82828-4A57-475D-8260-8EEDA7FAF043">
+            <Title>4. Sync architecture</Title>
+        </Document>
+        <Document ID="27DF371A-1D12-4899-A7D8-C280F49B0B88">
+            <Text>Encryption &amp; key model
+
+Recommended: client-side encryption + split-key recovery
+	•	Each document/chunk encrypted with a DEK (data key).
+	•	DEKs are wrapped by a KEK (key-encryption key).
+	•	KEK is split:
+	◦	Part protected on-device (Secure Enclave/Keystore)
+	◦	Part stored in cloud KMS/HSM (tenant-isolated)
+	•	Decryption requires both parts + authenticated user session.
+Why this hybrid key approach is good:
+	•	Cloud can store and sync safely (it holds encrypted blobs).
+	•	You can still do account recovery / multi-device enrollment.
+	•	If a user nukes access, you can do crypto-erasure by destroying wraps.
+</Text>
+        </Document>
+        <Document ID="41BB8782-F9A2-437F-B594-DD11DB9B3EBE">
+            <Title>10. Concrete end-to-end flows</Title>
+        </Document>
+        <Document ID="B91BC524-0199-432D-97A8-002E1B006B7A">
+            <Title>3. Cloud Storage</Title>
+            <Text>Cloud storage: sync without giving the cloud your plaintext (if possible)
+Best-practice target: client-side encryption (zero-knowledge style)
+	•	Device generates a Data Encryption Key (DEK) per file (or per chunk).
+	•	Encrypt file locally → upload encrypted blob to cloud object storage.
+	•	Cloud never sees plaintext.
+Key management options
+	•	User-derived key (passphrase) → you can’t recover accounts easily.
+	•	Escrowed keys (recoverable) → more supportable, but higher trust burden.
+	•	Split key (recommended compromise):
+	◦	Part on device, part in cloud HSM/KMS; requires both to decrypt.
+	•	Support multi-device by securely re-wrapping keys for new devices.
+Sync
+	•	Encrypted files + encrypted metadata
+	•	Conflict resolution at metadata layer, not content layer.
+</Text>
+        </Document>
+        <Document ID="CBEAC9DC-4E65-47ED-AAB5-E2B8765FB6DB">
+            <Text>“Event log” + “CRDT-ish” metadata, not file overwrites
+	•	Every change produces an append-only event:
+	◦	upload_record, tag_added, note_created, doc_deleted, correction_made
+	•	Cloud stores events + encrypted blobs.
+	•	Devices replay events to converge state.
+	•	Conflicts (e.g., two devices edit the same note) resolve at metadata layer.
+This keeps you sane across iOS/Android + web.
+</Text>
+        </Document>
+        <Document ID="89CCD311-D1AA-4FCF-AF2B-E039DD129649">
+            <Title>2. Data Layers</Title>
+        </Document>
+        <Document ID="DC5EC25D-2300-4F69-8816-A3FFF0AAF57C">
+            <Text>LLM cloud: “minimize exposure” design (RAG + strict controls)
+You basically have three patterns:
+Pattern 1: “Cloud LLM sees plaintext” (simplest, most risk)
+	•	You send chunks of PHI to the LLM API.
+	•	Requires extremely strong vendor terms and technical controls.
+	•	In HIPAA mode, you’ll need a BAA (and likely a dedicated/isolated setup).
+Pattern 2: “De-identify/redact → cloud LLM” (middle ground)
+	•	On-device (or in your secure compute), redact identifiers:
+	◦	Names, addresses, MRN, phone, DOB (sometimes partial DOB), etc.
+	•	Send redacted chunks to LLM.
+	•	Keep a local mapping if the user wants rehydrated output.
+Caveat: De-identification is hard to guarantee, and “tokenization” isn’t magic if you can reverse it.
+Pattern 3 (ideal): “Confidential compute LLM gateway” (best privacy you can buy)
+	•	You run an LLM gateway service in a locked-down environment:
+	◦	Dedicated VPC
+	◦	No persistent logs
+	◦	Egress restrictions
+	◦	Short-lived request storage only
+	•	Optionally use confidential computing (TEEs) so even cloud admins can’t inspect memory easily.
+	•	The LLM can be:
+	◦	A hosted open-weight model you control
+	◦	Or a “private managed” endpoint with strong contractual + technical isolation
+This is the enterprise-style “private managed API” approach.
+</Text>
+        </Document>
+        <Document ID="2FA80FAB-2F79-4CF6-9F3C-10E3F37175D2">
+            <Text>Tier A: On-device synthesis (default for small tasks)
+	•	Quick summaries of a single doc, short Q&amp;A, redaction, simple timeline.
+Tier B: Secure cloud synthesis (for heavy lift)
+	•	Longitudinal timeline across years
+	•	Medication reconciliation
+	•	Trend analysis on labs
+	•	Multi-doc summarization
+	•	“Prepare a doctor visit brief”
+Key design: Cloud synthesis runs in a policy-enforced AI gateway, not directly from the app to an LLM.
+</Text>
+        </Document>
+        <Document ID="2972A6C6-53FA-483B-897B-9CA176D113F6">
+            <Title>To Do</Title>
+        </Document>
+        <Document ID="FF99D43E-5963-4436-93D2-195B0B52DCE6">
+            <Title>0. Product UX</Title>
+        </Document>
+        <Document ID="3D0123AE-ACCC-463D-859A-A80FA1F0764C">
+            <Text>Cloud storage: sync without giving the cloud your plaintext (if possible)
+Best-practice target: client-side encryption (zero-knowledge style)
+	•	Device generates a Data Encryption Key (DEK) per file (or per chunk).
+	•	Encrypt file locally → upload encrypted blob to cloud object storage.
+	•	Cloud never sees plaintext.
+Key management options
+	•	User-derived key (passphrase) → you can’t recover accounts easily.
+	•	Escrowed keys (recoverable) → more supportable, but higher trust burden.
+	•	Split key (recommended compromise):
+	◦	Part on device, part in cloud HSM/KMS; requires both to decrypt.
+	•	Support multi-device by securely re-wrapping keys for new devices.
+Sync
+	•	Encrypted files + encrypted metadata
+	•	Conflict resolution at metadata layer, not content layer.
+</Text>
+        </Document>
+        <Document ID="BCCB1991-A4C4-442F-82DB-8A91DB208EA9">
+            <Title>5. Chunking + indexing (to enable synthesis + search)
+Chunking + indexing (to enable synthesis + search)
+</Title>
+        </Document>
+        <Document ID="B26FD740-16DC-4BE8-86C9-79915E3C3B7F">
+            <Title>Raw Records</Title>
+            <Text>Raw records (immutable)
+	•	PDFs, images, CCDA, FHIR bundles, lab results, etc.
+	•	Stored encrypted locally and encrypted in cloud object storage.
+</Text>
+        </Document>
+    </Documents>
+</SearchIndexes>
