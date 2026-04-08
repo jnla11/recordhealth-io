@@ -1,10 +1,10 @@
 # Server Infrastructure
 ## Record Health API — Cloudflare Worker Reference
 
-**Document version:** 1.0  
-**Status:** Current state + ADI build requirements  
-**Describes:** recordhealth-api Worker project, existing bindings, route surface, DB schema, and infrastructure gaps to be provisioned for ADI  
-**Companion documents:** ADAPTIVE_DOCUMENT_INTELLIGENCE.md, ARCHITECTURE.md
+**Document version:** 1.1
+**Status:** Current state + ADI build requirements
+**Describes:** recordhealth-api Worker project, existing bindings, route surface, DB schema, and infrastructure gaps to be provisioned for ADI
+**Companion documents:** ADAPTIVE_DOCUMENT_INTELLIGENCE.md, ARCHITECTURE.md, INTEGRATION_LAYER.md
 
 ---
 
@@ -173,6 +173,98 @@ consensus_config (
     value                   TEXT,
     updated_at              TIMESTAMPTZ
     -- Stores promotion thresholds, diversity minimums, burst detection params
+    -- Also stores model-version-keyed tier thresholds for integration layer:
+    -- e.g. key = 'tier1_floor.BioMistral-7B-finetuned-v0.3.1', value = '0.85'
+)
+
+-- Full chain lineage from failure event to training outcome
+learning_lineage (
+    id                          UUID PRIMARY KEY,
+    created_at                  TIMESTAMPTZ,
+    origin_type                 TEXT,       -- 'anomaly_flag' | 'seed_document' | 'mimic_document'
+    origin_id                   UUID,       -- FK → anomaly_flags | seed_documents | mimic_documents
+    expert_annotation_id        UUID,       -- FK → expert_annotations, null if not annotated
+    annotation_created_at       TIMESTAMPTZ,
+    annotator_level             TEXT,       -- L0–L5
+    corpus_snapshot_id          UUID,       -- FK → corpus export run
+    corpus_included_at          TIMESTAMPTZ,
+    training_artifact_id        UUID,       -- FK → training_artifacts
+    training_weight             FLOAT,      -- 1.0 standard, 0.7 distilled, 1.1 active opt-in
+    post_training_benchmark_id  UUID,       -- FK → benchmark_runs after artifact deployed
+    field_type                  TEXT,
+    confusion_class             TEXT,
+    f1_before                   FLOAT,      -- benchmark F1 on this class before training
+    f1_after                    FLOAT,      -- benchmark F1 on this class after training
+    delta                       FLOAT,      -- f1_after - f1_before
+    annotation_cycle_count      INT         -- annotation cycles before promotion threshold hit
+)
+
+-- Raw model output before normalization — 30-day hot window
+-- Flagged runs retained until linked anomaly_flag reaches terminal review_status
+raw_output_log (
+    id                          UUID PRIMARY KEY,
+    logged_at                   TIMESTAMPTZ,
+    extraction_run_id           UUID,
+    model_version               TEXT,
+    is_sampled                  BOOLEAN,    -- true = 10% clean sample; false = flagged (always logged)
+    is_flagged                  BOOLEAN,
+    raw_confidence_vector       JSONB,      -- {field_type: confidence_float, ...}
+    raw_model_output_s3_key     TEXT,       -- S3 key (preferred; route raw strings to S3)
+    raw_model_output            TEXT,       -- fallback only if S3 routing not active
+    pre_normalization_tier      TEXT,
+    post_normalization_tier     TEXT,
+    normalization_delta         BOOLEAN,    -- true if tier changed during normalization
+    normalization_delta_reason  TEXT,
+    summarized_at               TIMESTAMPTZ,
+    deleted_at                  TIMESTAMPTZ -- soft delete; hard delete runs 7 days after
+)
+
+-- Summarized form replacing raw_output_log after 30-day hot window
+raw_output_summary (
+    id                          UUID PRIMARY KEY,
+    extraction_run_id           UUID,
+    model_version               TEXT,
+    summarized_at               TIMESTAMPTZ,
+    confidence_p10              FLOAT,
+    confidence_p25              FLOAT,
+    confidence_p50              FLOAT,
+    confidence_p75              FLOAT,
+    confidence_p90              FLOAT,
+    confidence_by_field         JSONB,      -- median confidence per field_type (preserved)
+    tier_assignment             TEXT,
+    escalation_flag             BOOLEAN,
+    normalization_delta         BOOLEAN,    -- preserved even after summarization
+    anomaly_flag_id             UUID        -- FK → anomaly_flags if this run was flagged
+)
+
+-- Currently deployed model versions and rollback window
+model_versions (
+    id                          UUID PRIMARY KEY,
+    created_at                  TIMESTAMPTZ,
+    training_artifact_id        UUID,
+    model_version_string        TEXT,       -- e.g. 'BioMistral-7B-finetuned-v0.3.1'
+    layer                       TEXT,       -- '1_ondevice' | '2_private' | '3_bedrock_passthrough'
+    route                       TEXT,       -- 'A' | 'B' | 'C' | 'D'
+    status                      TEXT,       -- 'staging' | 'active' | 'retired'
+    deployed_at                 TIMESTAMPTZ,
+    retired_at                  TIMESTAMPTZ,
+    replaced_by                 UUID,       -- FK → model_versions
+    rollback_available_until    TIMESTAMPTZ
+)
+
+-- Inter-annotator disagreement tracking — guideline quality signal
+annotator_variance_log (
+    id                          UUID PRIMARY KEY,
+    logged_at                   TIMESTAMPTZ,
+    expert_annotation_id        UUID,
+    field_type                  TEXT,
+    confusion_class             TEXT,
+    annotator_a_level           TEXT,
+    annotator_b_level           TEXT,
+    annotator_a_class           TEXT,
+    annotator_b_class           TEXT,
+    resolution                  TEXT,       -- 'a_correct' | 'b_correct' | 'escalated' | 'guideline_gap'
+    guideline_gap_noted         BOOLEAN DEFAULT FALSE
 )
 ```
 
@@ -240,6 +332,17 @@ Purpose:  Consensus CRON — evaluate candidate rules, promote to PatternLibrary
           compute diversity scores, run burst detection, generate library diff,
           invalidate distribution cache
 Handler:  adiConsensusHandler() — to be added to index.js or extracted
+
+Schedule: 0 3 * * *   (daily at 3:00 AM UTC — after consensus CRON)
+Purpose:  ADI summarization — summarize raw_output_log rows past 30-day hot
+          window, write raw_output_summary rows, soft-delete raw rows
+Handler:  adiSummarizationHandler()
+
+Schedule: 0 4 * * *   (daily at 4:00 AM UTC — after summarization)
+Purpose:  ADI retention cleanup — hard delete soft-deleted rows older than 7 days,
+          archive normalized extraction_runs to S3 past 180 days,
+          archive resolved anomaly_flags to S3 past 365 days
+Handler:  adiRetentionCleanupHandler()
 ```
 
 **wrangler.toml change required:**
@@ -247,7 +350,9 @@ Handler:  adiConsensusHandler() — to be added to index.js or extracted
 [triggers]
 crons = [
   "0 0 1 * *",    # existing token drip
-  "0 2 * * *"     # ADI consensus job
+  "0 2 * * *",    # ADI consensus job
+  "0 3 * * *",    # ADI summarization job
+  "0 4 * * *"     # ADI retention cleanup job
 ]
 ```
 
@@ -287,6 +392,12 @@ env.ADI_PHI_PATTERN_BLOCKLIST    Comma-separated regex patterns for server-side 
 env.ADI_CONSENSUS_MIN_N          Default minimum observation count for promotion (overrides consensus_config table default during cold start)
 env.ADI_BURST_WINDOW_HOURS       Burst detection window in hours (default: 24)
 env.ADI_LIBRARY_CACHE_TTL        CDN cache TTL for pattern library delta responses in seconds
+env.ADI_LOG_SAMPLE_RATE_CLEAN    Clean run raw output sample rate (default: 0.10)
+env.ADI_RAW_VECTOR_RETENTION_DAYS  Hot window for raw_output_log in days (default: 30)
+env.ADI_EXTRACTION_ARCHIVE_DAYS  Extraction run Neon→S3 archive threshold in days (default: 180)
+env.ADI_ANOMALY_ARCHIVE_DAYS     Resolved anomaly_flag archive threshold in days (default: 365)
+env.ADI_S3_LOG_BUCKET            S3 bucket for raw output string storage (raw_model_output_s3_key)
+env.ADI_S3_ARCHIVE_BUCKET        S3 bucket for cold archive (extraction_runs, anomaly_flags)
 ```
 
 These are added to the Cloudflare Worker environment via the dashboard or `wrangler secret put`.
@@ -355,10 +466,26 @@ Phase 5 (federated learning)
 ├── New routes: /v1/gradients, /v1/gradients/model/latest
 └── Gradient aggregation handler — stateless, reads submissions, writes averaged weights
     Weights stored in pattern_library table as JSONB blob or separate model_versions table
+
+Integration Layer (parallel to Phase 3 server work)
+├── raw_output_log table + indexes
+├── raw_output_summary table
+├── learning_lineage table
+├── annotator_variance_log table
+├── model_versions table (extended from routing pipeline)
+├── consensus_config model-version-keyed threshold rows
+└── Integration layer normalization boundary wired into extraction route handler
+    See INTEGRATION_LAYER.md for full schema and constraints
+
+Post-Phase 3 (after first training run)
+├── adiSummarizationHandler() CRON (daily 3AM)
+├── adiRetentionCleanupHandler() CRON (daily 4AM)
+└── Shadow evaluation framework for first model swap
+    See INTEGRATION_LAYER.md §7 for migration delta methodology
 ```
 
 ---
 
 *End of document.*
 
-*This document describes the current state of recordhealth-api and the infrastructure changes required to support ADI. Implementation prompts should reference both this document and the relevant sections of ADAPTIVE_DOCUMENT_INTELLIGENCE.md. Schema changes require this document to be updated before implementation begins.*
+*This document describes the current state of recordhealth-api and the infrastructure changes required to support ADI. Implementation prompts should reference both this document and the relevant sections of ADAPTIVE_DOCUMENT_INTELLIGENCE.md. Schema changes require this document to be updated before implementation begins. Document version 1.1 adds: learning_lineage, raw_output_log, raw_output_summary, model_versions, and annotator_variance_log tables to section 4.3; ADI summarization and retention cleanup CRONs to section 6.2; six new env bindings to section 8; integration layer and post-Phase 3 blocks to section 12. See INTEGRATION_LAYER.md for the model abstraction contract and migration delta framework that these tables support.*

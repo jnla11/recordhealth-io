@@ -1,11 +1,14 @@
 # Function Distinction and Operational Boundaries
 ## Record Health ADI — Programmatic Context for Implementation
 
-**Document version:** 1.0
+**Document version:** 1.1
 **Status:** Authoritative — supersedes conflicting assumptions in prior spec versions
 **Purpose:** Precise function-level distinctions for Claude Code instances building each component.
 Every sprint prompt should reference the relevant section of this document. When this document
 conflicts with ADI v2.1 or EXPERT_ANNOTATION v1.2, this document governs.
+**See also:** INTEGRATION_LAYER.md for model abstraction contract, provenance schema, and
+migration delta framework. LOGGING_AND_RETENTION.md content is incorporated into
+SERVER_INFRASTRUCTURE.md — do not create a separate logging document.
 **Critical correction:** ADI v2.1 section 8.2 trust ladder phase gates tied transitions to user
 correction volume. That model is superseded here. Phase transitions are now driven by offline
 benchmark scores, not user activity. See section 2.
@@ -624,7 +627,11 @@ when building any component.
 | phi_gateway_log | Private instance only | PHI gateway (Role 1) | HIPAA audit |
 | consented_training_corpus | Private instance only | PHI gateway (Tier 3 flow) | Training loop |
 | benchmark_runs | Neon | Sampling engine (Step 7) | Admin dashboard, gate evaluation |
-| model_versions | Neon | Routing pipeline | Admin dashboard |
+| model_versions | Neon | Routing pipeline | Admin dashboard, integration layer (threshold lookup) |
+| raw_output_log | Neon (hot 30d) + S3 (raw strings) | Integration layer | Summarization CRON, L0 review |
+| raw_output_summary | Neon (indefinite) | Summarization CRON | Migration delta framework, threshold recalibration |
+| learning_lineage | Neon | Corpus export pipeline, async training loop | Admin dashboard, annotator routing, unlearning triage |
+| annotator_variance_log | Neon | SEED Master Control (on annotator disagreement) | L0 review, guideline quality dashboard |
 
 ### 8.2 Write Permission Boundaries
 
@@ -636,6 +643,11 @@ when building any component.
 | SEED Master Control | expert_annotations, negative_space_annotations | pattern_library (read-only), anomaly_flags (read-only) |
 | Async training loop | training_artifacts | pattern_library (goes through CRON + gate) |
 | Bedrock | Nothing — inference only, reads prompts, returns text | Everything |
+| Integration layer | raw_output_log | raw_output_summary, learning_lineage |
+| Summarization CRON | raw_output_summary | raw_output_log (read-only after initial write) |
+| Corpus export pipeline | learning_lineage (corpus inclusion event) | training_artifacts |
+| Async training loop (lineage) | learning_lineage (training_artifact_id field) | expert_annotations |
+| SEED Master Control | expert_annotations, negative_space_annotations, annotator_variance_log | pattern_library (read-only), anomaly_flags (read-only) |
 
 ### 8.3 Read-Only Boundaries
 
@@ -659,6 +671,12 @@ when building any component.
 | Gate approval (you, admin module) | Artifact routing + delivery | Training run |
 | Route B staged rollout | Correction rate monitoring | Automatic 100% rollout |
 | Correction rate delta negative | Staged rollout halt | Automatic rollback (manual decision) |
+| Extraction run completes | raw_output_log write (before normalization) | Normalization |
+| Normalization completes | normalized extraction_runs write, normalization_delta computation | raw_output_log write (already done) |
+| 30-day raw output window expires | Summarization CRON (daily 3AM) | Hard deletion (soft-delete only, hard delete +7 days) |
+| Model swap gate approved | Threshold recalibration write to consensus_config | Model deployment (requires thresholds first) |
+| Annotation enters corpus snapshot | learning_lineage row creation | Training run (manual trigger only) |
+| Annotator disagreement logged | annotator_variance_log write | Automatic guideline update |
 
 ### 8.5 The Difference Between Similar-Sounding Things
 
@@ -701,6 +719,55 @@ when building any component.
   continue/halt decision during rollout. Real-world correction rate is the ground truth
   that the benchmark approximates.
 
+**raw_output_log vs raw_output_summary:**
+- `raw_output_log`: Full fidelity record. Raw confidence vector per field type, full raw
+  model output string, normalization delta audit. Written before normalization. Retained
+  30 days (flagged runs retained until anomaly_flag reaches terminal review_status). High
+  storage cost.
+- `raw_output_summary`: Summarized form. Percentile bands replace raw vector. Raw string
+  gone. Written by summarization CRON after hot window expires. Retained indefinitely.
+  Supports migration delta and threshold recalibration but not per-field exact confidence
+  recovery for unflagged runs older than 30 days.
+
+**learning_lineage vs consensus_log:**
+- `consensus_log`: Records PatternLibrary rule promotion decisions — what rule, what version,
+  what observation count, what diversity score. Audit trail for the consensus engine.
+- `learning_lineage`: Records the full chain from failure event to training outcome. Links
+  anomaly_flag → expert_annotation → corpus_snapshot → training_artifact → benchmark delta.
+  Spans the entire System A pipeline. Supports unlearning triage and annotator routing.
+
+**model_versions vs training_artifacts:**
+- `training_artifacts`: Production record of a training run. Base model, corpus snapshot,
+  hyperparameters, benchmark scores, gate decision. One row per training run.
+- `model_versions`: Deployment record of what is currently live. Points to a training_artifact.
+  Tracks staged rollout status, deployment timestamp, retirement timestamp, rollback window.
+
+---
+
+## 10. Integration Layer Constraints
+
+Hard constraints on any sprint implementing extraction routing, tier assignment,
+or model output handling. Reference INTEGRATION_LAYER.md for full schema and rationale.
+
+1. Raw output logging occurs BEFORE normalization. Never after. The integration layer
+   writes to raw_output_log first. Normalization runs second. This order is non-negotiable.
+
+2. Tier assignment thresholds are read from consensus_config keyed by model_version.
+   No hardcoded thresholds anywhere in routing logic.
+
+3. normalization_delta is computed and logged on every extraction run. When pre- and
+   post-normalization tier differ, the case is flagged for manual review.
+
+4. The stable output schema (INTEGRATION_LAYER.md §3.2) is the only schema consumed
+   by routing logic and anomaly detection. Raw output (§3.3) is write-only for those systems.
+
+5. Model swap is not complete until new model_version thresholds are written to
+   consensus_config and shadow evaluation migration_delta_score is recorded in
+   training_artifacts.
+
+6. learning_lineage row is written for every annotation entering a corpus snapshot.
+   No annotation enters training without a lineage record.
+
 ---
 
 ## 9. Sprint Prompt Reference Guide
@@ -729,6 +796,13 @@ the section of this document that governs that component's behavior.
 | Bedrock pre-annotation (Step 5b) | 5.3 (Point 1 — annotation sessions only) |
 | Bedrock benchmark analysis (Step 9) | 5.3 (Point 2 — post-benchmark only) |
 | PHI gateway (Stage 4 Role 1) | 8.1 (phi_gateway_log on private instance only) |
+| Integration layer normalization boundary | 10 (constraints), INTEGRATION_LAYER.md §3 (schema) |
+| raw_output_log Worker write | 10.1 (before normalization), INTEGRATION_LAYER.md §3.3 |
+| Summarization CRON handler | SERVER_INFRASTRUCTURE.md §6.2, INTEGRATION_LAYER.md §3.3 |
+| model_versions deployment tracking | INTEGRATION_LAYER.md §4.2 (schema) |
+| learning_lineage write path | INTEGRATION_LAYER.md §5, 10.6 (no annotation without lineage) |
+| Shadow evaluation / migration delta | INTEGRATION_LAYER.md §7 |
+| Threshold recalibration on model swap | INTEGRATION_LAYER.md §6, 10.2 |
 
 ---
 
@@ -739,4 +813,7 @@ When a sprint prompt references this document, Claude Code instances should trea
 the distinctions defined here as hard constraints, not suggestions. The corrected
 training model (section 1), corrected phase gates (section 2), and user flag
 boundary (section 3) supersede corresponding sections in ADI v2.1 and
-EXPERT_ANNOTATION v1.2. All other sections in those documents remain in effect.*
+EXPERT_ANNOTATION v1.2. All other sections in those documents remain in effect.
+Document version 1.1 adds: integration layer rows to sections 8.1–8.5, new
+section 10 (integration layer constraints), and integration layer entries to the
+sprint prompt reference guide. See INTEGRATION_LAYER.md for full schema.*
