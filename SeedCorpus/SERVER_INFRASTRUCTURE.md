@@ -1,7 +1,7 @@
 # Server Infrastructure
 ## Record Health API — Cloudflare Worker Reference
 
-**Document version:** 1.1
+**Document version:** 1.2
 **Status:** Current state + ADI build requirements
 **Describes:** recordhealth-api Worker project, existing bindings, route surface, DB schema, and infrastructure gaps to be provisioned for ADI
 **Companion documents:** ADAPTIVE_DOCUMENT_INTELLIGENCE.md, ARCHITECTURE.md, INTEGRATION_LAYER.md
@@ -439,7 +439,41 @@ Process:    Edit src/index.js → wrangler deploy → verify via /health and /he
 Secrets:    Set via wrangler secret put {KEY} or Cloudflare dashboard
 ```
 
-**No staging environment is currently configured.** For ADI, consider adding a `[env.staging]` block to wrangler.toml with a separate DATABASE_URL pointing to a Neon branch. Neon supports instant database branching — a staging branch costs nothing and eliminates the current pattern of testing against production. Not a blocker for Phase 1-2 (on-device work), but worth doing before Phase 3 when the Worker starts receiving real atom payloads.
+**Staging environment is a hard prerequisite for Phase 3.** Do not begin Phase 3
+server work (ADI table migration, Worker ingestion endpoint, consensus CRON) until
+staging is in place. Once the Worker receives real atom payloads and CRONs are live,
+retrofitting staging around live data flows is significantly harder.
+
+### Sprint: Staging Environment (complete before Phase 3)
+
+```
+Scope:
+  1. Neon staging branch
+     neon branches create --name staging
+     Copy DATABASE_URL from branch → staging env binding
+
+  2. wrangler.toml — add [env.staging] block
+     [env.staging]
+     DATABASE_URL = {staging Neon branch connection string}
+     # All other bindings inherited from top-level
+
+  3. Deploy staging Worker
+     wrangler deploy --env staging
+     Verify via staging subdomain /health and /health/db
+
+  4. iOS Xcode scheme: RecordHealth Staging
+     Duplicate production scheme
+     Set WORKER_BASE_URL to staging Worker subdomain
+     Use for all testing against staging infra
+
+  5. Smoke test
+     Verify ADI routes hit staging Worker and staging Neon branch
+     Confirm consensus CRON runs against staging branch without touching production
+     Verify /health/db returns staging branch connection
+
+Cost: Zero — Neon branch is free, staging Worker subdomain is free
+Gate: Must pass smoke test before Phase 3 implementation sprint begins
+```
 
 ---
 
