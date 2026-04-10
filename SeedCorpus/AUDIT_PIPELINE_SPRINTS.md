@@ -363,6 +363,9 @@ anywhere in the Neon rows. Commit before AP-7.
 
 ## AP-7 — iOS: Wire sendNegativeSpace
 
+> DEFERRED: Negative space is assessed by the human reviewer during
+> tier review. Automated gap detection is out of scope at this stage.
+
 ### Pre-sprint audit prompt
 ```
 Read AUDIT_PIPELINE.md sections 4.5 and 6.
