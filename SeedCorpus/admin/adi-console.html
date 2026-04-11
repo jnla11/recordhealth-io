@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADI Console — Record Health</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e17; --surface: #111827; --surface-hover: #1a2236;
+    --border: #1e293b; --border-active: #3b82f6;
+    --text: #e2e8f0; --text-muted: #64748b; --text-dim: #475569;
+    --accent: #3b82f6; --accent-hover: #2563eb;
+    --green: #10b981; --green-bg: #10b98118;
+    --amber: #f59e0b; --amber-bg: #f59e0b18;
+    --red: #ef4444; --red-bg: #ef444418;
+    --purple: #8b5cf6; --purple-bg: #8b5cf618;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
+    --font-sans: 'IBM Plex Sans', -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-sans); min-height: 100vh; }
+
+  /* Auth */
+  .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .auth-box { width: 420px; padding: 40px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .auth-label { font-size: 11px; font-family: var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; }
+  .auth-title { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .auth-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 32px; }
+  .field-label { display: block; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .field-group { margin-bottom: 16px; }
+  .auth-input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 13px; outline: none; }
+  .auth-input:focus { border-color: var(--accent); }
+  .error-msg { font-size: 12px; color: var(--red); margin-top: 6px; }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-family: var(--font-mono); font-weight: 500; cursor: pointer; border: 1px solid; transition: all 0.15s ease; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
+  .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-xs { padding: 5px 12px; font-size: 11px; }
+  .btn-full { width: 100%; padding: 10px 16px; margin-top: 12px; }
+  .btn-green { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-red { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-amber { background: var(--amber); border-color: var(--amber); color: #000; }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.02em; }
+  .badge-blue { background: #3b82f618; color: #60a5fa; border: 1px solid #3b82f640; }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid #10b98140; }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid #f59e0b40; }
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid #ef444440; }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid #8b5cf640; }
+  .badge-gray { background: #64748b18; color: #94a3b8; border: 1px solid #64748b40; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 48px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-brand { font-size: 14px; font-weight: 700; font-family: var(--font-mono); }
+  .header-version { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); }
+  .nav-btn { padding: 5px 12px; border-radius: 5px; border: none; background: transparent; color: var(--text-muted); font-size: 12px; font-family: var(--font-sans); font-weight: 500; cursor: pointer; }
+  .nav-btn.active { background: var(--bg); color: var(--text); }
+
+  /* Layout */
+  .content { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .loading { color: var(--text-muted); padding: 40px; }
+
+  /* Stat cards */
+  .stat-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; flex: 1; min-width: 140px; }
+  .stat-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-family: var(--font-mono); font-weight: 600; line-height: 1; }
+  .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* Queue */
+  .queue-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .section-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .section-sub { font-size: 12px; color: var(--text-muted); }
+  .filter-row { display: flex; gap: 6px; }
+  .queue-col-header { display: grid; grid-template-columns: 1fr 110px 130px 100px 90px 120px; gap: 10px; padding: 6px 14px; font-size: 9px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .queue-row { display: grid; grid-template-columns: 1fr 110px 130px 100px 90px 120px; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-size: 12px; font-family: var(--font-mono); align-items: center; margin-bottom: 2px; }
+  .queue-row:hover { background: var(--surface-hover); border-color: var(--border-active); }
+  .queue-empty { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 40px; text-align: center; color: var(--text-dim); font-size: 13px; }
+
+  /* Audit queue rows — different column layout */
+  .audit-col-header { display: grid; grid-template-columns: 160px 1fr 80px 90px; gap: 10px; padding: 6px 14px; font-size: 9px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .audit-row { display: grid; grid-template-columns: 160px 1fr 80px 90px; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-size: 12px; font-family: var(--font-mono); align-items: center; margin-bottom: 2px; }
+  .audit-row:hover { background: var(--surface-hover); border-color: var(--border-active); }
+  .audit-doc-col-header { display: grid; grid-template-columns: 1fr 110px 60px 50px 50px 50px; gap: 10px; padding: 6px 14px; font-size: 9px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .audit-doc-row { display: grid; grid-template-columns: 1fr 110px 60px 50px 50px 50px; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-size: 12px; font-family: var(--font-mono); align-items: center; margin-bottom: 2px; }
+  .audit-doc-row:hover { background: var(--surface-hover); border-color: var(--border-active); }
+
+  /* Audit page buttons */
+  .page-selector { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 16px; }
+
+  /* Audit JSON blocks */
+  .json-block { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; margin-bottom: 12px; }
+  .json-section-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 16px 0 6px; }
+
+  /* ─── ANNOTATION WORKSPACE ─── */
+  .workspace { display: flex; gap: 0; height: calc(100vh - 48px); overflow: hidden; }
+  .pdf-pane { flex: 3; background: #1a1a2e; overflow: auto; position: relative; border-right: 1px solid var(--border); }
+  .pdf-pane canvas { display: block; margin: 0 auto; }
+  .annotation-pane { flex: 2; min-width: 380px; max-width: 480px; overflow-y: auto; background: var(--bg); padding: 16px; }
+
+  /* PDF overlay */
+  .pdf-container { position: relative; display: inline-block; margin: 20px auto; }
+  .pdf-container canvas { display: block; }
+  .overlay-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .overlay-svg .region { pointer-events: all; cursor: pointer; transition: all 0.15s; }
+  .overlay-svg .region:hover { stroke-width: 2.5; }
+  .overlay-svg .region-extraction { fill: rgba(59,130,246,0.12); stroke: rgba(59,130,246,0.6); stroke-width: 1.5; }
+  .overlay-svg .region-extraction.selected { fill: rgba(59,130,246,0.25); stroke: rgba(59,130,246,1); stroke-width: 2.5; }
+  .overlay-svg .region-confirmed { fill: rgba(16,185,129,0.12); stroke: rgba(16,185,129,0.6); stroke-width: 1.5; }
+  .overlay-svg .region-corrected { fill: rgba(245,158,11,0.12); stroke: rgba(245,158,11,0.6); stroke-width: 1.5; }
+  .overlay-svg .region-rejected { fill: rgba(239,68,68,0.12); stroke: rgba(239,68,68,0.6); stroke-width: 1.5; }
+  .overlay-svg .region-discovery { fill: rgba(139,92,246,0.15); stroke: rgba(139,92,246,0.8); stroke-width: 2; stroke-dasharray: 4,3; }
+  .overlay-svg .region-drawing { fill: rgba(139,92,246,0.1); stroke: rgba(139,92,246,0.5); stroke-width: 1; stroke-dasharray: 3,3; }
+
+  /* Annotation panel sections */
+  .ann-panel-header { padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .ann-panel-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .ann-panel-sub { font-size: 11px; color: var(--text-muted); }
+  .tool-bar { display: flex; gap: 6px; margin-bottom: 12px; padding: 8px; background: var(--surface); border-radius: 6px; border: 1px solid var(--border); }
+  .tool-btn { padding: 6px 12px; border-radius: 4px; font-size: 11px; font-family: var(--font-mono); cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+  .tool-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .tool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Selected extraction detail */
+  .ext-detail { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; margin-bottom: 10px; }
+  .ext-detail-field { font-family: var(--font-mono); font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .ext-detail-value { font-family: var(--font-mono); font-size: 12px; color: var(--green); margin-bottom: 8px; }
+  .ext-detail-meta { font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); margin-bottom: 8px; }
+  .verdict-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .verdict-btn { padding: 5px 14px; border-radius: 4px; font-size: 11px; font-family: var(--font-mono); cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+  .verdict-btn:hover { border-color: var(--text-muted); }
+  .verdict-btn.v-confirmed { background: var(--green-bg); color: var(--green); border-color: #10b98140; }
+  .verdict-btn.v-corrected { background: var(--amber-bg); color: var(--amber); border-color: #f59e0b40; }
+  .verdict-btn.v-rejected { background: var(--red-bg); color: var(--red); border-color: #ef444440; }
+  .ann-input { width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 11px; outline: none; margin-bottom: 6px; }
+  .ann-input:focus { border-color: var(--accent); }
+  .ann-textarea { width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 11px; outline: none; resize: vertical; min-height: 40px; margin-bottom: 6px; }
+  .ann-select { width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 11px; outline: none; margin-bottom: 6px; }
+
+  /* Annotation list in panel */
+  .ann-list-item { padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; margin-bottom: 6px; font-size: 11px; }
+  .ann-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+
+  /* Session bar */
+  .session-bar { position: fixed; bottom: 0; right: 0; width: 480px; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+  .session-stats { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); }
+  .info-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; color: var(--text-dim); font-size: 13px; }
+
+  /* Page nav */
+  .page-nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .page-nav span { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SEED_API_BASE = "https://recordhealth-api.jason-nolte.workers.dev";
+const AUDIT_API_BASE = "https://recordhealth-api-staging.jason-nolte.workers.dev";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+// ─── Confusion Classes ───────────────────────────────────
+const CONFUSION_CLASSES = [
+  { group: "Domain 1 — Optical", classes: ["d1_alphanumericSubstitution","d1_ligatureCollapse","d1_punctuationDropout","d1_diacriticStrip","d1_lowContrastDropout","d1_skewDistortion","d1_motionBlur","d1_shadowIntrusion","d1_compressionArtifact","d1_faxHalftone","d1_generationLoss","d1_stampOverlay","d1_paperDamage","d1_backgroundTexture"] },
+  { group: "Domain 2 — Layout", classes: ["d2_columnMisattribution","d2_referenceRangeCollision","d2_labelValueInversion","d2_headerValueCollision","d2_multiPageContextLoss","d2_sectionBoundaryFailure","d2_nestedTableFailure","d2_reflowArtifact","d2_impliedUnitContext","d2_lineBreakIntrusion","d2_whitespaceDelimiterAmbiguity"] },
+  { group: "Domain 2 — Terminology", classes: ["d2_terminologyVariant","d2_brandToGenericFailure","d2_formularyCodeUnresolved","d2_compoundTermFailure","d2_unitVariant","d2_numericFormatVariant","d2_dateFormatVariant","d2_negationMisparse","d2_qualifierDropout","d2_contextualAbbreviationCollision","d2_providerSpecificNomenclature"] },
+  { group: "Other", classes: ["unknown"] }
+];
+
+// ─── State ───────────────────────────────────────────────
+let state = {
+  apiKey: localStorage.getItem("seed_api_key") || null,
+  auditKey: sessionStorage.getItem("audit_admin_key") || null,
+  view: "dashboard",
+  selectedDoc: null,
+  loading: false,
+  error: null,
+  stats: null,
+  queue: null,
+  filter: "all",
+  // Workspace state
+  docDetail: null,
+  pdfDoc: null,
+  currentPage: 1,
+  totalPages: 0,
+  canvasWidth: 0,
+  canvasHeight: 0,
+  // Annotation state
+  tool: "select",
+  sessionId: null,
+  selectedExtraction: null,
+  annotations: [],
+  drawStart: null,
+  drawCurrent: null,
+  connectSource: null,
+  // Audit state
+  auditView: "sessions",
+  auditSessions: null,
+  selectedAuditSession: null,
+  selectedAuditDoc: null,
+  auditDocDetail: null,
+  auditPageData: null,
+  auditPageIndex: null,
+  auditSessionDetail: null,
+  auditLoading: false,
+};
+
+function setState(updates) { Object.assign(state, updates); render(); }
+
+// ─── Seed API ────────────────────────────────────────────
+async function api(path, opts = {}) {
+  const res = await fetch(`${SEED_API_BASE}${path}`, {
+    method: opts.method || (opts.body ? "POST" : "GET"),
+    headers: { "Authorization": `Bearer ${state.apiKey}`, "Content-Type": "application/json" },
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ─── Audit API ───────────────────────────────────────────
+async function auditApi(path) {
+  const key = state.auditKey;
+  if (!key) throw new Error("No audit admin key");
+  const res = await fetch(`${AUDIT_API_BASE}${path}`, {
+    headers: { "Authorization": `Bearer ${key}` }
+  });
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      sessionStorage.removeItem("audit_admin_key");
+      state.auditKey = null;
+      throw new Error("Audit auth failed — key cleared. Re-enter key.");
+    }
+    throw new Error(`Audit API: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }); }
+
+// ─── Auth ────────────────────────────────────────────────
+async function doAuth(seedKey, auditKey) {
+  try {
+    state.apiKey = seedKey;
+    state.auditKey = auditKey;
+    await api("/v1/seed/queue?limit=1");
+    localStorage.setItem("seed_api_key", seedKey);
+    sessionStorage.setItem("audit_admin_key", auditKey);
+    setState({ error: null });
+    loadDashboard();
+  } catch (e) {
+    state.apiKey = null;
+    localStorage.removeItem("seed_api_key");
+    setState({ error: e.message });
+  }
+}
+
+function disconnect() {
+  localStorage.removeItem("seed_api_key");
+  sessionStorage.removeItem("audit_admin_key");
+  setState({ apiKey: null, auditKey: null, view: "dashboard", selectedDoc: null });
+}
+
+// ─── Seed Actions ────────────────────────────────────────
+async function loadDashboard() { setState({ loading: true }); try { setState({ stats: await api("/v1/seed/stats"), loading: false }); } catch (e) { setState({ loading: false }); } }
+
+async function loadQueue() { setState({ loading: true }); try { const p = state.filter !== "all" ? `?status=${state.filter}` : ""; setState({ queue: await api(`/v1/seed/queue${p}`), loading: false }); } catch (e) { setState({ loading: false }); } }
+
+async function openDocument(id) {
+  setState({ selectedDoc: id, loading: true, view: "workspace", docDetail: null, annotations: [], sessionId: null, selectedExtraction: null, tool: "select", currentPage: 1 });
+  try {
+    const docDetail = await api(`/v1/seed/document/${id}`);
+    const sessionId = uuid();
+    await api("/v1/seed/session/start", { method: "POST", body: { id: sessionId, documentId: id, annotatorId: "seed-console" } });
+    setState({ docDetail, sessionId, loading: false });
+    setTimeout(() => renderPDF(), 50);
+  } catch (e) {
+    setState({ loading: false, error: e.message });
+  }
+}
+
+async function renderPDF() {
+  const doc = state.docDetail?.document;
+  if (!doc?.render_data) return;
+  try {
+    const pdfData = atob(doc.render_data);
+    const pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
+    state.pdfDoc = pdfDoc;
+    state.totalPages = pdfDoc.numPages;
+    renderPage(state.currentPage);
+  } catch (e) { console.error("PDF render error:", e); }
+}
+
+async function renderPage(pageNum) {
+  const pdfDoc = state.pdfDoc;
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageNum);
+  const scale = 1.5;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.getElementById("pdf-canvas");
+  if (!canvas) return;
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  state.canvasWidth = viewport.width;
+  state.canvasHeight = viewport.height;
+  const ctx = canvas.getContext("2d");
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  updateOverlay();
+}
+
+function changePage(delta) {
+  const newPage = state.currentPage + delta;
+  if (newPage >= 1 && newPage <= state.totalPages) {
+    state.currentPage = newPage;
+    renderPage(newPage);
+  }
+}
+
+function updateOverlay() {
+  const svg = document.getElementById("overlay-svg");
+  if (!svg) return;
+  svg.setAttribute("viewBox", `0 0 ${state.canvasWidth} ${state.canvasHeight}`);
+  let rects = "";
+  const extractions = getExtractions();
+  extractions.forEach((ext, i) => {
+    if (!ext.sourceRegion?.spans) return;
+    ext.sourceRegion.spans.forEach(span => {
+      if (span.page !== state.currentPage) return;
+      const b = span.bounds;
+      if (!b) return;
+      const x = b.x * state.canvasWidth, y = b.y * state.canvasHeight;
+      const w = b.w * state.canvasWidth, h = b.h * state.canvasHeight;
+      const ann = state.annotations.find(a => a.interpretationId === (ext.id || `ext-${i}`));
+      let cls = "region region-extraction";
+      if (ann) cls = `region region-${ann.verdict}`;
+      if (state.selectedExtraction === i) cls += " selected";
+      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" onclick="selectExtraction(${i})" />`;
+    });
+  });
+  if (extractions.length === 0) {
+    const gt = state.docDetail?.document?.ground_truth || [];
+    gt.forEach((field, i) => {
+      if (!field.approximateBoundingBox) return;
+      const b = field.approximateBoundingBox;
+      const x = b.x * state.canvasWidth, y = b.y * state.canvasHeight;
+      const w = b.w * state.canvasWidth, h = b.h * state.canvasHeight;
+      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-extraction" onclick="selectGTField(${i})" />`;
+    });
+  }
+  state.annotations.filter(a => a.annotationType === "discovery").forEach(a => {
+    if (!a.drawnRegion?.spans?.[0]) return;
+    const b = a.drawnRegion.spans[0].bounds;
+    const x = b.x * state.canvasWidth, y = b.y * state.canvasHeight;
+    const w = b.w * state.canvasWidth, h = b.h * state.canvasHeight;
+    rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-discovery" />`;
+  });
+  if (state.drawStart && state.drawCurrent) {
+    const x = Math.min(state.drawStart.x, state.drawCurrent.x);
+    const y = Math.min(state.drawStart.y, state.drawCurrent.y);
+    const w = Math.abs(state.drawCurrent.x - state.drawStart.x);
+    const h = Math.abs(state.drawCurrent.y - state.drawStart.y);
+    rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region-drawing" />`;
+  }
+  svg.innerHTML = rects;
+}
+
+function getExtractions() {
+  const ext = state.docDetail?.latestExtraction;
+  if (!ext?.extractions) return [];
+  return Array.isArray(ext.extractions) ? ext.extractions : [];
+}
+
+function selectExtraction(idx) {
+  if (state.tool !== "select") return;
+  setState({ selectedExtraction: state.selectedExtraction === idx ? null : idx });
+  updateOverlay();
+}
+
+function selectGTField(idx) {
+  if (state.tool !== "select") return;
+  setState({ selectedExtraction: idx });
+}
+
+// ─── Drawing ─────────────────────────────────────────────
+function initDrawListeners() {
+  const container = document.getElementById("pdf-container");
+  if (!container) return;
+  container.onmousedown = (e) => {
+    if (state.tool !== "draw") return;
+    const rect = container.getBoundingClientRect();
+    state.drawStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    state.drawCurrent = { ...state.drawStart };
+  };
+  container.onmousemove = (e) => {
+    if (!state.drawStart || state.tool !== "draw") return;
+    const rect = container.getBoundingClientRect();
+    state.drawCurrent = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    updateOverlay();
+  };
+  container.onmouseup = (e) => {
+    if (!state.drawStart || state.tool !== "draw") return;
+    const rect = container.getBoundingClientRect();
+    const end = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const x = Math.min(state.drawStart.x, end.x) / state.canvasWidth;
+    const y = Math.min(state.drawStart.y, end.y) / state.canvasHeight;
+    const w = Math.abs(end.x - state.drawStart.x) / state.canvasWidth;
+    const h = Math.abs(end.y - state.drawStart.y) / state.canvasHeight;
+    if (w > 0.01 && h > 0.005) {
+      const discovery = {
+        id: uuid(), annotationType: "discovery",
+        drawnRegion: { spans: [{ page: state.currentPage, bounds: { x, y, w, h } }] },
+        discoveredKind: "", discoveredPayload: null,
+        confusionClass: null, rationale: "", _needsDetail: true,
+      };
+      state.annotations.push(discovery);
+      setState({ selectedExtraction: null, drawStart: null, drawCurrent: null, tool: "select" });
+    } else {
+      state.drawStart = null; state.drawCurrent = null;
+    }
+    updateOverlay();
+  };
+}
+
+// ─── Annotation Actions ──────────────────────────────────
+function addVerdict(extIdx, verdict) {
+  const ext = getExtractions()[extIdx];
+  const existing = state.annotations.findIndex(a => a.interpretationId === (ext?.id || `ext-${extIdx}`));
+  const ann = {
+    id: uuid(), annotationType: "correction",
+    interpretationId: ext?.id || `ext-${extIdx}`,
+    verdict, correctedPayload: null, confusionClass: null, rationale: "", _extIdx: extIdx,
+  };
+  if (existing >= 0) state.annotations[existing] = ann;
+  else state.annotations.push(ann);
+  setState({});
+  updateOverlay();
+}
+
+function updateAnnotationField(annId, field, value) {
+  const ann = state.annotations.find(a => a.id === annId);
+  if (ann) ann[field] = value;
+}
+
+function removeAnnotation(annId) {
+  state.annotations = state.annotations.filter(a => a.id !== annId);
+  setState({});
+  updateOverlay();
+}
+
+async function submitAnnotations() {
+  if (state.annotations.length === 0) return;
+  setState({ loading: true });
+  try {
+    const payload = {
+      sessionId: state.sessionId, documentId: state.selectedDoc,
+      annotatorId: "seed-console", annotatorLevel: "L0",
+      annotations: state.annotations.map(a => ({
+        id: a.id, annotationType: a.annotationType,
+        interpretationId: a.interpretationId || null, verdict: a.verdict || null,
+        correctedPayload: a.correctedPayload || null, drawnRegion: a.drawnRegion || null,
+        discoveredKind: a.discoveredKind || null, discoveredPayload: a.discoveredPayload || null,
+        sourceRegion: a.sourceRegion || null, targetRegion: a.targetRegion || null,
+        connectionType: a.connectionType || null, confusionClass: a.confusionClass || null,
+        rationale: a.rationale || "",
+      })),
+    };
+    await api("/v1/seed/annotate-visual", { method: "POST", body: payload });
+    if (state.sessionId) {
+      await api("/v1/seed/session/complete", { method: "POST", body: { sessionId: state.sessionId, durationSeconds: 0, notes: `${state.annotations.length} annotations` } });
+    }
+    const docDetail = await api(`/v1/seed/document/${state.selectedDoc}`);
+    setState({ annotations: [], docDetail, loading: false, selectedExtraction: null, sessionId: null });
+    updateOverlay();
+  } catch (e) {
+    setState({ loading: false, error: e.message });
+  }
+}
+
+// ─── Audit Actions ───────────────────────────────────────
+async function loadAuditSessions() {
+  setState({ auditLoading: true, auditView: "sessions", selectedAuditSession: null, selectedAuditDoc: null });
+  try {
+    let sessions = await auditApi("/v1/admin/audit/sessions");
+    if (!Array.isArray(sessions)) sessions = sessions.sessions || sessions.data || [];
+    setState({ auditSessions: sessions, auditLoading: false });
+  } catch (e) {
+    setState({ auditLoading: false, error: e.message });
+  }
+}
+
+async function loadAuditSession(sessionId) {
+  setState({ auditLoading: true, auditView: "session", selectedAuditSession: sessionId, selectedAuditDoc: null });
+  try {
+    const data = await auditApi(`/v1/admin/audit/session/${sessionId}`);
+    setState({ auditSessionDetail: data, auditLoading: false });
+  } catch (e) {
+    setState({ auditLoading: false, error: e.message });
+  }
+}
+
+async function loadAuditDocument(docId) {
+  setState({ auditLoading: true, auditView: "document", selectedAuditDoc: docId, auditPageData: null, auditPageIndex: null });
+  try {
+    let doc = await auditApi(`/v1/admin/audit/document/${docId}`);
+    if (doc.document) doc = doc.document;
+    setState({ auditDocDetail: doc, auditLoading: false });
+  } catch (e) {
+    setState({ auditLoading: false, error: e.message });
+  }
+}
+
+async function loadAuditPage(docId, pageIndex) {
+  state.auditPageIndex = pageIndex;
+  state.auditPageData = null;
+  render();
+  try {
+    const data = await auditApi(`/v1/admin/audit/document/${docId}/page/${pageIndex}`);
+    setState({ auditPageData: data, auditPageIndex: pageIndex });
+  } catch (e) {
+    setState({ error: e.message });
+  }
+}
+
+// ─── Render Helpers ──────────────────────────────────────
+function badge(text, color) { return `<span class="badge badge-${color}">${text}</span>`; }
+function statusColor(s) { return { pending: "amber", ocr_complete: "blue", extracted: "purple", annotated: "green" }[s] || "gray"; }
+function statCard(label, value, color, sub) { return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="color:${color || 'var(--accent)'}">${value}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ""}</div>`; }
+function confusionClassOptions(selected) {
+  return CONFUSION_CLASSES.map(g => `<optgroup label="${g.group}">${g.classes.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join("")}</optgroup>`).join("");
+}
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ─── Views ───────────────────────────────────────────────
+function renderAuth() {
+  return `<div class="auth-wrap"><div class="auth-box">
+    <div class="auth-label">Record Health</div>
+    <div class="auth-title">ADI Console</div>
+    <div class="auth-sub">Corpus Management & Extraction Audit</div>
+    <div class="field-group">
+      <label class="field-label">Seed API Key</label>
+      <input type="password" id="auth-seed-key" class="auth-input" placeholder="ADMIN_KEY or ANNOTATOR_KEY">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Audit Admin Key</label>
+      <input type="password" id="auth-audit-key" class="auth-input" placeholder="ADI_ADMIN_KEY"
+        onkeydown="if(event.key==='Enter')doAuth(document.getElementById('auth-seed-key').value,this.value)">
+    </div>
+    ${state.error ? `<div class="error-msg">${state.error}</div>` : ""}
+    <button class="btn btn-primary btn-full" onclick="doAuth(document.getElementById('auth-seed-key').value,document.getElementById('auth-audit-key').value)">Connect</button>
+  </div></div>`;
+}
+
+function renderAuditAuth() {
+  return `<div class="auth-wrap"><div class="auth-box">
+    <div class="auth-label">Record Health</div>
+    <div class="auth-title">ADI Console</div>
+    <div class="auth-sub">Seed key cached. Enter audit admin key to continue.</div>
+    <div class="field-group">
+      <label class="field-label">Audit Admin Key</label>
+      <input type="password" id="auth-audit-only" class="auth-input" placeholder="ADI_ADMIN_KEY"
+        onkeydown="if(event.key==='Enter')doAuditAuth(this.value)">
+    </div>
+    ${state.error ? `<div class="error-msg">${state.error}</div>` : ""}
+    <button class="btn btn-primary btn-full" onclick="doAuditAuth(document.getElementById('auth-audit-only').value)">Connect</button>
+  </div></div>`;
+}
+
+function doAuditAuth(auditKey) {
+  if (!auditKey) return;
+  sessionStorage.setItem("audit_admin_key", auditKey);
+  setState({ auditKey: auditKey, error: null });
+  loadDashboard();
+}
+
+function renderHeader() {
+  const nb = (id, label, action) => `<button class="nav-btn ${state.view === id ? 'active' : ''}" onclick="${action}">${label}</button>`;
+  return `<div class="header"><div class="header-left">
+    <span class="header-brand">ADI</span><span class="header-version">v1.4</span>
+    <div style="width:1px;height:16px;background:var(--border)"></div>
+    ${nb("dashboard", "Dashboard", "setState({view:'dashboard',selectedDoc:null});loadDashboard()")}
+    ${nb("queue", "Queue", "setState({view:'queue',selectedDoc:null});loadQueue()")}
+    ${nb("audit", "Audit", "setState({view:'audit',auditView:'sessions'});loadAuditSessions()")}
+    ${nb("workspace", "Workspace", "")}
+  </div><button class="btn btn-ghost btn-xs" onclick="disconnect()">Disconnect</button></div>`;
+}
+
+function renderDashboard() {
+  if (state.loading) return `<div class="loading">Loading...</div>`;
+  const s = state.stats?.corpus || {};
+  const st = s.byStatus || {};
+  const sp = s.bySplit || {};
+  return `<div style="margin-bottom:20px"><div class="section-title">Dashboard</div><div class="section-sub">Corpus overview</div></div>
+    <div class="stat-row">${statCard("Total", s.total || 0, "var(--accent)")}${statCard("Pending", st.pending || 0, "var(--amber)")}${statCard("Extracted", st.extracted || 0, "var(--purple)")}${statCard("Annotated", st.annotated || 0, "var(--green)")}</div>
+    <div class="stat-row">${statCard("Training", sp.training || 0, "var(--text)", `${sp.validation || 0} val · ${sp.test || 0} test`)}${statCard("Annotations", state.stats?.annotations?.total || 0)}${statCard("Runs", state.stats?.extractionRuns?.total || 0)}${statCard("Augmented", s.augmented || 0, "var(--text)", `${s.original || 0} original`)}</div>
+    ${state.stats?.latestBenchmark ? `<div class="info-box">Latest benchmark: ${(state.stats.latestBenchmark.overall_accuracy * 100).toFixed(1)}% accuracy</div>` : `<div class="info-box">No benchmark runs yet</div>`}`;
+}
+
+function renderQueue() {
+  if (state.loading) return `<div class="loading">Loading...</div>`;
+  const d = state.queue;
+  const fb = (f, l) => `<button class="btn ${state.filter === f ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="setState({filter:'${f}'});loadQueue()">${l}${f !== 'all' && d?.stats?.[f] != null ? ` (${d.stats[f]})` : ''}</button>`;
+  return `<div class="queue-header"><div><div class="section-title">Queue</div><div class="section-sub">${d?.stats?.total || 0} documents</div></div>
+    <div class="filter-row">${fb("all","All")}${fb("pending","Pending")}${fb("extracted","Extracted")}${fb("annotated","Annotated")}</div></div>
+    ${!d?.documents?.length ? `<div class="queue-empty">No documents. Ingest via POST /v1/seed/ingest-document</div>` : `
+      <div class="queue-col-header"><span>ID</span><span>Category</span><span>Layout</span><span>Split</span><span>Status</span><span>Created</span></div>
+      ${d.documents.map(doc => `<div class="queue-row" onclick="openDocument('${doc.id}')">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${doc.id}</span>
+        <span>${badge(doc.document_category, "blue")}</span>
+        <span style="color:var(--text-muted);font-size:11px">${doc.layout_type}</span>
+        <span>${badge(doc.corpus_split, "gray")}</span>
+        <span>${badge(doc.annotation_status, statusColor(doc.annotation_status))}</span>
+        <span style="color:var(--text-dim);font-size:10px">${new Date(doc.created_at).toLocaleDateString()}</span>
+      </div>`).join("")}`}`;
+}
+
+// ─── Audit Views ─────────────────────────────────────────
+function renderAudit() {
+  if (state.auditView === "document") return renderAuditDocument();
+  if (state.auditView === "session") return renderAuditSession();
+  return renderAuditSessions();
+}
+
+function renderAuditSessions() {
+  if (state.auditLoading) return `<div class="loading">Loading audit sessions...</div>`;
+  const sessions = state.auditSessions || [];
+  const openCount = sessions.filter(s => !s.completed_at).length;
+  const totalDocs = sessions.reduce((sum, s) => sum + (s.document_count || 0), 0);
+
+  let html = `<div style="margin-bottom:20px"><div class="section-title">Audit Sessions</div><div class="section-sub">Extraction audit telemetry</div></div>`;
+  html += `<div class="stat-row">${statCard("Sessions", sessions.length, "var(--accent)")}${statCard("Open", openCount, "var(--amber)")}${statCard("Documents", totalDocs, "var(--purple)")}</div>`;
+
+  if (sessions.length === 0) {
+    html += `<div class="queue-empty">No audit sessions found</div>`;
+  } else {
+    html += `<div class="audit-col-header"><span>Created</span><span>Label</span><span>Docs</span><span>Status</span></div>`;
+    sessions.forEach(s => {
+      const isComplete = !!s.completed_at;
+      html += `<div class="audit-row" onclick="loadAuditSession('${s.id}')">
+        <span style="color:var(--text-dim);font-size:11px">${formatDate(s.created_at)}</span>
+        <span>${s.session_label || s.label || "—"}</span>
+        <span>${s.document_count || 0}</span>
+        <span>${isComplete ? badge("complete", "green") : badge("open", "amber")}</span>
+      </div>`;
+    });
+  }
+  return html;
+}
+
+function renderAuditSession() {
+  if (state.auditLoading) return `<div class="loading">Loading session...</div>`;
+  const data = state.auditSessionDetail;
+  if (!data) return `<div class="loading">No session data</div>`;
+  const summary = data.summary || data;
+  const documents = data.documents || [];
+
+  const tier1Display = summary.tier1_rate != null ? (summary.tier1_rate * 100).toFixed(1) + "%" : "—";
+  const tier1Color = summary.tier1_rate >= 0.8 ? "var(--green)" : summary.tier1_rate >= 0.6 ? "var(--amber)" : "var(--red)";
+  const phiCount = summary.phi_by_token_type ? Object.values(summary.phi_by_token_type).reduce((a, b) => a + b, 0) : 0;
+
+  let html = `<button class="btn btn-ghost btn-sm" onclick="loadAuditSessions()" style="margin-bottom:16px">\u2190 Sessions</button>`;
+  html += `<div style="margin-bottom:20px"><div class="section-title">Session Detail</div></div>`;
+  html += `<div class="stat-row">
+    ${statCard("Total Extractions", summary.total_extractions ?? "—", "var(--accent)")}
+    ${statCard("Tier 1 Rate", tier1Display, tier1Color)}
+    ${statCard("PHI Detections", phiCount, "var(--red)", summary.phi_by_token_type ? JSON.stringify(summary.phi_by_token_type) : "")}
+    ${statCard("Negative Regions", summary.total_negative_regions ?? "—", "var(--text-muted)")}
+  </div>`;
+
+  html += `<div style="margin-bottom:12px"><div class="section-title" style="font-size:14px">Documents</div></div>`;
+  if (documents.length === 0) {
+    html += `<div class="queue-empty">No documents in this session</div>`;
+  } else {
+    html += `<div class="audit-doc-col-header"><span>Filename</span><span>Category</span><span>Pages</span><span>T1</span><span>T2</span><span>T3</span></div>`;
+    documents.forEach(doc => {
+      html += `<div class="audit-doc-row" onclick="loadAuditDocument('${doc.id}')">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${doc.document_filename || doc.filename || "—"}</span>
+        <span>${badge(doc.document_category || doc.category || "—", "blue")}</span>
+        <span>${doc.page_count || 0}</span>
+        <span style="color:var(--green)">${doc.total_fields_accepted || 0}</span>
+        <span style="color:var(--amber)">${doc.total_fields_review || 0}</span>
+        <span style="color:var(--red)">${doc.total_fields_escalated || 0}</span>
+      </div>`;
+    });
+  }
+  return html;
+}
+
+function renderAuditDocument() {
+  if (state.auditLoading) return `<div class="loading">Loading document...</div>`;
+  const doc = state.auditDocDetail;
+  if (!doc) return `<div class="loading">No document data</div>`;
+
+  let html = `<button class="btn btn-ghost btn-sm" onclick="loadAuditSession('${state.selectedAuditSession}')" style="margin-bottom:16px">\u2190 Session</button>`;
+  html += `<div style="margin-bottom:20px"><div class="section-title">${doc.document_filename || doc.filename || "Document Detail"}</div></div>`;
+
+  html += `<div class="stat-row">
+    ${statCard("Category", doc.document_category || doc.category || "—", "var(--text)")}
+    ${statCard("Pages", doc.page_count ?? "—", "var(--accent)")}
+    ${statCard("Total Fields", doc.total_fields_extracted ?? "—", "var(--accent)")}
+    ${statCard("T1 Accepted", doc.total_fields_accepted ?? "—", "var(--green)")}
+  </div>
+  <div class="stat-row">
+    ${statCard("T2 Review", doc.total_fields_review ?? "—", "var(--amber)")}
+    ${statCard("T3 Escalated", doc.total_fields_escalated ?? "—", "var(--red)")}
+    ${statCard("Processing", doc.processing_duration_ms != null ? doc.processing_duration_ms + "ms" : "—", "var(--text-muted)")}
+    ${statCard("OCR Engine", doc.ocr_engine || "—", "var(--text-muted)")}
+  </div>`;
+
+  // Page selector
+  const pageCount = doc.page_count || 0;
+  if (pageCount > 0) {
+    html += `<div style="margin-bottom:8px"><div class="section-title" style="font-size:14px">Pages</div></div>`;
+    html += `<div class="page-selector">`;
+    for (let i = 0; i < pageCount; i++) {
+      const active = state.auditPageIndex === i ? " btn-primary" : " btn-ghost";
+      html += `<button class="btn btn-sm${active}" onclick="loadAuditPage('${state.selectedAuditDoc}',${i})">${i + 1}</button>`;
+    }
+    html += `</div>`;
+  }
+
+  // Page data
+  if (state.auditPageIndex != null) {
+    if (!state.auditPageData) {
+      html += `<div class="loading">Loading page ${state.auditPageIndex + 1}...</div>`;
+    } else {
+      const pd = state.auditPageData;
+      const sections = [
+        ["Fields", pd.fields],
+        ["PHI Detections", pd.phi],
+        ["Negative Space", pd.negative_space]
+      ];
+      sections.forEach(([label, data]) => {
+        const items = Array.isArray(data) ? data : [];
+        html += `<div class="json-section-label">${label} (${items.length})</div>`;
+        html += `<pre class="json-block">${items.length > 0 ? escapeHtml(JSON.stringify(items, null, 2)) : "[]"}</pre>`;
+      });
+    }
+  }
+  return html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ─── Workspace ───────────────────────────────────────────
+function renderWorkspace() {
+  if (state.loading && !state.docDetail) return `<div class="loading">Loading document...</div>`;
+  const doc = state.docDetail?.document;
+  if (!doc) return `<div class="loading">Document not found</div>`;
+  const hasPdf = !!doc.render_data;
+  const extractions = getExtractions();
+  const selExt = state.selectedExtraction !== null ? extractions[state.selectedExtraction] : null;
+  const gt = doc.ground_truth || [];
+  const selGT = (!selExt && state.selectedExtraction !== null) ? gt[state.selectedExtraction] : null;
+
+  let panelContent = "";
+  panelContent += `<div class="tool-bar">
+    <button class="tool-btn ${state.tool === 'select' ? 'active' : ''}" onclick="setState({tool:'select'})">⊡ Select</button>
+    <button class="tool-btn ${state.tool === 'draw' ? 'active' : ''}" onclick="setState({tool:'draw'})">✎ Draw Region</button>
+  </div>`;
+
+  if (selExt || selGT) {
+    const field = selExt || selGT;
+    const label = field.label || field.fieldType || "Unknown field";
+    const value = field.value || "—";
+    const unit = field.unit || "";
+    const conf = field.confidence != null ? `${(field.confidence * 100).toFixed(0)}%` : "—";
+    const existingAnn = selExt ? state.annotations.find(a => a.interpretationId === (selExt.id || `ext-${state.selectedExtraction}`)) : null;
+    panelContent += `<div class="ext-detail">
+      <div class="ext-detail-field">${label}</div>
+      <div class="ext-detail-value">${value} ${unit}</div>
+      <div class="ext-detail-meta">Confidence: ${conf} ${field.canonicalId ? `· ${field.canonicalId}` : ""}</div>
+      <div class="verdict-row">
+        <button class="verdict-btn ${existingAnn?.verdict === 'confirmed' ? 'v-confirmed' : ''}" onclick="addVerdict(${state.selectedExtraction},'confirmed')">✓ Confirm</button>
+        <button class="verdict-btn ${existingAnn?.verdict === 'corrected' ? 'v-corrected' : ''}" onclick="addVerdict(${state.selectedExtraction},'corrected')">✎ Correct</button>
+        <button class="verdict-btn ${existingAnn?.verdict === 'rejected' ? 'v-rejected' : ''}" onclick="addVerdict(${state.selectedExtraction},'rejected')">✗ Reject</button>
+      </div>
+      ${existingAnn?.verdict === 'corrected' ? `
+        <select class="ann-select" onchange="updateAnnotationField('${existingAnn.id}','confusionClass',this.value)">
+          <option value="">Confusion class...</option>${confusionClassOptions(existingAnn.confusionClass)}
+        </select>` : ""}
+      ${existingAnn ? `<textarea class="ann-textarea" placeholder="Rationale..." oninput="updateAnnotationField('${existingAnn.id}','rationale',this.value)">${existingAnn.rationale || ""}</textarea>` : ""}
+    </div>`;
+  } else {
+    panelContent += `<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">
+      ${extractions.length > 0 ? "Click a highlighted region to review" : "No extractions yet. Use ✎ Draw to mark regions."}
+    </div>`;
+  }
+
+  const pendingDiscoveries = state.annotations.filter(a => a.annotationType === "discovery" && a._needsDetail);
+  if (pendingDiscoveries.length > 0) {
+    panelContent += `<div style="margin-top:12px"><div class="field-label">New Discoveries</div>`;
+    pendingDiscoveries.forEach(d => {
+      panelContent += `<div class="ext-detail" style="border-color:var(--purple)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          ${badge("discovery", "purple")}
+          <button class="btn btn-ghost btn-xs" style="font-size:10px;padding:2px 8px;color:var(--red)" onclick="removeAnnotation('${d.id}')">Remove</button>
+        </div>
+        <select class="ann-select" onchange="updateAnnotationField('${d.id}','discoveredKind',this.value)">
+          <option value="">Field type...</option>
+          <option value="labValue">Lab Value</option>
+          <option value="medication">Medication</option>
+          <option value="condition">Condition</option>
+          <option value="vitalSign">Vital Sign</option>
+          <option value="procedure">Procedure</option>
+          <option value="provider">Provider</option>
+          <option value="visitDate">Visit Date</option>
+          <option value="demographic">Demographic</option>
+        </select>
+        <input class="ann-input" placeholder="Label (e.g. Glucose)" oninput="updateAnnotationField('${d.id}','_label',this.value)">
+        <input class="ann-input" placeholder="Value" oninput="updateAnnotationField('${d.id}','_value',this.value)">
+        <textarea class="ann-textarea" placeholder="Why was this missed?" oninput="updateAnnotationField('${d.id}','rationale',this.value)"></textarea>
+      </div>`;
+    });
+    panelContent += `</div>`;
+  }
+
+  const corrections = state.annotations.filter(a => a.annotationType === "correction");
+  const discoveries = state.annotations.filter(a => a.annotationType === "discovery");
+  const confirmed = corrections.filter(a => a.verdict === "confirmed").length;
+  const corrected = corrections.filter(a => a.verdict === "corrected").length;
+  const rejected = corrections.filter(a => a.verdict === "rejected").length;
+
+  if (state.annotations.length > 0) {
+    panelContent += `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <div class="field-label" style="margin-bottom:8px">Session Summary</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${confirmed > 0 ? badge(`${confirmed} confirmed`, "green") : ""}
+        ${corrected > 0 ? badge(`${corrected} corrected`, "amber") : ""}
+        ${rejected > 0 ? badge(`${rejected} rejected`, "red") : ""}
+        ${discoveries.length > 0 ? badge(`${discoveries.length} discovered`, "purple") : ""}
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitAnnotations()" ${state.loading ? 'disabled' : ''}>
+        ${state.loading ? 'Submitting...' : `Submit ${state.annotations.length} Annotation${state.annotations.length > 1 ? 's' : ''}`}
+      </button>
+    </div>`;
+  }
+
+  return `<div class="workspace">
+    <div class="pdf-pane">
+      ${state.totalPages > 1 ? `<div class="page-nav">
+        <button class="btn btn-ghost btn-xs" onclick="changePage(-1)" ${state.currentPage <= 1 ? 'disabled' : ''}>◄</button>
+        <span>Page ${state.currentPage} / ${state.totalPages}</span>
+        <button class="btn btn-ghost btn-xs" onclick="changePage(1)" ${state.currentPage >= state.totalPages ? 'disabled' : ''}>►</button>
+      </div>` : ""}
+      ${hasPdf ? `
+        <div style="display:flex;justify-content:center;padding:20px">
+          <div id="pdf-container" class="pdf-container">
+            <canvas id="pdf-canvas"></canvas>
+            <svg id="overlay-svg" class="overlay-svg"></svg>
+          </div>
+        </div>` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-dim);font-family:var(--font-mono)">No PDF attached to this document</div>`}
+    </div>
+    <div class="annotation-pane">
+      <div class="ann-panel-header">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="ann-panel-title">${doc.id}</div>
+            <div class="ann-panel-sub">${badge(doc.document_category, "blue")} ${badge(doc.annotation_status, statusColor(doc.annotation_status))} ${badge(doc.source_type || "synthetic", "gray")}</div>
+          </div>
+          <button class="btn btn-ghost btn-xs" onclick="setState({view:'queue',selectedDoc:null});loadQueue()">✕ Close</button>
+        </div>
+      </div>
+      ${panelContent}
+    </div>
+  </div>`;
+}
+
+// ─── Main Render ─────────────────────────────────────────
+function render() {
+  const app = document.getElementById("app");
+  if (!state.apiKey) { app.innerHTML = renderAuth(); document.getElementById("auth-seed-key")?.focus(); return; }
+  if (!state.auditKey) { app.innerHTML = renderAuditAuth(); document.getElementById("auth-audit-only")?.focus(); return; }
+  if (state.view === "workspace" && state.selectedDoc) {
+    app.innerHTML = `${renderHeader()}${renderWorkspace()}`;
+    setTimeout(() => { initDrawListeners(); if (state.pdfDoc) renderPage(state.currentPage); }, 50);
+    return;
+  }
+  let body;
+  if (state.view === "audit") body = renderAudit();
+  else if (state.view === "queue") body = renderQueue();
+  else body = renderDashboard();
+  app.innerHTML = `${renderHeader()}<div class="content">${body}</div>`;
+}
+
+// ─── Init ────────────────────────────────────────────────
+if (state.apiKey) { render(); loadDashboard(); } else { render(); }
+</script>
+</body>
+</html>
