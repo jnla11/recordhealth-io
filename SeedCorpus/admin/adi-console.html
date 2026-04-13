@@ -120,6 +120,7 @@
   .overlay-svg .region-rejected { fill: rgba(239,68,68,0.12); stroke: rgba(239,68,68,0.6); stroke-width: 1.5; }
   .overlay-svg .region-discovery { fill: rgba(139,92,246,0.15); stroke: rgba(139,92,246,0.8); stroke-width: 2; stroke-dasharray: 4,3; }
   .overlay-svg .region-drawing { fill: rgba(139,92,246,0.1); stroke: rgba(139,92,246,0.5); stroke-width: 1; stroke-dasharray: 3,3; }
+  .overlay-svg .region-phi { fill: rgba(239,68,68,0.12); stroke: rgba(239,68,68,0.6); stroke-width: 1.5; }
 
   /* Annotation panel sections */
   .ann-panel-header { padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
@@ -162,6 +163,7 @@
 </head>
 <body>
 <div id="app"></div>
+<script src="config.js"></script>
 <script>
 const SEED_API_BASE = "https://recordhealth-api.jason-nolte.workers.dev";
 const AUDIT_API_BASE = "https://recordhealth-api-staging.jason-nolte.workers.dev";
@@ -211,6 +213,11 @@ let state = {
   auditPageIndex: null,
   auditSessionDetail: null,
   auditLoading: false,
+  // Audit PDF viewer state (AP-9)
+  auditPdfDoc: null,
+  auditCurrentPage: 1,
+  auditCanvasWidth: 0,
+  auditCanvasHeight: 0,
 };
 
 function setState(updates) { Object.assign(state, updates); render(); }
@@ -508,7 +515,7 @@ async function loadAuditSession(sessionId) {
 }
 
 async function loadAuditDocument(docId) {
-  setState({ auditLoading: true, auditView: "document", selectedAuditDoc: docId, auditPageData: null, auditPageIndex: null });
+  setState({ auditLoading: true, auditView: "document", selectedAuditDoc: docId, auditPageData: null, auditPageIndex: null, auditPdfDoc: null, auditCurrentPage: 1, auditCanvasWidth: 0, auditCanvasHeight: 0 });
   try {
     let doc = await auditApi(`/v1/admin/audit/document/${docId}`);
     if (doc.document) doc = doc.document;
@@ -520,14 +527,89 @@ async function loadAuditDocument(docId) {
 
 async function loadAuditPage(docId, pageIndex) {
   state.auditPageIndex = pageIndex;
+  state.auditCurrentPage = pageIndex + 1;
   state.auditPageData = null;
   render();
   try {
     const data = await auditApi(`/v1/admin/audit/document/${docId}/page/${pageIndex}`);
     setState({ auditPageData: data, auditPageIndex: pageIndex });
+    if (state.auditPdfDoc) {
+      setTimeout(() => renderAuditPdfPage(pageIndex + 1), 50);
+    }
   } catch (e) {
     setState({ error: e.message });
   }
+}
+
+// ─── Audit PDF Viewer (AP-9) ────────────────────────────
+function handleAuditPdfFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function() {
+    try {
+      const pdfDoc = await pdfjsLib.getDocument({ data: reader.result }).promise;
+      state.auditPdfDoc = pdfDoc;
+      if (state.auditPageIndex != null) {
+        state.auditCurrentPage = state.auditPageIndex + 1;
+        render();
+        setTimeout(() => renderAuditPdfPage(state.auditCurrentPage), 50);
+      } else {
+        state.auditCurrentPage = 1;
+        render();
+        setTimeout(() => renderAuditPdfPage(1), 50);
+      }
+    } catch (e) { console.error("Audit PDF load error:", e); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function renderAuditPdfPage(pageNum) {
+  const pdfDoc = state.auditPdfDoc;
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageNum);
+  const scale = 1.5;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.getElementById("audit-pdf-canvas");
+  if (!canvas) return;
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  state.auditCanvasWidth = viewport.width;
+  state.auditCanvasHeight = viewport.height;
+  const ctx = canvas.getContext("2d");
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  updateAuditOverlay();
+}
+
+function updateAuditOverlay() {
+  const svg = document.getElementById("audit-overlay-svg");
+  if (!svg) return;
+  svg.setAttribute("viewBox", `0 0 ${state.auditCanvasWidth} ${state.auditCanvasHeight}`);
+  let rects = "";
+  const pd = state.auditPageData;
+  if (pd) {
+    const fields = Array.isArray(pd.fields) ? pd.fields : [];
+    fields.forEach((f, i) => {
+      const b = f.bounding_box;
+      if (!b) return;
+      const x = b.x * state.auditCanvasWidth;
+      const y = b.y * state.auditCanvasHeight;
+      const w = (b.width || b.w) * state.auditCanvasWidth;
+      const h = (b.height || b.h) * state.auditCanvasHeight;
+      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-extraction" onclick="console.log('audit field',${i},state.auditPageData.fields[${i}])" />`;
+    });
+    const phi = Array.isArray(pd.phi) ? pd.phi : [];
+    phi.forEach((p, i) => {
+      const b = p.bounding_box;
+      if (!b) return;
+      const x = b.x * state.auditCanvasWidth;
+      const y = b.y * state.auditCanvasHeight;
+      const w = (b.width || b.w) * state.auditCanvasWidth;
+      const h = (b.height || b.h) * state.auditCanvasHeight;
+      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-phi" onclick="console.log('audit phi',${i},state.auditPageData.phi[${i}])" />`;
+    });
+  }
+  svg.innerHTML = rects;
 }
 
 // ─── Render Helpers ──────────────────────────────────────
@@ -703,9 +785,10 @@ function renderAuditDocument() {
   if (state.auditLoading) return `<div class="loading">Loading document...</div>`;
   const doc = state.auditDocDetail;
   if (!doc) return `<div class="loading">No document data</div>`;
+  const docFilename = doc.document_filename || doc.filename || "Document Detail";
 
   let html = `<button class="btn btn-ghost btn-sm" onclick="loadAuditSession('${state.selectedAuditSession}')" style="margin-bottom:16px">\u2190 Session</button>`;
-  html += `<div style="margin-bottom:20px"><div class="section-title">${doc.document_filename || doc.filename || "Document Detail"}</div></div>`;
+  html += `<div style="margin-bottom:20px"><div class="section-title">${docFilename}</div></div>`;
 
   html += `<div class="stat-row">
     ${statCard("Category", doc.document_category || doc.category || "—", "var(--text)")}
@@ -720,6 +803,23 @@ function renderAuditDocument() {
     ${statCard("OCR Engine", doc.ocr_engine || "—", "var(--text-muted)")}
   </div>`;
 
+  // PDF file picker (AP-9)
+  html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="field-label" style="margin-bottom:4px">Load Source PDF</div>
+        <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono)">Match: ${escapeHtml(docFilename)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${state.auditPdfDoc ? `<span class="badge badge-green">PDF loaded (${state.auditPdfDoc.numPages} pages)</span>` : ""}
+        <label class="btn btn-ghost btn-sm" style="margin:0;cursor:pointer">
+          ${state.auditPdfDoc ? "Replace PDF" : "Choose File"}
+          <input type="file" accept=".pdf" onchange="handleAuditPdfFile(this)" style="display:none">
+        </label>
+      </div>
+    </div>
+  </div>`;
+
   // Page selector
   const pageCount = doc.page_count || 0;
   if (pageCount > 0) {
@@ -730,6 +830,24 @@ function renderAuditDocument() {
       html += `<button class="btn btn-sm${active}" onclick="loadAuditPage('${state.selectedAuditDoc}',${i})">${i + 1}</button>`;
     }
     html += `</div>`;
+  }
+
+  // Legend (AP-9)
+  html += `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);margin-bottom:16px;display:flex;gap:16px;align-items:center">
+    <span><span style="display:inline-block;width:10px;height:10px;background:rgba(59,130,246,0.5);border:1px solid rgba(59,130,246,0.8);border-radius:2px;vertical-align:middle;margin-right:4px"></span>Fields</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:rgba(239,68,68,0.5);border:1px solid rgba(239,68,68,0.8);border-radius:2px;vertical-align:middle;margin-right:4px"></span>PHI</span>
+  </div>`;
+
+  // PDF viewer + overlay (AP-9)
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    html += `<div style="background:#1a1a2e;border:1px solid var(--border);border-radius:8px;overflow:auto;margin-bottom:16px">
+      <div style="display:flex;justify-content:center;padding:20px">
+        <div class="pdf-container">
+          <canvas id="audit-pdf-canvas"></canvas>
+          <svg id="audit-overlay-svg" class="overlay-svg"></svg>
+        </div>
+      </div>
+    </div>`;
   }
 
   // Page data
@@ -896,6 +1014,19 @@ function render() {
   else if (state.view === "queue") body = renderQueue();
   else body = renderDashboard();
   app.innerHTML = `${renderHeader()}<div class="content">${body}</div>`;
+  if (state.view === "audit" && state.auditView === "document" && state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => renderAuditPdfPage(state.auditPageIndex + 1), 50);
+  }
+}
+
+// ─── Config Injection ────────────────────────────────────
+if (window.ADI_CONFIG?.seedKey) {
+  state.apiKey = window.ADI_CONFIG.seedKey;
+  localStorage.setItem("seed_api_key", state.apiKey);
+}
+if (window.ADI_CONFIG?.auditKey) {
+  state.auditKey = window.ADI_CONFIG.auditKey;
+  sessionStorage.setItem("audit_admin_key", state.auditKey);
 }
 
 // ─── Init ────────────────────────────────────────────────
