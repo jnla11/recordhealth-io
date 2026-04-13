@@ -527,14 +527,14 @@ async function loadAuditDocument(docId) {
 
 async function loadAuditPage(docId, pageIndex) {
   state.auditPageIndex = pageIndex;
-  state.auditCurrentPage = pageIndex + 1;
+  state.auditCurrentPage = pageIndex;
   state.auditPageData = null;
   render();
   try {
     const data = await auditApi(`/v1/admin/audit/document/${docId}/page/${pageIndex}`);
     setState({ auditPageData: data, auditPageIndex: pageIndex });
     if (state.auditPdfDoc) {
-      setTimeout(() => renderAuditPdfPage(pageIndex + 1), 50);
+      setTimeout(() => renderAuditPdfPage(pageIndex), 50);
     }
   } catch (e) {
     setState({ error: e.message });
@@ -551,7 +551,7 @@ function handleAuditPdfFile(input) {
       const pdfDoc = await pdfjsLib.getDocument({ data: reader.result }).promise;
       state.auditPdfDoc = pdfDoc;
       if (state.auditPageIndex != null) {
-        state.auditCurrentPage = state.auditPageIndex + 1;
+        state.auditCurrentPage = state.auditPageIndex;
         render();
         setTimeout(() => renderAuditPdfPage(state.auditCurrentPage), 50);
       } else {
@@ -826,8 +826,9 @@ function renderAuditDocument() {
     html += `<div style="margin-bottom:8px"><div class="section-title" style="font-size:14px">Pages</div></div>`;
     html += `<div class="page-selector">`;
     for (let i = 0; i < pageCount; i++) {
-      const active = state.auditPageIndex === i ? " btn-primary" : " btn-ghost";
-      html += `<button class="btn btn-sm${active}" onclick="loadAuditPage('${state.selectedAuditDoc}',${i})">${i + 1}</button>`;
+      const pageNum = i + 1;
+      const active = state.auditPageIndex === pageNum ? " btn-primary" : " btn-ghost";
+      html += `<button class="btn btn-sm${active}" onclick="loadAuditPage('${state.selectedAuditDoc}',${pageNum})">${pageNum}</button>`;
     }
     html += `</div>`;
   }
@@ -853,7 +854,7 @@ function renderAuditDocument() {
   // Page data
   if (state.auditPageIndex != null) {
     if (!state.auditPageData) {
-      html += `<div class="loading">Loading page ${state.auditPageIndex + 1}...</div>`;
+      html += `<div class="loading">Loading page ${state.auditPageIndex}...</div>`;
     } else {
       const pd = state.auditPageData;
       const sections = [
@@ -1015,7 +1016,7 @@ function render() {
   else body = renderDashboard();
   app.innerHTML = `${renderHeader()}<div class="content">${body}</div>`;
   if (state.view === "audit" && state.auditView === "document" && state.auditPdfDoc && state.auditPageIndex != null) {
-    setTimeout(() => renderAuditPdfPage(state.auditPageIndex + 1), 50);
+    setTimeout(() => renderAuditPdfPage(state.auditPageIndex), 50);
   }
 }
 
