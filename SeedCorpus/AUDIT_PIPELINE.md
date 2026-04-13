@@ -478,10 +478,118 @@ Consistent with FUNCTION_DISTINCTION.md section 8.2.
 
 ---
 
+## AP-10a Addendum — sendFields() payload conventions
+
+These rules apply to the iOS `AuditService.sendFields()` payload and the
+corresponding `audit_fields` rows. They resolve column-name and type
+mismatches between the iOS extraction model and the Neon schema.
+
+### Tier numbering
+
+`tier_assigned` is an INT derived from `ReviewTier.tierNumber`:
+
+| ReviewTier         | tier_assigned |
+|--------------------|---------------|
+| `autoAccept`       | 1             |
+| `smartReview`      | 2             |
+| `explicitApproval` | 3             |
+
+Lower numbers = less friction. Any rename or reordering of `ReviewTier`
+cases requires a coordinated Neon migration before the iOS change ships.
+
+### Extraction pass coverage
+
+`extraction_pass` is hardcoded `"pass2"` for every field leaving
+`sendFields()`. The current pipeline only routes AI Pass 2 output
+(`AIExtractionService.extract`) through `TierAssignmentService`, so every
+item reaching the audit payload is by construction a Pass 2 field.
+
+**Not yet covered by the audit:**
+
+- Regex clinical suggestions emitted by `UnifiedExtractor` in
+  `RecordIngestPipeline.run()` step 4. These go directly to
+  `PendingInterpretationStore` and never flow through `sendFields()`.
+- FHIR-sourced imports (`ExtractionMethod.fhirImport`).
+- Manually annotated items from `RecordAnnotationView`
+  (`ExtractionMethod.userManual`).
+- Reconciliation `corroborations` (written directly to `FactStore` as new
+  `FactInterpretation`s, never entering `PendingInterpretation`).
+- Reconciliation `duplicates` (dropped entirely).
+
+A follow-on sprint should decide which of these belong in the audit and
+either plumb them through `sendFields()` or give them a dedicated endpoint.
+
+### source_text_length and word_count
+
+Both scalars are computed on the **tokenized** `sourceText` that the iOS
+side holds at audit time. PHI placeholders (`{{PHI:DATE:date1}}`,
+`{{PHI:PROVIDER:dr2}}`, etc.) are longer than the underlying values they
+replace, so both counts are slightly inflated relative to the original
+document text. This is intentional: detokenizing for measurement would
+pull PHI into a code path whose output then leaves the device. Dashboards
+consuming these columns should treat them as analytic approximations, not
+as exact document metrics.
+
+### was_reconciled semantics
+
+`was_reconciled = true` means the field was classified as a near-match
+against an existing FactStore entry by `EntityReconciliationService` and
+merged with the user's prior knowledge rather than entering as a fresh
+atom. `false` means the field is a new atom with no prior corroboration.
+
+**Reconciliation outcomes NOT currently expressed in the audit:**
+- `corroborations` — strong matches written directly to FactStore.
+  Invisible to the audit. See coverage gap above.
+- `duplicates` — exact-match drops. Invisible to the audit.
+
+### bounding_box shape
+
+`bounding_box` is a JSONB object with a single top-level key `spans`, an
+array of per-span dictionaries. Each span carries the union rect for the
+full sourceText region and — when AP-10a value-narrowing succeeds — a
+narrower rect around the `proposedValue` subset of the span's wordRects:
+
+```
+{
+  "spans": [
+    {
+      "page": 2,
+      "x": 0.12, "y": 0.34, "width": 0.50, "height": 0.03,
+      "value_x": 0.18, "value_y": 0.34, "value_width": 0.07, "value_height": 0.03
+    }
+  ]
+}
+```
+
+- `x/y/width/height` (full-span bounds) are always present.
+- `value_x/value_y/value_width/value_height` are **only present** when
+  the matcher located `proposedValue` inside that span's wordRects.
+- **`valueBounds == nil` is not an error.** It means the value could not
+  be located within the span (e.g. AI truncation, date format drift,
+  numeric ambiguity across line). Dashboards should fall back to the
+  full-span bounds in that case.
+- `page_index` (the INT column) is populated from `spans[0].page` as a
+  convenience index for the tab-panel query. Multi-page items lose
+  later spans from the column-level filter — the authoritative page
+  list lives inside `bounding_box.spans[*].page`.
+
+### Keys dropped from the payload
+
+The following keys used to appear in the pre-AP-10a payload and are
+**no longer sent**:
+
+- `value`, `source_text` — PHI-adjacent; the audit must never receive
+  raw extracted values or source strings.
+- `tier_reason`, `status`, `kind`, `tier`, `extraction_method` —
+  superseded by the renamed/retyped columns above.
+
+---
+
 *End of document.*
 
-*Document version 1.0. Governs the superuser extraction audit pipeline.
-All sprint prompts implementing audit components must reference the relevant
-sections of this document. Schema changes require this document to be updated
-before implementation begins. PHI boundary (section 2) is a hard constraint
-on all implementations — no exceptions.*
+*Document version 1.1 (AP-10a addendum). Governs the superuser
+extraction audit pipeline. All sprint prompts implementing audit
+components must reference the relevant sections of this document.
+Schema changes require this document to be updated before
+implementation begins. PHI boundary (section 2) is a hard
+constraint on all implementations — no exceptions.*
