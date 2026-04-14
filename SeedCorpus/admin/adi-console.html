@@ -159,6 +159,78 @@
   /* Page nav */
   .page-nav { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
   .page-nav span { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); }
+
+  /* ─── AP-10c — Audit Split Pane ─── */
+  .adi-split { display: flex; height: calc(100vh - 48px); overflow: hidden; }
+  .adi-pdf-pane { flex: 0 0 60%; background: #1a1a2e; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
+  .adi-right-pane { flex: 1; background: var(--bg); display: flex; flex-direction: column; min-width: 0; }
+  .adi-pdf-topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); gap: 12px; flex-shrink: 0; }
+  .adi-pdf-topbar .doc-title { font-size: 12px; font-family: var(--font-mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 30%; min-width: 0; }
+  .adi-page-nav { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0; }
+  .adi-zoom { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0; }
+  .adi-zoom-btn { width: 24px; height: 24px; border-radius: 4px; background: transparent; border: 1px solid var(--border); color: var(--text); cursor: pointer; font-family: var(--font-mono); font-size: 14px; line-height: 1; padding: 0; }
+  .adi-zoom-btn:hover:not(:disabled) { background: var(--surface-hover); }
+  .adi-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .adi-canvas-area { flex: 1; overflow: auto; padding: 20px; touch-action: none; }
+  .adi-canvas-area .pdf-container { margin: 0 auto; }
+  .adi-empty-prompt { color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; text-align: center; padding: 60px 20px; }
+
+  .adi-right-topbar { display: flex; align-items: center; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .adi-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .adi-tab-btn { flex: 1; padding: 10px 14px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; font-weight: 500; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; }
+  .adi-tab-btn:hover { color: var(--text); }
+  .adi-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--bg); }
+  .adi-tab-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+  /* Session detail cards */
+  .adi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .adi-card-title { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .adi-kv { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; font-family: var(--font-mono); }
+  .adi-kv .k { color: var(--text-muted); }
+  .adi-kv .v { color: var(--text); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+
+  /* Fields & PHI list */
+  .adi-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 4px; }
+  .adi-list-title { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .adi-filter-row { display: flex; align-items: center; gap: 6px; padding: 8px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+  .adi-filter-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .adi-filter-select { padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 11px; outline: none; }
+  .adi-field-row { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; font-family: var(--font-mono); font-size: 11px; cursor: pointer; }
+  .adi-field-row:hover { background: var(--surface-hover); border-color: var(--border-active); }
+  .adi-field-row.selected { background: var(--surface-hover); border-color: var(--accent); }
+  .adi-field-row .type-badge { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0; }
+  .adi-field-row .type-badge.clinical { background: #3b82f626; color: #60a5fa; border: 1px solid #3b82f640; }
+  .adi-field-row .type-badge.temporal { background: #8b5cf626; color: #a78bfa; border: 1px solid #8b5cf640; }
+  .adi-field-row .type-badge.provider { background: #f59e0b26; color: #fbbf24; border: 1px solid #f59e0b40; }
+  .adi-field-row .kind { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .adi-field-row .conf { color: var(--text-muted); font-size: 10px; flex-shrink: 0; }
+  .adi-field-row .tier { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; flex-shrink: 0; }
+  .adi-field-row .tier.t1 { background: var(--green-bg); color: var(--green); border: 1px solid #10b98140; }
+  .adi-field-row .tier.t2 { background: var(--amber-bg); color: var(--amber); border: 1px solid #f59e0b40; }
+  .adi-field-row .tier.t3 { background: var(--red-bg); color: var(--red); border: 1px solid #ef444440; }
+  .adi-phi-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+  .adi-phi-placeholder { color: var(--text-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; max-width: 40%; }
+
+  /* Detail view */
+  .adi-back { padding: 6px 12px; border-radius: 5px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; cursor: pointer; margin-bottom: 14px; }
+  .adi-back:hover { color: var(--text); border-color: var(--text-muted); }
+  .adi-title { font-size: 15px; font-weight: 600; font-family: var(--font-mono); color: var(--text); margin-bottom: 14px; word-break: break-all; }
+  .adi-title.muted { color: var(--text-muted); font-style: italic; font-weight: 500; margin-bottom: 2px; }
+  .adi-subtitle { font-size: 18px; font-weight: 600; font-family: var(--font-mono); color: var(--accent); margin: 0 0 14px; word-break: break-all; line-height: 1.3; }
+  .adi-note { padding: 10px 12px; background: var(--amber-bg); border: 1px solid #f59e0b40; border-radius: 6px; color: var(--amber); font-size: 11px; font-family: var(--font-mono); margin-bottom: 14px; line-height: 1.55; }
+  .adi-placeholder { padding: 14px 16px; background: var(--surface); border: 1px dashed var(--border); border-radius: 6px; color: var(--text-dim); font-size: 11px; font-family: var(--font-mono); text-align: center; }
+
+  /* Overlay boxes */
+  .adi-overlay rect { transition: opacity 0.12s ease; pointer-events: all; cursor: pointer; }
+  .adi-overlay .box-field { fill: rgba(59,130,246,0.12); stroke: rgba(59,130,246,0.65); stroke-width: 1.5; }
+  .adi-overlay .box-field.dim { fill: rgba(59,130,246,0.025); stroke: rgba(59,130,246,0.2); }
+  .adi-overlay .box-field.sel { fill: rgba(59,130,246,0.3); stroke: #60a5fa; stroke-width: 2.5; }
+  .adi-overlay .box-field-val { fill: rgba(59,130,246,0.22); stroke: rgba(59,130,246,0.95); stroke-width: 1; }
+  .adi-overlay .box-field-val.dim { fill: rgba(59,130,246,0.05); stroke: rgba(59,130,246,0.25); }
+  .adi-overlay .box-field-val.sel { fill: rgba(59,130,246,0.45); stroke: #93c5fd; stroke-width: 1.5; }
+  .adi-overlay .box-phi { fill: rgba(239,68,68,0.12); stroke: rgba(239,68,68,0.7); stroke-width: 1.5; }
+  .adi-overlay .box-phi.dim { fill: rgba(239,68,68,0.025); stroke: rgba(239,68,68,0.22); }
+  .adi-overlay .box-phi.sel { fill: rgba(239,68,68,0.32); stroke: #fca5a5; stroke-width: 2.5; }
 </style>
 </head>
 <body>
@@ -218,6 +290,20 @@ let state = {
   auditCurrentPage: 1,
   auditCanvasWidth: 0,
   auditCanvasHeight: 0,
+  // AP-10c — audit split pane
+  auditTab: "detail",              // "detail" | "fields" | "phi"
+  auditFieldFilter: "all",         // "all" | "clinical" | "temporal" | "provider"
+  auditFieldView: "list",          // "list" | "detail"
+  auditPhiView: "list",            // "list" | "detail"
+  auditSelectedField: null,        // index into filtered list
+  auditSelectedPhi: null,          // index into deduped list
+  auditPhiBoxes: null,             // from /phi-boxes/:n
+  auditPdfScale: 1.0,              // 0.5–3.0
+  auditRenderTask: null,           // pdf.js RenderTask
+  // Local PDF text extraction cache — null=loading, string=found, false=no match.
+  // Cleared on selection/page change so stale values don't leak between records.
+  auditFieldExtractedValue: null,
+  auditPhiExtractedValue: null,
 };
 
 function setState(updates) { Object.assign(state, updates); render(); }
@@ -515,11 +601,22 @@ async function loadAuditSession(sessionId) {
 }
 
 async function loadAuditDocument(docId) {
-  setState({ auditLoading: true, auditView: "document", selectedAuditDoc: docId, auditPageData: null, auditPageIndex: null, auditPdfDoc: null, auditCurrentPage: 1, auditCanvasWidth: 0, auditCanvasHeight: 0 });
+  setState({
+    auditLoading: true, auditView: "document", selectedAuditDoc: docId,
+    auditPageData: null, auditPageIndex: null, auditPhiBoxes: null,
+    auditPdfDoc: null, auditCurrentPage: 1, auditCanvasWidth: 0, auditCanvasHeight: 0,
+    auditTab: "detail", auditFieldView: "list", auditPhiView: "list",
+    auditSelectedField: null, auditSelectedPhi: null,
+    auditFieldFilter: "all", auditPdfScale: 1.0, auditRenderTask: null,
+    auditFieldExtractedValue: null, auditPhiExtractedValue: null,
+  });
   try {
     let doc = await auditApi(`/v1/admin/audit/document/${docId}`);
     if (doc.document) doc = doc.document;
     setState({ auditDocDetail: doc, auditLoading: false });
+    if ((doc.page_count || 0) >= 1) {
+      loadAuditPage(docId, 1);
+    }
   } catch (e) {
     setState({ auditLoading: false, error: e.message });
   }
@@ -529,10 +626,21 @@ async function loadAuditPage(docId, pageIndex) {
   state.auditPageIndex = pageIndex;
   state.auditCurrentPage = pageIndex;
   state.auditPageData = null;
+  state.auditPhiBoxes = null;
+  state.auditSelectedField = null;
+  state.auditSelectedPhi = null;
+  state.auditFieldView = "list";
+  state.auditPhiView = "list";
+  state.auditFieldExtractedValue = null;
+  state.auditPhiExtractedValue = null;
   render();
   try {
-    const data = await auditApi(`/v1/admin/audit/document/${docId}/page/${pageIndex}`);
-    setState({ auditPageData: data, auditPageIndex: pageIndex });
+    const [pageData, phiData] = await Promise.all([
+      auditApi(`/v1/admin/audit/document/${docId}/page/${pageIndex}`),
+      auditApi(`/v1/admin/audit/document/${docId}/phi-boxes/${pageIndex}`)
+        .catch(err => { console.warn("phi-boxes fetch failed:", err.message); return { phi_boxes: [] }; }),
+    ]);
+    setState({ auditPageData: pageData, auditPhiBoxes: phiData, auditPageIndex: pageIndex });
     if (state.auditPdfDoc) {
       setTimeout(() => renderAuditPdfPage(pageIndex), 50);
     }
@@ -550,6 +658,14 @@ function handleAuditPdfFile(input) {
     try {
       const pdfDoc = await pdfjsLib.getDocument({ data: reader.result }).promise;
       state.auditPdfDoc = pdfDoc;
+      // If user already opened a field/phi detail before loading the PDF, the
+      // extraction was stubbed out — retry it now that we have the text layer.
+      if (state.auditFieldView === "detail" && state.auditSelectedField != null) {
+        state.auditFieldExtractedValue = null;
+      }
+      if (state.auditPhiView === "detail" && state.auditSelectedPhi != null) {
+        state.auditPhiExtractedValue = null;
+      }
       if (state.auditPageIndex != null) {
         state.auditCurrentPage = state.auditPageIndex;
         render();
@@ -559,6 +675,8 @@ function handleAuditPdfFile(input) {
         render();
         setTimeout(() => renderAuditPdfPage(1), 50);
       }
+      if (state.auditFieldView === "detail") runAuditFieldExtraction();
+      if (state.auditPhiView === "detail") runAuditPhiExtraction();
     } catch (e) { console.error("Audit PDF load error:", e); }
   };
   reader.readAsArrayBuffer(file);
@@ -567,8 +685,17 @@ function handleAuditPdfFile(input) {
 async function renderAuditPdfPage(pageNum) {
   const pdfDoc = state.auditPdfDoc;
   if (!pdfDoc) return;
+  // Hardened cancel — rapid setState/zoom/page-change bursts were still racing
+  // through task.cancel() without fully tearing down the prior canvas ctx,
+  // producing "Cannot use the same canvas during multiple render() operations".
+  // Cancel, null out, yield 50ms for pdf.js to finish unwinding, then proceed.
+  if (state.auditRenderTask) {
+    try { state.auditRenderTask.cancel(); } catch (_) {}
+    state.auditRenderTask = null;
+    await new Promise(r => setTimeout(r, 50));
+  }
   const page = await pdfDoc.getPage(pageNum);
-  const scale = 1.5;
+  const scale = 1.5 * (state.auditPdfScale || 1);
   const viewport = page.getViewport({ scale });
   const canvas = document.getElementById("audit-pdf-canvas");
   if (!canvas) return;
@@ -577,39 +704,283 @@ async function renderAuditPdfPage(pageNum) {
   state.auditCanvasWidth = viewport.width;
   state.auditCanvasHeight = viewport.height;
   const ctx = canvas.getContext("2d");
-  await page.render({ canvasContext: ctx, viewport }).promise;
+  const task = page.render({ canvasContext: ctx, viewport });
+  state.auditRenderTask = task;
+  try {
+    await task.promise;
+  } catch (e) {
+    // pdf.js throws RenderingCancelledException when cancel() is called — ignore it.
+    if (e && e.name !== "RenderingCancelledException") console.error("audit PDF render:", e);
+    return;
+  } finally {
+    if (state.auditRenderTask === task) state.auditRenderTask = null;
+  }
   updateAuditOverlay();
+}
+
+// AP-10c — extract span list from new or legacy bounding_box shape
+function extractBoxSpans(bb) {
+  if (!bb) return [];
+  if (Array.isArray(bb.spans)) return bb.spans;
+  if (bb.x != null) {
+    return [{ page: bb.page || 1, x: bb.x, y: bb.y, width: bb.width ?? bb.w, height: bb.height ?? bb.h }];
+  }
+  return [];
+}
+
+// PHI records from the /phi-boxes/:n endpoint carry the box under
+// `field_bounding_box`; other shapes use `bounding_box`. Always read through
+// this helper so both are handled identically.
+function extractPhiBoxSpans(p) {
+  if (!p) return [];
+  return extractBoxSpans(p.field_bounding_box ?? p.bounding_box);
+}
+
+function getFilteredAuditFields() {
+  const fields = Array.isArray(state.auditPageData?.fields) ? state.auditPageData.fields : [];
+  const filter = state.auditFieldFilter || "all";
+  if (filter === "all") return fields;
+  return fields.filter(f => {
+    const ft = (f.field_type || f.fieldType || "").toLowerCase();
+    return ft === filter;
+  });
 }
 
 function updateAuditOverlay() {
   const svg = document.getElementById("audit-overlay-svg");
   if (!svg) return;
-  svg.setAttribute("viewBox", `0 0 ${state.auditCanvasWidth} ${state.auditCanvasHeight}`);
+  // FIX 2 — read canvas dimensions live from the DOM so zoom changes are reflected
+  // immediately. Also explicitly set width/height attrs on the SVG so it physically
+  // matches the canvas (not just the viewBox — CSS 100%/100% can lag one frame).
+  const canvas = document.getElementById("audit-pdf-canvas");
+  if (!canvas) { svg.innerHTML = ""; return; }
+  const W = canvas.width;
+  const H = canvas.height;
+  if (!W || !H) { svg.innerHTML = ""; return; }
+  svg.setAttribute("width", W);
+  svg.setAttribute("height", H);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const tab = state.auditTab || "detail";
+  if (tab !== "fields" && tab !== "phi") { svg.innerHTML = ""; return; }
+
   let rects = "";
-  const pd = state.auditPageData;
-  if (pd) {
-    const fields = Array.isArray(pd.fields) ? pd.fields : [];
+  const curPage = state.auditCurrentPage || state.auditPageIndex || 1;
+
+  if (tab === "fields") {
+    const fields = getFilteredAuditFields();
+    const selIdx = state.auditSelectedField;
+    const dim = selIdx != null;
     fields.forEach((f, i) => {
-      const b = f.bounding_box;
-      if (!b) return;
-      const x = b.x * state.auditCanvasWidth;
-      const y = b.y * state.auditCanvasHeight;
-      const w = (b.width || b.w) * state.auditCanvasWidth;
-      const h = (b.height || b.h) * state.auditCanvasHeight;
-      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-extraction" onclick="console.log('audit field',${i},state.auditPageData.fields[${i}])" />`;
-    });
-    const phi = Array.isArray(pd.phi) ? pd.phi : [];
-    phi.forEach((p, i) => {
-      const b = p.bounding_box;
-      if (!b) return;
-      const x = b.x * state.auditCanvasWidth;
-      const y = b.y * state.auditCanvasHeight;
-      const w = (b.width || b.w) * state.auditCanvasWidth;
-      const h = (b.height || b.h) * state.auditCanvasHeight;
-      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="region region-phi" onclick="console.log('audit phi',${i},state.auditPageData.phi[${i}])" />`;
+      const spans = extractBoxSpans(f.bounding_box);
+      spans.forEach(sp => {
+        // Accept span-level, record-level, or default to current page
+        // (page data endpoint is already page-scoped).
+        const spanPage = sp.page ?? f.page ?? curPage;
+        if (spanPage !== curPage) return;
+        const x = (sp.x || 0) * W;
+        const y = (sp.y || 0) * H;
+        const w = (sp.width ?? sp.w ?? 0) * W;
+        const h = (sp.height ?? sp.h ?? 0) * H;
+        let cls = "box-field";
+        if (selIdx === i) cls += " sel";
+        else if (dim) cls += " dim";
+        rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" onclick="selectAuditField(${i})"/>`;
+        if (sp.value_x != null) {
+          const vx = sp.value_x * W;
+          const vy = (sp.value_y || 0) * H;
+          const vw = (sp.value_width ?? sp.value_w ?? 0) * W;
+          const vh = (sp.value_height ?? sp.value_h ?? 0) * H;
+          let vcls = "box-field-val";
+          if (selIdx === i) vcls += " sel";
+          else if (dim) vcls += " dim";
+          rects += `<rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" class="${vcls}" onclick="selectAuditField(${i})"/>`;
+        }
+      });
     });
   }
+
+  if (tab === "phi") {
+    // PHI records from /phi-boxes/:n carry their bbox under `field_bounding_box`;
+    // extractPhiBoxSpans handles both that shape and the legacy `bounding_box`.
+    const phi = getDedupedPhiBoxes();
+    const selIdx = state.auditSelectedPhi;
+    const dim = selIdx != null;
+    phi.forEach((p, i) => {
+      const spans = extractPhiBoxSpans(p);
+      spans.forEach(sp => {
+        // phi-boxes endpoint is already page-scoped, so page may be missing
+        // from the span. Fall back to the record's page, then to current page.
+        const spanPage = sp.page ?? p.page ?? curPage;
+        if (spanPage !== curPage) return;
+        const x = (sp.x || 0) * W;
+        const y = (sp.y || 0) * H;
+        const w = (sp.width ?? sp.w ?? 0) * W;
+        const h = (sp.height ?? sp.h ?? 0) * H;
+        let cls = "box-phi";
+        if (selIdx === i) cls += " sel";
+        else if (dim) cls += " dim";
+        rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" onclick="selectAuditPhi(${i})"/>`;
+      });
+    });
+  }
+
   svg.innerHTML = rects;
+}
+
+function getDedupedPhiBoxes() {
+  const raw = state.auditPhiBoxes;
+  let arr;
+  if (Array.isArray(raw)) arr = raw;
+  else if (Array.isArray(raw?.phi_boxes)) arr = raw.phi_boxes;
+  else if (Array.isArray(raw?.phi)) arr = raw.phi;
+  else arr = [];
+
+  const map = new Map();
+  let anon = 0;
+  arr.forEach(p => {
+    const id = p.field_id ?? p.fieldId ?? p.id ?? `__anon_${anon++}`;
+    if (!map.has(id)) {
+      map.set(id, p);
+    } else {
+      const existing = map.get(id);
+      // Write merged spans into field_bounding_box so subsequent reads via
+      // extractPhiBoxSpans (which prefers field_bounding_box) see the union.
+      const merged = {
+        ...existing,
+        field_bounding_box: { spans: extractPhiBoxSpans(existing).concat(extractPhiBoxSpans(p)) },
+        bounding_box: undefined,
+      };
+      map.set(id, merged);
+    }
+  });
+  return Array.from(map.values());
+}
+
+// ─── AP-10c — Local PDF text extraction (no network) ─────
+// Uses PDF.js getTextContent() to pull the text that visually lives inside the
+// normalized bbox spans for a field or PHI detection. The source PDF is already
+// loaded client-side (state.auditPdfDoc) so no PHI ever leaves the browser.
+async function extractTextFromBounds(pageNum, spans) {
+  const pdf = state.auditPdfDoc;
+  if (!pdf || !Array.isArray(spans) || spans.length === 0) return null;
+  try {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const viewport = page.getViewport({ scale: 1.0 });
+    const W = viewport.width;
+    const H = viewport.height;
+
+    const matched = [];
+    for (const item of textContent.items) {
+      if (!item.str || !item.str.trim()) continue;
+      // PDF.js text items carry [scaleX, skewY, skewX, scaleY, tx, ty] in item.transform.
+      // PDF origin is bottom-left; normalize to top-left 0-1 so it matches the
+      // audit record's bounding_box coordinate space.
+      const tx = item.transform[4] / W;
+      const ty = 1 - (item.transform[5] / H);
+      for (const span of spans) {
+        // Tight value bounds only — never fall back to the full span rectangle,
+        // which would pull in surrounding label/header text and bloat the result.
+        // A span without value_* coordinates contributes nothing to the match.
+        if (span.value_x == null) continue;
+        const x = span.value_x;
+        const y = span.value_y;
+        const w = span.value_width;
+        const h = span.value_height;
+        if (y == null || w == null || h == null) continue;
+        // 1% slack to tolerate minor coordinate drift between OCR and PDF text layer.
+        if (tx >= x - 0.01 && tx <= x + w + 0.01 &&
+            ty >= y - 0.01 && ty <= y + h + 0.01) {
+          matched.push(item.str);
+          break;
+        }
+      }
+    }
+    return matched.length > 0 ? matched.join(' ').trim() : null;
+  } catch (e) {
+    console.warn("[AP-10c] extractTextFromBounds failed:", e && e.message);
+    return null;
+  }
+}
+
+async function runAuditFieldExtraction() {
+  const idx = state.auditSelectedField;
+  if (idx == null) return;
+  const fields = getFilteredAuditFields();
+  const f = fields[idx];
+  if (!f) return;
+  const pageNum = state.auditCurrentPage || state.auditPageIndex || 1;
+  const allSpans = extractBoxSpans(f.bounding_box);
+  const pageSpans = allSpans.filter(sp => (sp.page ?? f.page ?? pageNum) === pageNum);
+  if (pageSpans.length === 0) {
+    state.auditFieldExtractedValue = false;
+    patchAuditFieldValueSlot(f);
+    return;
+  }
+  const value = await extractTextFromBounds(pageNum, pageSpans);
+  // Guard: user may have navigated away while we were awaiting.
+  if (state.auditSelectedField !== idx || state.auditFieldView !== "detail") return;
+  state.auditFieldExtractedValue = value || false;
+  patchAuditFieldValueSlot(f);
+}
+
+function patchAuditFieldValueSlot(f) {
+  const slot = document.getElementById("audit-field-value-slot");
+  if (!slot) return;
+  const v = state.auditFieldExtractedValue;
+  const kind = f.entity_kind || f.entityKind || f.kind || '—';
+  if (v === null) {
+    slot.innerHTML =
+      `<div class="adi-title muted">Extracted value</div>
+       <div class="adi-subtitle" style="color:var(--text-dim)">Extracting from PDF…</div>`;
+  } else if (typeof v === "string" && v.length > 0) {
+    slot.innerHTML =
+      `<div class="adi-title muted">Extracted value</div>
+       <div class="adi-subtitle" style="color:var(--green)">${escapeHtml(v)}</div>`;
+  } else {
+    slot.innerHTML =
+      `<div class="adi-title muted">Extracted value</div>
+       <div class="adi-subtitle">${escapeHtml(String(kind))}</div>
+       <div class="adi-note">Extracted value not stored in audit record. See highlighted region on document.</div>`;
+  }
+}
+
+async function runAuditPhiExtraction() {
+  const idx = state.auditSelectedPhi;
+  if (idx == null) return;
+  const phi = getDedupedPhiBoxes();
+  const p = phi[idx];
+  if (!p) return;
+  const pageNum = state.auditCurrentPage || state.auditPageIndex || 1;
+  const allSpans = extractPhiBoxSpans(p);
+  const pageSpans = allSpans.filter(sp => (sp.page ?? p.page ?? pageNum) === pageNum);
+  if (pageSpans.length === 0) {
+    state.auditPhiExtractedValue = false;
+    patchAuditPhiValueSlot();
+    return;
+  }
+  const value = await extractTextFromBounds(pageNum, pageSpans);
+  if (state.auditSelectedPhi !== idx || state.auditPhiView !== "detail") return;
+  state.auditPhiExtractedValue = value || false;
+  patchAuditPhiValueSlot();
+}
+
+function patchAuditPhiValueSlot() {
+  const slot = document.getElementById("audit-phi-value-slot");
+  if (!slot) return;
+  const v = state.auditPhiExtractedValue;
+  const label = `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Value on document</div>`;
+  if (v === null) {
+    slot.innerHTML = label +
+      `<div style="font-size:13px;font-family:var(--font-mono);color:var(--text-dim)">Extracting from PDF…</div>`;
+  } else if (typeof v === "string" && v.length > 0) {
+    slot.innerHTML = label +
+      `<div style="font-size:14px;font-family:var(--font-mono);color:var(--green);word-break:break-all;line-height:1.4">${escapeHtml(v)}</div>`;
+  } else {
+    slot.innerHTML = label +
+      `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);font-style:italic">Not available</div>`;
+  }
 }
 
 // ─── Render Helpers ──────────────────────────────────────
@@ -781,95 +1152,568 @@ function renderAuditSession() {
   return html;
 }
 
+// ─── AP-10c — Audit Document (Split Pane) ─────────────────
 function renderAuditDocument() {
-  if (state.auditLoading) return `<div class="loading">Loading document...</div>`;
+  if (state.auditLoading && !state.auditDocDetail) return `<div class="loading" style="padding:40px">Loading document...</div>`;
   const doc = state.auditDocDetail;
-  if (!doc) return `<div class="loading">No document data</div>`;
-  const docFilename = doc.document_filename || doc.filename || "Document Detail";
-
-  let html = `<button class="btn btn-ghost btn-sm" onclick="loadAuditSession('${state.selectedAuditSession}')" style="margin-bottom:16px">\u2190 Session</button>`;
-  html += `<div style="margin-bottom:20px"><div class="section-title">${docFilename}</div></div>`;
-
-  html += `<div class="stat-row">
-    ${statCard("Category", doc.document_category || doc.category || "—", "var(--text)")}
-    ${statCard("Pages", doc.page_count ?? "—", "var(--accent)")}
-    ${statCard("Total Fields", doc.total_fields_extracted ?? "—", "var(--accent)")}
-    ${statCard("T1 Accepted", doc.total_fields_accepted ?? "—", "var(--green)")}
-  </div>
-  <div class="stat-row">
-    ${statCard("T2 Review", doc.total_fields_review ?? "—", "var(--amber)")}
-    ${statCard("T3 Escalated", doc.total_fields_escalated ?? "—", "var(--red)")}
-    ${statCard("Processing", doc.processing_duration_ms != null ? doc.processing_duration_ms + "ms" : "—", "var(--text-muted)")}
-    ${statCard("OCR Engine", doc.ocr_engine || "—", "var(--text-muted)")}
-  </div>`;
-
-  // PDF file picker (AP-9)
-  html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <div>
-        <div class="field-label" style="margin-bottom:4px">Load Source PDF</div>
-        <div style="font-size:11px;color:var(--text-dim);font-family:var(--font-mono)">Match: ${escapeHtml(docFilename)}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${state.auditPdfDoc ? `<span class="badge badge-green">PDF loaded (${state.auditPdfDoc.numPages} pages)</span>` : ""}
-        <label class="btn btn-ghost btn-sm" style="margin:0;cursor:pointer">
-          ${state.auditPdfDoc ? "Replace PDF" : "Choose File"}
-          <input type="file" accept=".pdf" onchange="handleAuditPdfFile(this)" style="display:none">
-        </label>
-      </div>
-    </div>
-  </div>`;
-
-  // Page selector
+  if (!doc) return `<div class="loading" style="padding:40px">No document data</div>`;
+  const docFilename = doc.document_filename || doc.filename || "Document";
   const pageCount = doc.page_count || 0;
-  if (pageCount > 0) {
-    html += `<div style="margin-bottom:8px"><div class="section-title" style="font-size:14px">Pages</div></div>`;
-    html += `<div class="page-selector">`;
-    for (let i = 0; i < pageCount; i++) {
-      const pageNum = i + 1;
-      const active = state.auditPageIndex === pageNum ? " btn-primary" : " btn-ghost";
-      html += `<button class="btn btn-sm${active}" onclick="loadAuditPage('${state.selectedAuditDoc}',${pageNum})">${pageNum}</button>`;
-    }
-    html += `</div>`;
-  }
+  const curPage = state.auditPageIndex || 1;
+  const pdfLoaded = !!state.auditPdfDoc;
+  const zoomPct = Math.round((state.auditPdfScale || 1) * 100);
+  const tab = state.auditTab || "detail";
 
-  // Legend (AP-9)
-  html += `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-muted);margin-bottom:16px;display:flex;gap:16px;align-items:center">
-    <span><span style="display:inline-block;width:10px;height:10px;background:rgba(59,130,246,0.5);border:1px solid rgba(59,130,246,0.8);border-radius:2px;vertical-align:middle;margin-right:4px"></span>Fields</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:rgba(239,68,68,0.5);border:1px solid rgba(239,68,68,0.8);border-radius:2px;vertical-align:middle;margin-right:4px"></span>PHI</span>
-  </div>`;
+  const prevDisabled = curPage <= 1 ? 'disabled' : '';
+  const nextDisabled = (pageCount > 0 && curPage >= pageCount) ? 'disabled' : '';
 
-  // PDF viewer + overlay (AP-9)
-  if (state.auditPdfDoc && state.auditPageIndex != null) {
-    html += `<div style="background:#1a1a2e;border:1px solid var(--border);border-radius:8px;overflow:auto;margin-bottom:16px">
-      <div style="display:flex;justify-content:center;padding:20px">
-        <div class="pdf-container">
-          <canvas id="audit-pdf-canvas"></canvas>
-          <svg id="audit-overlay-svg" class="overlay-svg"></svg>
+  const leftPane = `
+    <div class="adi-pdf-pane">
+      <div class="adi-pdf-topbar">
+        <div class="doc-title" title="${escapeHtml(docFilename)}">${escapeHtml(docFilename)}</div>
+        <div class="adi-page-nav">
+          <button class="btn btn-ghost btn-xs" ${prevDisabled} onclick="auditPageDelta(-1)">\u2190 Prev</button>
+          <span>Page ${curPage} of ${pageCount || '—'}</span>
+          <button class="btn btn-ghost btn-xs" ${nextDisabled} onclick="auditPageDelta(1)">Next \u2192</button>
+        </div>
+        <div class="adi-zoom">
+          <button class="adi-zoom-btn" onclick="auditZoomDelta(-0.25)" ${state.auditPdfScale <= 0.5 ? 'disabled' : ''}>\u2212</button>
+          <span>${zoomPct}%</span>
+          <button class="adi-zoom-btn" onclick="auditZoomDelta(0.25)" ${state.auditPdfScale >= 3 ? 'disabled' : ''}>+</button>
         </div>
       </div>
+      <div class="adi-canvas-area" id="adi-canvas-area">
+        ${pdfLoaded ? `
+          <div class="pdf-container">
+            <canvas id="audit-pdf-canvas"></canvas>
+            <svg id="audit-overlay-svg" class="overlay-svg adi-overlay"></svg>
+          </div>` : `
+          <div class="adi-empty-prompt">
+            <div style="margin-bottom:14px">No source PDF loaded for this document.</div>
+            <label class="btn btn-ghost btn-sm" style="margin:0;cursor:pointer">
+              Choose PDF File
+              <input type="file" accept=".pdf" onchange="handleAuditPdfFile(this)" style="display:none">
+            </label>
+          </div>`}
+      </div>
     </div>`;
+
+  const rightPane = `
+    <div class="adi-right-pane">
+      <div class="adi-right-topbar">
+        <button class="adi-back" style="margin-bottom:0" onclick="loadAuditSession('${state.selectedAuditSession}')">\u2190 Session</button>
+      </div>
+      <div class="adi-tabs">
+        <button class="adi-tab-btn ${tab === 'detail' ? 'active' : ''}" onclick="switchAuditTab('detail')">Session Detail</button>
+        <button class="adi-tab-btn ${tab === 'fields' ? 'active' : ''}" onclick="switchAuditTab('fields')">Fields</button>
+        <button class="adi-tab-btn ${tab === 'phi' ? 'active' : ''}" onclick="switchAuditTab('phi')">PHI</button>
+      </div>
+      <div class="adi-tab-content">
+        ${tab === 'detail' ? renderAuditDetailTab(doc) : ''}
+        ${tab === 'fields' ? renderAuditFieldsTab() : ''}
+        ${tab === 'phi' ? renderAuditPhiTab() : ''}
+      </div>
+    </div>`;
+
+  return `<div class="adi-split">${leftPane}${rightPane}</div>`;
+}
+
+function renderAuditDetailTab(doc) {
+  const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const ms = (n) => (n == null || isNaN(n)) ? '—' : (n < 1000 ? `${n}ms` : `${(n/1000).toFixed(2)}s`);
+  const pct = (n, tot) => (n != null && tot) ? `${((n/tot)*100).toFixed(1)}%` : '—';
+
+  const t1 = doc.total_fields_accepted ?? doc.tier1_count ?? 0;
+  const t2 = doc.total_fields_review ?? doc.tier2_count ?? 0;
+  const t3 = doc.total_fields_escalated ?? doc.tier3_count ?? 0;
+  const totalExt = doc.total_fields_extracted ?? doc.total_extractions ?? (t1 + t2 + t3);
+  const tier1Rate = doc.tier1_rate != null ? (doc.tier1_rate * 100).toFixed(1) + '%' : pct(t1, totalExt);
+  const bft = doc.by_field_type || doc.field_type_counts || {};
+  const phiBy = doc.phi_by_token_type || {};
+  const phiTotal = doc.total_phi_detections ?? doc.phi_total ?? Object.values(phiBy).reduce((a, b) => a + (b || 0), 0);
+
+  let html = '';
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Document</div>
+    ${kv('Filename', escapeHtml(doc.document_filename || doc.filename || '—'))}
+    ${kv('Category', escapeHtml(doc.document_category || doc.category || '—'))}
+    ${kv('Page count', doc.page_count ?? '—')}
+    ${kv('OCR engine', escapeHtml(doc.ocr_engine || '—'))}
+    ${kv('Processing duration', ms(doc.processing_duration_ms))}
+    ${kv('Pass 1 duration', ms(doc.pass1_duration_ms ?? doc.pass_1_duration_ms))}
+    ${kv('Pass 2 duration', ms(doc.pass2_duration_ms ?? doc.pass_2_duration_ms))}
+    ${kv('Pipeline version', escapeHtml(doc.pipeline_version || '—'))}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Extraction Summary</div>
+    ${kv('Total extractions', totalExt ?? '—')}
+    ${kv('Tier 1 (auto)', `${t1} · ${pct(t1, totalExt)}`)}
+    ${kv('Tier 2 (review)', `${t2} · ${pct(t2, totalExt)}`)}
+    ${kv('Tier 3 (escalate)', `${t3} · ${pct(t3, totalExt)}`)}
+    ${kv('Tier 1 rate', tier1Rate)}
+    ${kv('High confidence', doc.high_confidence_count ?? '—')}
+    ${kv('Medium confidence', doc.medium_confidence_count ?? '—')}
+    ${kv('Low confidence', doc.low_confidence_count ?? '—')}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Field Type Breakdown</div>
+    ${kv('Clinical', bft.clinical ?? '—')}
+    ${kv('Temporal', bft.temporal ?? '—')}
+    ${kv('Provider', bft.provider ?? '—')}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">PHI Summary</div>
+    ${kv('Total PHI detections', phiTotal || '—')}
+    ${kv('Date', phiBy.date ?? '—')}
+    ${kv('Provider', phiBy.provider ?? '—')}
+    ${kv('Organization', phiBy.org ?? '—')}
+    ${kv('DOB', phiBy.dob ?? '—')}
+    ${kv('Patient', phiBy.patient ?? '—')}
+    ${kv('Department', phiBy.dept ?? '—')}
+  </div>`;
+
+  return html;
+}
+
+// ─── AP-10c — Fields tab ─────────────────────────────────
+function renderAuditFieldsTab() {
+  if (state.auditFieldView === "detail") return renderAuditFieldDetail();
+  const pd = state.auditPageData;
+  if (!pd) {
+    return `<div class="adi-placeholder">${state.auditPageIndex ? `Loading page ${state.auditPageIndex}…` : 'No page loaded'}</div>`;
+  }
+  const fields = getFilteredAuditFields();
+  const totalAll = Array.isArray(pd.fields) ? pd.fields.length : 0;
+  const filtered = state.auditFieldFilter !== 'all';
+
+  let html = `<div class="adi-list-header">
+    <span class="adi-list-title">Fields (${fields.length}${filtered ? ' / ' + totalAll : ''})</span>
+  </div>`;
+
+  html += `<div class="adi-filter-row">
+    <span class="adi-filter-label">Type</span>
+    <select class="adi-filter-select" onchange="setAuditFieldFilter(this.value)">
+      <option value="all" ${state.auditFieldFilter === 'all' ? 'selected' : ''}>All</option>
+      <option value="clinical" ${state.auditFieldFilter === 'clinical' ? 'selected' : ''}>Clinical</option>
+      <option value="temporal" ${state.auditFieldFilter === 'temporal' ? 'selected' : ''}>Temporal</option>
+      <option value="provider" ${state.auditFieldFilter === 'provider' ? 'selected' : ''}>Provider</option>
+    </select>
+  </div>`;
+
+  if (fields.length === 0) {
+    html += `<div class="adi-placeholder">No fields on this page</div>`;
+    return html;
   }
 
-  // Page data
-  if (state.auditPageIndex != null) {
-    if (!state.auditPageData) {
-      html += `<div class="loading">Loading page ${state.auditPageIndex}...</div>`;
-    } else {
-      const pd = state.auditPageData;
-      const sections = [
-        ["Fields", pd.fields],
-        ["PHI Detections", pd.phi],
-        ["Negative Space", pd.negative_space]
-      ];
-      sections.forEach(([label, data]) => {
-        const items = Array.isArray(data) ? data : [];
-        html += `<div class="json-section-label">${label} (${items.length})</div>`;
-        html += `<pre class="json-block">${items.length > 0 ? escapeHtml(JSON.stringify(items, null, 2)) : "[]"}</pre>`;
-      });
-    }
-  }
+  fields.forEach((f, i) => {
+    const ft = (f.field_type || f.fieldType || 'clinical').toLowerCase();
+    const ftBadge = ft === 'clinical' || ft === 'temporal' || ft === 'provider' ? ft : 'clinical';
+    const ftLabel = ft.slice(0, 4).toUpperCase();
+    const kind = f.entity_kind || f.entityKind || f.kind || '—';
+    const conf = f.confidence != null ? Math.round(f.confidence * 100) + '%' : '—';
+    const tier = f.tier ?? f.tier_level ?? null;
+    const tierCls = tier ? `t${tier}` : '';
+    const isSel = state.auditSelectedField === i;
+    html += `<div class="adi-field-row ${isSel ? 'selected' : ''}" onclick="selectAuditField(${i})">
+      <span class="type-badge ${ftBadge}">${ftLabel}</span>
+      <span class="kind">${escapeHtml(String(kind))}</span>
+      <span class="conf">${conf}</span>
+      ${tier != null ? `<span class="tier ${tierCls}">T${tier}</span>` : ''}
+    </div>`;
+  });
+
   return html;
+}
+
+function setAuditFieldFilter(filter) {
+  state.auditFieldFilter = filter;
+  state.auditSelectedField = null;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => updateAuditOverlay(), 30);
+  }
+}
+
+function selectAuditField(idx) {
+  state.auditSelectedField = idx;
+  state.auditFieldView = "detail";
+  state.auditFieldExtractedValue = null; // reset → shows "Extracting…" in initial render
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => {
+      updateAuditOverlay();
+      scrollAuditFieldIntoView(idx);
+    }, 30);
+    // Kick off local PDF text extraction. Patches the slot in-place when done.
+    runAuditFieldExtraction();
+  } else {
+    // No PDF loaded → can't extract, fall through to the "not stored" note.
+    state.auditFieldExtractedValue = false;
+    const f = getFilteredAuditFields()[idx];
+    if (f) setTimeout(() => patchAuditFieldValueSlot(f), 0);
+  }
+}
+
+function backToAuditFieldsList() {
+  state.auditFieldView = "list";
+  state.auditSelectedField = null;
+  state.auditFieldExtractedValue = null;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => updateAuditOverlay(), 30);
+  }
+}
+
+function scrollAuditFieldIntoView(idx) {
+  const area = document.getElementById("adi-canvas-area");
+  if (!area) return;
+  const fields = getFilteredAuditFields();
+  const f = fields[idx];
+  if (!f) return;
+  const curPage = state.auditCurrentPage || state.auditPageIndex || 1;
+  const sp = extractBoxSpans(f.bounding_box).find(s => (s.page || 1) === curPage);
+  if (!sp) return;
+  const H = state.auditCanvasHeight;
+  const y = (sp.y || 0) * H;
+  const h = (sp.height ?? sp.h ?? 0) * H;
+  // Canvas sits inside .pdf-container which is inside .adi-canvas-area with padding.
+  const container = area.querySelector(".pdf-container");
+  const containerTop = container ? (container.offsetTop || 0) : 0;
+  const target = containerTop + y + (h / 2) - (area.clientHeight / 2);
+  area.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+}
+
+function renderAuditFieldDetail() {
+  const idx = state.auditSelectedField;
+  const fields = getFilteredAuditFields();
+  const f = idx != null ? fields[idx] : null;
+  if (!f) {
+    return `<button class="adi-back" onclick="backToAuditFieldsList()">\u2190 Fields</button>
+      <div class="adi-placeholder">Field no longer available</div>`;
+  }
+  const ft = (f.field_type || f.fieldType || '—').toLowerCase();
+  const kind = f.entity_kind || f.entityKind || f.kind || '—';
+  const pass = f.extraction_pass ?? f.pass ?? f.extractionPass ?? '—';
+  const conf = f.confidence != null ? `${(f.confidence * 100).toFixed(1)}%` : '—';
+  const tier = f.tier ?? f.tier_level;
+  const tierLabelMap = { 1: 'Auto-accepted', 2: 'Smart review', 3: 'Explicit approval' };
+  const tierLabel = tierLabelMap[tier] || '—';
+  const autoAcc = f.auto_accepted ?? f.autoAccepted;
+  const reconciled = f.was_reconciled ?? f.wasReconciled;
+  const spans = extractBoxSpans(f.bounding_box);
+  const hasValueBbox = spans.some(s => s.value_x != null);
+
+  const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const bool = (b) => b == null ? '—' : (b ? 'Yes' : 'No');
+  const fmt3 = (n) => (n == null ? '—' : Number(n).toFixed(3));
+
+  let html = `<button class="adi-back" onclick="backToAuditFieldsList()">\u2190 Fields</button>`;
+  // Extracted value slot — initial content driven by cache state:
+  //   null  → "Extracting from PDF…" (local PDF.js text extraction in flight)
+  //   str   → green mono value
+  //   false → amber note + entity_kind subtitle (PDF has no text layer / no match)
+  const cached = state.auditFieldExtractedValue;
+  html += `<div id="audit-field-value-slot">`;
+  if (cached === null) {
+    html += `<div class="adi-title muted">Extracted value</div>
+             <div class="adi-subtitle" style="color:var(--text-dim)">Extracting from PDF…</div>`;
+  } else if (typeof cached === "string" && cached.length > 0) {
+    html += `<div class="adi-title muted">Extracted value</div>
+             <div class="adi-subtitle" style="color:var(--green)">${escapeHtml(cached)}</div>`;
+  } else {
+    html += `<div class="adi-title muted">Extracted value</div>
+             <div class="adi-subtitle">${escapeHtml(String(kind))}</div>
+             <div class="adi-note">Extracted value not stored in audit record. See highlighted region on document.</div>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Classification</div>
+    ${kv('Field type', escapeHtml(ft))}
+    ${kv('Entity kind', escapeHtml(String(kind)))}
+    ${kv('Extraction pass', escapeHtml(String(pass)))}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Confidence &amp; Tier</div>
+    ${kv('Confidence', conf)}
+    ${kv('Tier', tier != null ? `${tier} — ${tierLabel}` : '—')}
+    ${kv('Auto accepted', bool(autoAcc))}
+    ${kv('Was reconciled', bool(reconciled))}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Bounding Box</div>
+    ${kv('Span count', spans.length)}`;
+  spans.forEach((sp, si) => {
+    const coordStr = `x=${fmt3(sp.x)}, y=${fmt3(sp.y)}, w=${fmt3(sp.width ?? sp.w)}, h=${fmt3(sp.height ?? sp.h)}`;
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+      ${kv(`Span ${si+1}`, `Page ${sp.page || 1}`)}
+      <div style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);padding:4px 0">${coordStr}</div>`;
+    if (sp.value_x != null) {
+      const vStr = `x=${fmt3(sp.value_x)}, y=${fmt3(sp.value_y)}, w=${fmt3(sp.value_width ?? sp.value_w)}, h=${fmt3(sp.value_height ?? sp.value_h)}`;
+      html += `<div style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);padding:2px 0">value bbox: ${vStr}</div>`;
+    }
+    html += `</div>`;
+  });
+  if (hasValueBbox) {
+    html += `<div style="margin-top:8px">${kv('Tight bbox', 'Yes — value bounds differ from span')}</div>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">ADI Training</div>
+    <div style="color:var(--text-dim);font-size:11px;font-family:var(--font-mono);text-align:center;padding:12px 4px;line-height:1.5">Correction and training controls coming in a future sprint</div>
+  </div>`;
+
+  return html;
+}
+
+// ─── AP-10c — PHI tab ────────────────────────────────────
+function renderAuditPhiTab() {
+  if (state.auditPhiView === "detail") return renderAuditPhiDetail();
+  if (state.auditPhiBoxes == null) {
+    return `<div class="adi-placeholder">${state.auditPageIndex ? `Loading PHI for page ${state.auditPageIndex}…` : 'No page loaded'}</div>`;
+  }
+  const phi = getDedupedPhiBoxes();
+
+  let html = `<div class="adi-list-header">
+    <span class="adi-list-title">PHI Detections (${phi.length})</span>
+  </div>`;
+
+  if (phi.length === 0) {
+    html += `<div class="adi-placeholder">No PHI detections on this page</div>`;
+    return html;
+  }
+
+  phi.forEach((p, i) => {
+    const token = String(p.token_type || p.tokenType || '—').toUpperCase();
+    const placeholder = p.token_placeholder || p.tokenPlaceholder || '';
+    const kind = p.entity_kind || p.entityKind || '—';
+    const isSel = state.auditSelectedPhi === i;
+    html += `<div class="adi-field-row ${isSel ? 'selected' : ''}" onclick="selectAuditPhi(${i})">
+      <span class="adi-phi-dot"></span>
+      <span class="type-badge" style="background:var(--red-bg);color:var(--red);border:1px solid #ef444440">${escapeHtml(token)}</span>
+      <span class="kind">${escapeHtml(String(kind))}</span>
+      <span class="adi-phi-placeholder" title="${escapeHtml(placeholder)}">${escapeHtml(placeholder)}</span>
+    </div>`;
+  });
+
+  return html;
+}
+
+function selectAuditPhi(idx) {
+  state.auditSelectedPhi = idx;
+  state.auditPhiView = "detail";
+  state.auditPhiExtractedValue = null;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => {
+      updateAuditOverlay();
+      scrollAuditPhiIntoView(idx);
+    }, 30);
+    runAuditPhiExtraction();
+  } else {
+    state.auditPhiExtractedValue = false;
+    setTimeout(() => patchAuditPhiValueSlot(), 0);
+  }
+}
+
+function backToAuditPhiList() {
+  state.auditPhiView = "list";
+  state.auditSelectedPhi = null;
+  state.auditPhiExtractedValue = null;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => updateAuditOverlay(), 30);
+  }
+}
+
+function scrollAuditPhiIntoView(idx) {
+  const area = document.getElementById("adi-canvas-area");
+  if (!area) return;
+  const phi = getDedupedPhiBoxes();
+  const p = phi[idx];
+  if (!p) return;
+  const curPage = state.auditCurrentPage || state.auditPageIndex || 1;
+  const sp = extractPhiBoxSpans(p).find(s => (s.page ?? p.page ?? curPage) === curPage);
+  if (!sp) return;
+  const H = state.auditCanvasHeight;
+  const y = (sp.y || 0) * H;
+  const h = (sp.height ?? sp.h ?? 0) * H;
+  const container = area.querySelector(".pdf-container");
+  const containerTop = container ? (container.offsetTop || 0) : 0;
+  const target = containerTop + y + (h / 2) - (area.clientHeight / 2);
+  area.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+}
+
+function renderAuditPhiDetail() {
+  const idx = state.auditSelectedPhi;
+  const phi = getDedupedPhiBoxes();
+  const p = idx != null ? phi[idx] : null;
+  if (!p) {
+    return `<button class="adi-back" onclick="backToAuditPhiList()">\u2190 PHI</button>
+      <div class="adi-placeholder">PHI record no longer available</div>`;
+  }
+  const token = String(p.token_type || p.tokenType || '—').toUpperCase();
+  const placeholder = p.token_placeholder || p.tokenPlaceholder || '—';
+  const kind = p.entity_kind || p.entityKind || '—';
+  const ft = (p.field_type || p.fieldType || '—').toLowerCase();
+  const spans = extractPhiBoxSpans(p);
+
+  const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const fmt3 = (n) => (n == null ? '—' : Number(n).toFixed(3));
+
+  let html = `<button class="adi-back" onclick="backToAuditPhiList()">\u2190 PHI</button>`;
+  html += `<div class="adi-title">${escapeHtml(placeholder)}</div>`;
+
+  // Local PDF text extraction slot — shows the actual redacted value read from
+  // the source PDF text layer (never transmitted over the network).
+  const phiCached = state.auditPhiExtractedValue;
+  const phiLabel = `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Value on document</div>`;
+  html += `<div id="audit-phi-value-slot" style="margin-bottom:14px">`;
+  if (phiCached === null) {
+    html += phiLabel + `<div style="font-size:13px;font-family:var(--font-mono);color:var(--text-dim)">Extracting from PDF…</div>`;
+  } else if (typeof phiCached === "string" && phiCached.length > 0) {
+    html += phiLabel + `<div style="font-size:14px;font-family:var(--font-mono);color:var(--green);word-break:break-all;line-height:1.4">${escapeHtml(phiCached)}</div>`;
+  } else {
+    html += phiLabel + `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);font-style:italic">Not available</div>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Classification</div>
+    ${kv('Token type', escapeHtml(token))}
+    ${kv('Entity kind', escapeHtml(String(kind)))}
+    ${kv('Field type', escapeHtml(ft))}
+  </div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Bounding Box</div>
+    ${kv('Span count', spans.length)}`;
+  spans.forEach((sp, si) => {
+    const coordStr = `x=${fmt3(sp.x)}, y=${fmt3(sp.y)}, w=${fmt3(sp.width ?? sp.w)}, h=${fmt3(sp.height ?? sp.h)}`;
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+      ${kv(`Span ${si+1}`, `Page ${sp.page || 1}`)}
+      <div style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);padding:4px 0">${coordStr}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  return html;
+}
+
+// ─── AP-10c interaction helpers ───────────────────────────
+function switchAuditTab(tab) {
+  state.auditTab = tab;
+  state.auditFieldView = 'list';
+  state.auditPhiView = 'list';
+  state.auditSelectedField = null;
+  state.auditSelectedPhi = null;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => updateAuditOverlay(), 30);
+  }
+}
+
+function auditPageDelta(delta) {
+  const pc = state.auditDocDetail?.page_count || 0;
+  if (pc === 0) return;
+  const cur = state.auditPageIndex || 1;
+  const newPage = cur + delta;
+  if (newPage >= 1 && newPage <= pc) {
+    loadAuditPage(state.selectedAuditDoc, newPage);
+  }
+}
+
+function auditZoomDelta(delta) {
+  const next = Math.max(0.5, Math.min(3.0, (state.auditPdfScale || 1) + delta));
+  if (Math.abs(next - (state.auditPdfScale || 1)) < 0.001) return;
+  state.auditPdfScale = next;
+  render();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    setTimeout(() => renderAuditPdfPage(state.auditPageIndex), 30);
+  }
+}
+
+// ─── AP-10c Step 6 — pinch / wheel zoom gestures ─────────
+// During an active gesture we avoid full render() on every frame (which would
+// thrash the DOM at 60fps). Instead we patch the zoom % text and re-render the
+// PDF canvas via rAF. A single render() on gesture end refreshes +/- disabled.
+let _auditZoomRaf = null;
+let _auditGestureStartScale = 1;
+let _auditPinchStartDist = 0;
+
+function _auditAdjustScale(next) {
+  const clamped = Math.max(0.5, Math.min(3.0, next));
+  if (Math.abs(clamped - (state.auditPdfScale || 1)) < 0.001) return;
+  state.auditPdfScale = clamped;
+  if (_auditZoomRaf) return;
+  _auditZoomRaf = requestAnimationFrame(() => {
+    _auditZoomRaf = null;
+    const zoomSpan = document.querySelector(".adi-zoom span");
+    if (zoomSpan) zoomSpan.textContent = Math.round((state.auditPdfScale || 1) * 100) + "%";
+    if (state.auditPdfDoc && state.auditPageIndex != null) {
+      renderAuditPdfPage(state.auditPageIndex);
+    }
+  });
+}
+
+function _auditHandleWheel(e) {
+  // macOS trackpad pinch → wheel with ctrlKey. Ctrl+scroll on desktop too.
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  _auditAdjustScale((state.auditPdfScale || 1) + (-e.deltaY * 0.01));
+}
+function _auditHandleGestureStart(e) {
+  e.preventDefault();
+  _auditGestureStartScale = state.auditPdfScale || 1;
+}
+function _auditHandleGestureChange(e) {
+  e.preventDefault();
+  _auditAdjustScale(_auditGestureStartScale * e.scale);
+}
+function _auditHandleGestureEnd(e) {
+  e.preventDefault();
+  render();
+}
+function _auditHandleTouchStart(e) {
+  if (e.touches.length !== 2) return;
+  _auditPinchStartDist = Math.hypot(
+    e.touches[0].clientX - e.touches[1].clientX,
+    e.touches[0].clientY - e.touches[1].clientY
+  );
+  _auditGestureStartScale = state.auditPdfScale || 1;
+}
+function _auditHandleTouchMove(e) {
+  if (e.touches.length !== 2 || !_auditPinchStartDist) return;
+  e.preventDefault();
+  const dist = Math.hypot(
+    e.touches[0].clientX - e.touches[1].clientX,
+    e.touches[0].clientY - e.touches[1].clientY
+  );
+  _auditAdjustScale(_auditGestureStartScale * (dist / _auditPinchStartDist));
+}
+function _auditHandleTouchEnd() {
+  if (_auditPinchStartDist) {
+    _auditPinchStartDist = 0;
+    render();
+  }
+}
+
+function bindAuditPdfGestures() {
+  const area = document.getElementById("adi-canvas-area");
+  if (!area) return;
+  area.addEventListener("wheel", _auditHandleWheel, { passive: false });
+  area.addEventListener("gesturestart", _auditHandleGestureStart);
+  area.addEventListener("gesturechange", _auditHandleGestureChange);
+  area.addEventListener("gestureend", _auditHandleGestureEnd);
+  area.addEventListener("touchstart", _auditHandleTouchStart, { passive: false });
+  area.addEventListener("touchmove", _auditHandleTouchMove, { passive: false });
+  area.addEventListener("touchend", _auditHandleTouchEnd);
 }
 
 function escapeHtml(str) {
@@ -1010,14 +1854,20 @@ function render() {
     setTimeout(() => { initDrawListeners(); if (state.pdfDoc) renderPage(state.currentPage); }, 50);
     return;
   }
+  // AP-10c — audit document view uses its own split-pane layout (full height, no content wrapper)
+  if (state.view === "audit" && state.auditView === "document") {
+    app.innerHTML = `${renderHeader()}${renderAuditDocument()}`;
+    if (state.auditPdfDoc && state.auditPageIndex != null) {
+      setTimeout(() => renderAuditPdfPage(state.auditPageIndex), 50);
+    }
+    bindAuditPdfGestures();
+    return;
+  }
   let body;
   if (state.view === "audit") body = renderAudit();
   else if (state.view === "queue") body = renderQueue();
   else body = renderDashboard();
   app.innerHTML = `${renderHeader()}<div class="content">${body}</div>`;
-  if (state.view === "audit" && state.auditView === "document" && state.auditPdfDoc && state.auditPageIndex != null) {
-    setTimeout(() => renderAuditPdfPage(state.auditPageIndex), 50);
-  }
 }
 
 // ─── Config Injection ────────────────────────────────────
