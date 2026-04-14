@@ -762,7 +762,7 @@ function updateAuditOverlay() {
         const spanPage = sp.page ?? f.page ?? curPage;
         if (spanPage !== curPage) return;
         const x = (sp.x || 0) * W;
-        const y = (sp.y || 0) * H;
+        const y = (1 - (sp.y || 0) - (sp.height ?? sp.h ?? 0)) * H;
         const w = (sp.width ?? sp.w ?? 0) * W;
         const h = (sp.height ?? sp.h ?? 0) * H;
         let cls = "box-field";
@@ -771,7 +771,7 @@ function updateAuditOverlay() {
         rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" onclick="selectAuditField(${i})"/>`;
         if (sp.value_x != null) {
           const vx = sp.value_x * W;
-          const vy = (sp.value_y || 0) * H;
+          const vy = (1 - (sp.value_y || 0) - (sp.value_height ?? sp.value_h ?? 0)) * H;
           const vw = (sp.value_width ?? sp.value_w ?? 0) * W;
           const vh = (sp.value_height ?? sp.value_h ?? 0) * H;
           let vcls = "box-field-val";
@@ -797,7 +797,7 @@ function updateAuditOverlay() {
         const spanPage = sp.page ?? p.page ?? curPage;
         if (spanPage !== curPage) return;
         const x = (sp.x || 0) * W;
-        const y = (sp.y || 0) * H;
+        const y = (1 - (sp.y || 0) - (sp.height ?? sp.h ?? 0)) * H;
         const w = (sp.width ?? sp.w ?? 0) * W;
         const h = (sp.height ?? sp.h ?? 0) * H;
         let cls = "box-phi";
