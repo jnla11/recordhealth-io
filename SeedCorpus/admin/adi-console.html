@@ -300,10 +300,6 @@ let state = {
   auditPhiBoxes: null,             // from /phi-boxes/:n
   auditPdfScale: 1.0,              // 0.5–3.0
   auditRenderTask: null,           // pdf.js RenderTask
-  // Local PDF text extraction cache — null=loading, string=found, false=no match.
-  // Cleared on selection/page change so stale values don't leak between records.
-  auditFieldExtractedValue: null,
-  auditPhiExtractedValue: null,
 };
 
 function setState(updates) { Object.assign(state, updates); render(); }
@@ -608,7 +604,6 @@ async function loadAuditDocument(docId) {
     auditTab: "detail", auditFieldView: "list", auditPhiView: "list",
     auditSelectedField: null, auditSelectedPhi: null,
     auditFieldFilter: "all", auditPdfScale: 1.0, auditRenderTask: null,
-    auditFieldExtractedValue: null, auditPhiExtractedValue: null,
   });
   try {
     let doc = await auditApi(`/v1/admin/audit/document/${docId}`);
@@ -631,8 +626,6 @@ async function loadAuditPage(docId, pageIndex) {
   state.auditSelectedPhi = null;
   state.auditFieldView = "list";
   state.auditPhiView = "list";
-  state.auditFieldExtractedValue = null;
-  state.auditPhiExtractedValue = null;
   render();
   try {
     const [pageData, phiData] = await Promise.all([
@@ -658,14 +651,6 @@ function handleAuditPdfFile(input) {
     try {
       const pdfDoc = await pdfjsLib.getDocument({ data: reader.result }).promise;
       state.auditPdfDoc = pdfDoc;
-      // If user already opened a field/phi detail before loading the PDF, the
-      // extraction was stubbed out — retry it now that we have the text layer.
-      if (state.auditFieldView === "detail" && state.auditSelectedField != null) {
-        state.auditFieldExtractedValue = null;
-      }
-      if (state.auditPhiView === "detail" && state.auditSelectedPhi != null) {
-        state.auditPhiExtractedValue = null;
-      }
       if (state.auditPageIndex != null) {
         state.auditCurrentPage = state.auditPageIndex;
         render();
@@ -675,8 +660,6 @@ function handleAuditPdfFile(input) {
         render();
         setTimeout(() => renderAuditPdfPage(1), 50);
       }
-      if (state.auditFieldView === "detail") runAuditFieldExtraction();
-      if (state.auditPhiView === "detail") runAuditPhiExtraction();
     } catch (e) { console.error("Audit PDF load error:", e); }
   };
   reader.readAsArrayBuffer(file);
@@ -857,132 +840,6 @@ function getDedupedPhiBoxes() {
   return Array.from(map.values());
 }
 
-// ─── AP-10c — Local PDF text extraction (no network) ─────
-// Uses PDF.js getTextContent() to pull the text that visually lives inside the
-// normalized bbox spans for a field or PHI detection. The source PDF is already
-// loaded client-side (state.auditPdfDoc) so no PHI ever leaves the browser.
-async function extractTextFromBounds(pageNum, spans) {
-  const pdf = state.auditPdfDoc;
-  if (!pdf || !Array.isArray(spans) || spans.length === 0) return null;
-  try {
-    const page = await pdf.getPage(pageNum);
-    const textContent = await page.getTextContent();
-    const viewport = page.getViewport({ scale: 1.0 });
-    const W = viewport.width;
-    const H = viewport.height;
-
-    const matched = [];
-    for (const item of textContent.items) {
-      if (!item.str || !item.str.trim()) continue;
-      // PDF.js text items carry [scaleX, skewY, skewX, scaleY, tx, ty] in item.transform.
-      // PDF origin is bottom-left; normalize to top-left 0-1 so it matches the
-      // audit record's bounding_box coordinate space.
-      const tx = item.transform[4] / W;
-      const ty = 1 - (item.transform[5] / H);
-      for (const span of spans) {
-        // Tight value bounds only — never fall back to the full span rectangle,
-        // which would pull in surrounding label/header text and bloat the result.
-        // A span without value_* coordinates contributes nothing to the match.
-        if (span.value_x == null) continue;
-        const x = span.value_x;
-        const y = span.value_y;
-        const w = span.value_width;
-        const h = span.value_height;
-        if (y == null || w == null || h == null) continue;
-        // 1% slack to tolerate minor coordinate drift between OCR and PDF text layer.
-        if (tx >= x - 0.01 && tx <= x + w + 0.01 &&
-            ty >= y - 0.01 && ty <= y + h + 0.01) {
-          matched.push(item.str);
-          break;
-        }
-      }
-    }
-    return matched.length > 0 ? matched.join(' ').trim() : null;
-  } catch (e) {
-    console.warn("[AP-10c] extractTextFromBounds failed:", e && e.message);
-    return null;
-  }
-}
-
-async function runAuditFieldExtraction() {
-  const idx = state.auditSelectedField;
-  if (idx == null) return;
-  const fields = getFilteredAuditFields();
-  const f = fields[idx];
-  if (!f) return;
-  const pageNum = state.auditCurrentPage || state.auditPageIndex || 1;
-  const allSpans = extractBoxSpans(f.bounding_box);
-  const pageSpans = allSpans.filter(sp => (sp.page ?? f.page ?? pageNum) === pageNum);
-  if (pageSpans.length === 0) {
-    state.auditFieldExtractedValue = false;
-    patchAuditFieldValueSlot(f);
-    return;
-  }
-  const value = await extractTextFromBounds(pageNum, pageSpans);
-  // Guard: user may have navigated away while we were awaiting.
-  if (state.auditSelectedField !== idx || state.auditFieldView !== "detail") return;
-  state.auditFieldExtractedValue = value || false;
-  patchAuditFieldValueSlot(f);
-}
-
-function patchAuditFieldValueSlot(f) {
-  const slot = document.getElementById("audit-field-value-slot");
-  if (!slot) return;
-  const v = state.auditFieldExtractedValue;
-  const kind = f.entity_kind || f.entityKind || f.kind || '—';
-  if (v === null) {
-    slot.innerHTML =
-      `<div class="adi-title muted">Extracted value</div>
-       <div class="adi-subtitle" style="color:var(--text-dim)">Extracting from PDF…</div>`;
-  } else if (typeof v === "string" && v.length > 0) {
-    slot.innerHTML =
-      `<div class="adi-title muted">Extracted value</div>
-       <div class="adi-subtitle" style="color:var(--green)">${escapeHtml(v)}</div>`;
-  } else {
-    slot.innerHTML =
-      `<div class="adi-title muted">Extracted value</div>
-       <div class="adi-subtitle">${escapeHtml(String(kind))}</div>
-       <div class="adi-note">Extracted value not stored in audit record. See highlighted region on document.</div>`;
-  }
-}
-
-async function runAuditPhiExtraction() {
-  const idx = state.auditSelectedPhi;
-  if (idx == null) return;
-  const phi = getDedupedPhiBoxes();
-  const p = phi[idx];
-  if (!p) return;
-  const pageNum = state.auditCurrentPage || state.auditPageIndex || 1;
-  const allSpans = extractPhiBoxSpans(p);
-  const pageSpans = allSpans.filter(sp => (sp.page ?? p.page ?? pageNum) === pageNum);
-  if (pageSpans.length === 0) {
-    state.auditPhiExtractedValue = false;
-    patchAuditPhiValueSlot();
-    return;
-  }
-  const value = await extractTextFromBounds(pageNum, pageSpans);
-  if (state.auditSelectedPhi !== idx || state.auditPhiView !== "detail") return;
-  state.auditPhiExtractedValue = value || false;
-  patchAuditPhiValueSlot();
-}
-
-function patchAuditPhiValueSlot() {
-  const slot = document.getElementById("audit-phi-value-slot");
-  if (!slot) return;
-  const v = state.auditPhiExtractedValue;
-  const label = `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Value on document</div>`;
-  if (v === null) {
-    slot.innerHTML = label +
-      `<div style="font-size:13px;font-family:var(--font-mono);color:var(--text-dim)">Extracting from PDF…</div>`;
-  } else if (typeof v === "string" && v.length > 0) {
-    slot.innerHTML = label +
-      `<div style="font-size:14px;font-family:var(--font-mono);color:var(--green);word-break:break-all;line-height:1.4">${escapeHtml(v)}</div>`;
-  } else {
-    slot.innerHTML = label +
-      `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);font-style:italic">Not available</div>`;
-  }
-}
-
 // ─── Render Helpers ──────────────────────────────────────
 function badge(text, color) { return `<span class="badge badge-${color}">${text}</span>`; }
 function statusColor(s) { return { pending: "amber", ocr_complete: "blue", extracted: "purple", annotated: "green" }[s] || "gray"; }
@@ -1122,14 +979,17 @@ function renderAuditSession() {
 
   const tier1Display = summary.tier1_rate != null ? (summary.tier1_rate * 100).toFixed(1) + "%" : "—";
   const tier1Color = summary.tier1_rate >= 0.8 ? "var(--green)" : summary.tier1_rate >= 0.6 ? "var(--amber)" : "var(--red)";
-  const phiCount = summary.phi_by_token_type ? Object.values(summary.phi_by_token_type).reduce((a, b) => a + b, 0) : 0;
+  const phiCountDisplay = summary.total_phi_detections ?? "—";
+  const phiBreakdown = summary.phi_by_token_type && typeof summary.phi_by_token_type === "object"
+    ? Object.entries(summary.phi_by_token_type).map(([k, v]) => `${k}: ${v}`).join(" · ")
+    : "";
 
   let html = `<button class="btn btn-ghost btn-sm" onclick="loadAuditSessions()" style="margin-bottom:16px">\u2190 Sessions</button>`;
   html += `<div style="margin-bottom:20px"><div class="section-title">Session Detail</div></div>`;
   html += `<div class="stat-row">
     ${statCard("Total Extractions", summary.total_extractions ?? "—", "var(--accent)")}
     ${statCard("Tier 1 Rate", tier1Display, tier1Color)}
-    ${statCard("PHI Detections", phiCount, "var(--red)", summary.phi_by_token_type ? JSON.stringify(summary.phi_by_token_type) : "")}
+    ${statCard("PHI Detections", phiCountDisplay, "var(--red)", phiBreakdown)}
     ${statCard("Negative Regions", summary.total_negative_regions ?? "—", "var(--text-muted)")}
   </div>`;
 
@@ -1221,16 +1081,15 @@ function renderAuditDocument() {
 function renderAuditDetailTab(doc) {
   const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const ms = (n) => (n == null || isNaN(n)) ? '—' : (n < 1000 ? `${n}ms` : `${(n/1000).toFixed(2)}s`);
-  const pct = (n, tot) => (n != null && tot) ? `${((n/tot)*100).toFixed(1)}%` : '—';
 
-  const t1 = doc.total_fields_accepted ?? doc.tier1_count ?? 0;
-  const t2 = doc.total_fields_review ?? doc.tier2_count ?? 0;
-  const t3 = doc.total_fields_escalated ?? doc.tier3_count ?? 0;
-  const totalExt = doc.total_fields_extracted ?? doc.total_extractions ?? (t1 + t2 + t3);
-  const tier1Rate = doc.tier1_rate != null ? (doc.tier1_rate * 100).toFixed(1) + '%' : pct(t1, totalExt);
+  const t1 = doc.total_fields_accepted ?? doc.tier1_count ?? '—';
+  const t2 = doc.total_fields_review ?? doc.tier2_count ?? '—';
+  const t3 = doc.total_fields_escalated ?? doc.tier3_count ?? '—';
+  const totalExt = doc.total_fields_extracted ?? doc.total_extractions ?? '—';
+  const tier1Rate = doc.tier1_rate != null ? (doc.tier1_rate * 100).toFixed(1) + '%' : '—';
   const bft = doc.by_field_type || doc.field_type_counts || {};
   const phiBy = doc.phi_by_token_type || {};
-  const phiTotal = doc.total_phi_detections ?? doc.phi_total ?? Object.values(phiBy).reduce((a, b) => a + (b || 0), 0);
+  const phiTotal = doc.total_phi_detections ?? doc.phi_total ?? '—';
 
   let html = '';
   html += `<div class="adi-card">
@@ -1247,10 +1106,10 @@ function renderAuditDetailTab(doc) {
 
   html += `<div class="adi-card">
     <div class="adi-card-title">Extraction Summary</div>
-    ${kv('Total extractions', totalExt ?? '—')}
-    ${kv('Tier 1 (auto)', `${t1} · ${pct(t1, totalExt)}`)}
-    ${kv('Tier 2 (review)', `${t2} · ${pct(t2, totalExt)}`)}
-    ${kv('Tier 3 (escalate)', `${t3} · ${pct(t3, totalExt)}`)}
+    ${kv('Total extractions', totalExt)}
+    ${kv('Tier 1 (auto)', t1)}
+    ${kv('Tier 2 (review)', t2)}
+    ${kv('Tier 3 (escalate)', t3)}
     ${kv('Tier 1 rate', tier1Rate)}
     ${kv('High confidence', doc.high_confidence_count ?? '—')}
     ${kv('Medium confidence', doc.medium_confidence_count ?? '—')}
@@ -1259,20 +1118,13 @@ function renderAuditDetailTab(doc) {
 
   html += `<div class="adi-card">
     <div class="adi-card-title">Field Type Breakdown</div>
-    ${kv('Clinical', bft.clinical ?? '—')}
-    ${kv('Temporal', bft.temporal ?? '—')}
-    ${kv('Provider', bft.provider ?? '—')}
+    ${Object.keys(bft).length === 0 ? kv('—', '—') : Object.entries(bft).map(([k, v]) => kv(escapeHtml(String(k)), v ?? '—')).join('')}
   </div>`;
 
   html += `<div class="adi-card">
     <div class="adi-card-title">PHI Summary</div>
-    ${kv('Total PHI detections', phiTotal || '—')}
-    ${kv('Date', phiBy.date ?? '—')}
-    ${kv('Provider', phiBy.provider ?? '—')}
-    ${kv('Organization', phiBy.org ?? '—')}
-    ${kv('DOB', phiBy.dob ?? '—')}
-    ${kv('Patient', phiBy.patient ?? '—')}
-    ${kv('Department', phiBy.dept ?? '—')}
+    ${kv('Total PHI detections', phiTotal)}
+    ${Object.entries(phiBy).map(([k, v]) => kv(escapeHtml(String(k)), v ?? '—')).join('')}
   </div>`;
 
   return html;
@@ -1309,9 +1161,10 @@ function renderAuditFieldsTab() {
   }
 
   fields.forEach((f, i) => {
-    const ft = (f.field_type || f.fieldType || 'clinical').toLowerCase();
-    const ftBadge = ft === 'clinical' || ft === 'temporal' || ft === 'provider' ? ft : 'clinical';
-    const ftLabel = ft.slice(0, 4).toUpperCase();
+    const ftRaw = f.field_type ?? f.fieldType;
+    const ft = ftRaw != null ? String(ftRaw).toLowerCase() : null;
+    const ftBadge = (ft === 'clinical' || ft === 'temporal' || ft === 'provider') ? ft : '';
+    const ftLabel = ft != null ? ft.slice(0, 4).toUpperCase() : '—';
     const kind = f.entity_kind || f.entityKind || f.kind || '—';
     const conf = f.confidence != null ? Math.round(f.confidence * 100) + '%' : '—';
     const tier = f.tier ?? f.tier_level ?? null;
@@ -1340,27 +1193,18 @@ function setAuditFieldFilter(filter) {
 function selectAuditField(idx) {
   state.auditSelectedField = idx;
   state.auditFieldView = "detail";
-  state.auditFieldExtractedValue = null; // reset → shows "Extracting…" in initial render
   render();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
     setTimeout(() => {
       updateAuditOverlay();
       scrollAuditFieldIntoView(idx);
     }, 30);
-    // Kick off local PDF text extraction. Patches the slot in-place when done.
-    runAuditFieldExtraction();
-  } else {
-    // No PDF loaded → can't extract, fall through to the "not stored" note.
-    state.auditFieldExtractedValue = false;
-    const f = getFilteredAuditFields()[idx];
-    if (f) setTimeout(() => patchAuditFieldValueSlot(f), 0);
   }
 }
 
 function backToAuditFieldsList() {
   state.auditFieldView = "list";
   state.auditSelectedField = null;
-  state.auditFieldExtractedValue = null;
   render();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
     setTimeout(() => updateAuditOverlay(), 30);
@@ -1394,41 +1238,38 @@ function renderAuditFieldDetail() {
     return `<button class="adi-back" onclick="backToAuditFieldsList()">\u2190 Fields</button>
       <div class="adi-placeholder">Field no longer available</div>`;
   }
-  const ft = (f.field_type || f.fieldType || '—').toLowerCase();
+  const ftRaw = f.field_type ?? f.fieldType;
+  const ft = ftRaw != null ? String(ftRaw).toLowerCase() : '—';
   const kind = f.entity_kind || f.entityKind || f.kind || '—';
   const pass = f.extraction_pass ?? f.pass ?? f.extractionPass ?? '—';
   const conf = f.confidence != null ? `${(f.confidence * 100).toFixed(1)}%` : '—';
   const tier = f.tier ?? f.tier_level;
+  // Display convention only — these labels are a local UI mapping of the
+  // tier integer, not authoritative API data. The API returns only the
+  // integer; any rename of the tiers must update this mapping.
   const tierLabelMap = { 1: 'Auto-accepted', 2: 'Smart review', 3: 'Explicit approval' };
   const tierLabel = tierLabelMap[tier] || '—';
   const autoAcc = f.auto_accepted ?? f.autoAccepted;
   const reconciled = f.was_reconciled ?? f.wasReconciled;
   const spans = extractBoxSpans(f.bounding_box);
   const hasValueBbox = spans.some(s => s.value_x != null);
+  const aiValue = f.value ?? null;
+  const sourceText = f.source_text ?? null;
 
   const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const bool = (b) => b == null ? '—' : (b ? 'Yes' : 'No');
   const fmt3 = (n) => (n == null ? '—' : Number(n).toFixed(3));
 
   let html = `<button class="adi-back" onclick="backToAuditFieldsList()">\u2190 Fields</button>`;
-  // Extracted value slot — initial content driven by cache state:
-  //   null  → "Extracting from PDF…" (local PDF.js text extraction in flight)
-  //   str   → green mono value
-  //   false → amber note + entity_kind subtitle (PDF has no text layer / no match)
-  const cached = state.auditFieldExtractedValue;
-  html += `<div id="audit-field-value-slot">`;
-  if (cached === null) {
-    html += `<div class="adi-title muted">Extracted value</div>
-             <div class="adi-subtitle" style="color:var(--text-dim)">Extracting from PDF…</div>`;
-  } else if (typeof cached === "string" && cached.length > 0) {
-    html += `<div class="adi-title muted">Extracted value</div>
-             <div class="adi-subtitle" style="color:var(--green)">${escapeHtml(cached)}</div>`;
-  } else {
-    html += `<div class="adi-title muted">Extracted value</div>
-             <div class="adi-subtitle">${escapeHtml(String(kind))}</div>
-             <div class="adi-note">Extracted value not stored in audit record. See highlighted region on document.</div>`;
-  }
-  html += `</div>`;
+
+  html += `<div class="adi-card">
+    <div class="adi-card-title">Extracted Data</div>
+    <div class="adi-kv"><span class="k">AI Extracted Value</span><span class="v">${aiValue != null ? escapeHtml(String(aiValue)) : '—'}</span></div>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)">
+      <div style="font-size:10px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Source Text</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.5">${sourceText != null ? escapeHtml(String(sourceText)) : '—'}</div>
+    </div>
+  </div>`;
 
   html += `<div class="adi-card">
     <div class="adi-card-title">Classification</div>
@@ -1508,24 +1349,18 @@ function renderAuditPhiTab() {
 function selectAuditPhi(idx) {
   state.auditSelectedPhi = idx;
   state.auditPhiView = "detail";
-  state.auditPhiExtractedValue = null;
   render();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
     setTimeout(() => {
       updateAuditOverlay();
       scrollAuditPhiIntoView(idx);
     }, 30);
-    runAuditPhiExtraction();
-  } else {
-    state.auditPhiExtractedValue = false;
-    setTimeout(() => patchAuditPhiValueSlot(), 0);
   }
 }
 
 function backToAuditPhiList() {
   state.auditPhiView = "list";
   state.auditSelectedPhi = null;
-  state.auditPhiExtractedValue = null;
   render();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
     setTimeout(() => updateAuditOverlay(), 30);
@@ -1558,31 +1393,23 @@ function renderAuditPhiDetail() {
     return `<button class="adi-back" onclick="backToAuditPhiList()">\u2190 PHI</button>
       <div class="adi-placeholder">PHI record no longer available</div>`;
   }
-  const token = String(p.token_type || p.tokenType || '—').toUpperCase();
-  const placeholder = p.token_placeholder || p.tokenPlaceholder || '—';
+  const tokenRaw = p.token_type ?? p.tokenType;
+  const token = tokenRaw != null ? String(tokenRaw).toUpperCase() : '—';
+  const placeholder = p.token_placeholder ?? p.tokenPlaceholder ?? '—';
   const kind = p.entity_kind || p.entityKind || '—';
-  const ft = (p.field_type || p.fieldType || '—').toLowerCase();
+  const ftRaw = p.field_type ?? p.fieldType;
+  const ft = ftRaw != null ? String(ftRaw).toLowerCase() : '—';
   const spans = extractPhiBoxSpans(p);
 
   const kv = (k, v) => `<div class="adi-kv"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   const fmt3 = (n) => (n == null ? '—' : Number(n).toFixed(3));
 
   let html = `<button class="adi-back" onclick="backToAuditPhiList()">\u2190 PHI</button>`;
-  html += `<div class="adi-title">${escapeHtml(placeholder)}</div>`;
 
-  // Local PDF text extraction slot — shows the actual redacted value read from
-  // the source PDF text layer (never transmitted over the network).
-  const phiCached = state.auditPhiExtractedValue;
-  const phiLabel = `<div style="font-size:9px;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Value on document</div>`;
-  html += `<div id="audit-phi-value-slot" style="margin-bottom:14px">`;
-  if (phiCached === null) {
-    html += phiLabel + `<div style="font-size:13px;font-family:var(--font-mono);color:var(--text-dim)">Extracting from PDF…</div>`;
-  } else if (typeof phiCached === "string" && phiCached.length > 0) {
-    html += phiLabel + `<div style="font-size:14px;font-family:var(--font-mono);color:var(--green);word-break:break-all;line-height:1.4">${escapeHtml(phiCached)}</div>`;
-  } else {
-    html += phiLabel + `<div style="font-size:11px;font-family:var(--font-mono);color:var(--text-dim);font-style:italic">Not available</div>`;
-  }
-  html += `</div>`;
+  html += `<div class="adi-card">
+    <div class="adi-card-title">PHI Detection</div>
+    <div class="adi-kv"><span class="k">Token Placeholder</span><span class="v" style="font-family:var(--font-mono);color:var(--red);max-width:70%">${escapeHtml(String(placeholder))}</span></div>
+  </div>`;
 
   html += `<div class="adi-card">
     <div class="adi-card-title">Classification</div>
@@ -1834,7 +1661,7 @@ function renderWorkspace() {
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
             <div class="ann-panel-title">${doc.id}</div>
-            <div class="ann-panel-sub">${badge(doc.document_category, "blue")} ${badge(doc.annotation_status, statusColor(doc.annotation_status))} ${badge(doc.source_type || "synthetic", "gray")}</div>
+            <div class="ann-panel-sub">${badge(doc.document_category, "blue")} ${badge(doc.annotation_status, statusColor(doc.annotation_status))} ${badge(doc.source_type ?? "—", "gray")}</div>
           </div>
           <button class="btn btn-ghost btn-xs" onclick="setState({view:'queue',selectedDoc:null});loadQueue()">✕ Close</button>
         </div>
