@@ -9,16 +9,28 @@ population is sprint GT-1.5a.
 
 ## Status
 
-Provisional — empty until GT-1.5a audit sprint populates it from
-the iOS codebase. No prompt_ids are assumed, guessed, or
-pre-assigned. Every entry below will be written by GT-1.5a after
-developer confirmation of the inventory.
+Populated by GT-1.5a on 2026-04-15. 16 prompts registered at v1.
 
 ## Registry
 
 | prompt_id | current_version | type | location | notes |
 |-----------|-----------------|------|----------|-------|
-| (empty — populated by GT-1.5a) | | | | |
+| pass1_document_read | v1 | core | RecordHealth/AI/Pipeline/DocumentReadService.swift | Pass 1 document classification and context extraction |
+| pass2_extraction | v1 | core | RecordHealth/AI/Pipeline/AIExtractionService.swift | Pass 2 structured entity extraction, JSON output |
+| ask_ai_single_record | v1 | core | RecordHealth/AI/Pipeline/AIContextBuilder.swift | Ask AI base system prompt for single-record Q&A |
+| ask_ai_structured_summary | v1 | modifier | RecordHealth/AI/Pipeline/AIContextBuilder.swift | Structured-card response modifier layered on ask_ai_single_record |
+| appointment_prep_summary | v1 | synthesis | RecordHealth/AI/Prompts/AppointmentPrepPrompt.swift | Appointment prep system prompt — tokenized context assembly |
+| appointment_prep_user_trigger | v1 | synthesis | RecordHealth/AI/Prompts/AppointmentPrepPrompt.swift | Appointment prep user-role trigger message |
+| ask_ai_button_explain_report | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain this report" |
+| ask_ai_button_explain_abnormal | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain abnormal values" (lab) |
+| ask_ai_button_explain_findings_imaging | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain the findings" (imaging) |
+| ask_ai_button_explain_findings_pathology | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain the findings" (pathology/surgical) |
+| ask_ai_button_explain_medication | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain this medication" |
+| ask_ai_button_translate_terminology | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Translate into plain English" |
+| ask_ai_button_doctor_questions | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "What should I ask my doctor?" |
+| ask_ai_button_what_was_decided | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "What was decided?" (visit notes) |
+| ask_ai_button_key_findings_default | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain key findings" (default category) |
+| ask_ai_button_key_findings_followup | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain key findings" (follow-up) |
 
 ## Discipline
 
