@@ -208,6 +208,7 @@
   .adi-field-row .tier.t1 { background: var(--green-bg); color: var(--green); border: 1px solid #10b98140; }
   .adi-field-row .tier.t2 { background: var(--amber-bg); color: var(--amber); border: 1px solid #f59e0b40; }
   .adi-field-row .tier.t3 { background: var(--red-bg); color: var(--red); border: 1px solid #ef444440; }
+  .adi-field-row .spans { padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; background: #64748b18; color: #94a3b8; border: 1px solid #64748b40; flex-shrink: 0; font-family: var(--font-mono); }
   .adi-phi-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
   .adi-phi-placeholder { color: var(--text-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; max-width: 40%; }
 
@@ -223,14 +224,24 @@
   /* Overlay boxes */
   .adi-overlay rect { transition: opacity 0.12s ease; pointer-events: all; cursor: pointer; }
   .adi-overlay .box-field { fill: rgba(59,130,246,0.12); stroke: rgba(59,130,246,0.65); stroke-width: 1.5; }
-  .adi-overlay .box-field.dim { fill: rgba(59,130,246,0.025); stroke: rgba(59,130,246,0.2); }
-  .adi-overlay .box-field.sel { fill: rgba(59,130,246,0.3); stroke: #60a5fa; stroke-width: 2.5; }
+  .adi-overlay .box-field.dim { opacity: 0.2; }
+  .adi-overlay .box-field.sel { fill: rgba(59,130,246,0.15); stroke: rgba(99,155,255,0.8); stroke-width: 2; }
+  .adi-overlay .box-field.spansel { fill: rgba(59,130,246,0.25); stroke: rgba(191,219,254,0.9); stroke-width: 2.5; }
+  .adi-overlay .box-field.groupdim { opacity: 0.3; }
   .adi-overlay .box-field-val { fill: rgba(59,130,246,0.22); stroke: rgba(59,130,246,0.95); stroke-width: 1; }
-  .adi-overlay .box-field-val.dim { fill: rgba(59,130,246,0.05); stroke: rgba(59,130,246,0.25); }
+  .adi-overlay .box-field-val.dim { opacity: 0.2; }
   .adi-overlay .box-field-val.sel { fill: rgba(59,130,246,0.45); stroke: #93c5fd; stroke-width: 1.5; }
-  .adi-overlay .box-phi { fill: rgba(239,68,68,0.12); stroke: rgba(239,68,68,0.7); stroke-width: 1.5; }
-  .adi-overlay .box-phi.dim { fill: rgba(239,68,68,0.025); stroke: rgba(239,68,68,0.22); }
-  .adi-overlay .box-phi.sel { fill: rgba(239,68,68,0.32); stroke: #fca5a5; stroke-width: 2.5; }
+  .adi-overlay .box-field-val.spansel { fill: rgba(59,130,246,0.6); stroke: #dbeafe; stroke-width: 2; }
+  .adi-overlay .box-field-val.groupdim { opacity: 0.3; }
+  .adi-overlay .box-phi { fill: rgba(239,68,68,0.06); stroke: rgba(239,68,68,0.5); stroke-width: 1.5; }
+  .adi-overlay .box-phi.dim { opacity: 0.2; }
+  .adi-overlay .box-phi.sel { fill: rgba(239,68,68,0.08); stroke: rgba(252,165,165,0.7); stroke-width: 2; }
+  .adi-overlay .hull-selected { fill: none; stroke: #3b82f6; stroke-width: 1; stroke-dasharray: 6,3; pointer-events: none; }
+
+  /* Clickable span rows in the field detail Bounding Box card */
+  .adi-span-row { cursor: pointer; padding: 8px 8px 6px; margin-top: 8px; border-top: 1px dashed var(--border); transition: background 0.1s; }
+  .adi-span-row:hover { background: var(--surface-hover); }
+  .adi-span-row.selected { background: rgba(59,130,246,0.15); }
 </style>
 </head>
 <body>
@@ -296,6 +307,7 @@ let state = {
   auditFieldView: "list",          // "list" | "detail"
   auditPhiView: "list",            // "list" | "detail"
   auditSelectedField: null,        // index into filtered list
+  auditSelectedSpanIndex: null,    // sub-selection within selected field — index into raw extractBoxSpans()
   auditSelectedPhi: null,          // index into deduped list
   auditPhiBoxes: null,             // from /phi-boxes/:n
   auditPdfScale: 1.0,              // 0.5–3.0
@@ -602,7 +614,7 @@ async function loadAuditDocument(docId) {
     auditPageData: null, auditPageIndex: null, auditPhiBoxes: null,
     auditPdfDoc: null, auditCurrentPage: 1, auditCanvasWidth: 0, auditCanvasHeight: 0,
     auditTab: "detail", auditFieldView: "list", auditPhiView: "list",
-    auditSelectedField: null, auditSelectedPhi: null,
+    auditSelectedField: null, auditSelectedSpanIndex: null, auditSelectedPhi: null,
     auditFieldFilter: "all", auditPdfScale: 1.0, auditRenderTask: null,
   });
   try {
@@ -623,6 +635,7 @@ async function loadAuditPage(docId, pageIndex) {
   state.auditPageData = null;
   state.auditPhiBoxes = null;
   state.auditSelectedField = null;
+  state.auditSelectedSpanIndex = null;
   state.auditSelectedPhi = null;
   state.auditFieldView = "list";
   state.auditPhiView = "list";
@@ -701,6 +714,49 @@ async function renderAuditPdfPage(pageNum) {
   updateAuditOverlay();
 }
 
+// Adjacent field spans → single merged display rect (Vision space).
+// Two spans merge if vertical gap ≤ 1.5× max height AND x ranges overlap
+// or are within 0.02. Iterated pairwise until stable. Non-adjacent spans
+// remain as their own single-source groups. Display-only: f.bounding_box
+// in state is never mutated, and Provenance Doctrine "Capture at Source"
+// is honored because each merged group records its constituent source
+// spans for value sub-box rendering and detail reporting.
+// PHI never passes through here — multi-span PHI represents distinct
+// document instances (header vs signature) and must stay disjoint.
+function mergeAdjacentFieldSpans(spans) {
+  let groups = spans.map(sp => ({
+    x: sp.x || 0,
+    y: sp.y || 0,
+    width: sp.width ?? sp.w ?? 0,
+    height: sp.height ?? sp.h ?? 0,
+    sources: [sp],
+  }));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    outer: for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        const a = groups[i], b = groups[j];
+        const maxH = Math.max(a.height, b.height);
+        if (Math.abs(a.y - b.y) > maxH * 1.5) continue;
+        const xOverlap =
+          a.x <= b.x + b.width + 0.02 &&
+          b.x <= a.x + a.width + 0.02;
+        if (!xOverlap) continue;
+        const nx = Math.min(a.x, b.x);
+        const ny = Math.min(a.y, b.y);
+        const nw = Math.max(a.x + a.width, b.x + b.width) - nx;
+        const nh = Math.max(a.y + a.height, b.y + b.height) - ny;
+        groups[i] = { x: nx, y: ny, width: nw, height: nh, sources: a.sources.concat(b.sources) };
+        groups.splice(j, 1);
+        changed = true;
+        break outer;
+      }
+    }
+  }
+  return groups;
+}
+
 // AP-10c — extract span list from new or legacy bounding_box shape
 function extractBoxSpans(bb) {
   if (!bb) return [];
@@ -747,38 +803,118 @@ function updateAuditOverlay() {
   const tab = state.auditTab || "detail";
   if (tab !== "fields" && tab !== "phi") { svg.innerHTML = ""; return; }
 
+  let hullRects = "";
   let rects = "";
   const curPage = state.auditCurrentPage || state.auditPageIndex || 1;
+
+  // Dashed selection hull — computed in Vision space from the selected
+  // item's current-page spans, then y-flipped for canvas. Communicates
+  // "total selection extent" without claiming captured coverage of the
+  // interior whitespace (fill: none). Rendered behind individual rects.
+  const buildHull = (spansInVisionSpace) => {
+    if (!spansInVisionSpace || spansInVisionSpace.length === 0) return "";
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    spansInVisionSpace.forEach(sp => {
+      const sx = sp.x || 0;
+      const sy = sp.y || 0;
+      const sw = sp.width ?? sp.w ?? 0;
+      const sh = sp.height ?? sp.h ?? 0;
+      if (sx < minX) minX = sx;
+      if (sy < minY) minY = sy;
+      if (sx + sw > maxX) maxX = sx + sw;
+      if (sy + sh > maxY) maxY = sy + sh;
+    });
+    if (minX === Infinity) return "";
+    const hx = minX * W;
+    const hy = (1 - minY - (maxY - minY)) * H;
+    const hw = (maxX - minX) * W;
+    const hh = (maxY - minY) * H;
+    return `<rect x="${hx}" y="${hy}" width="${hw}" height="${hh}" class="hull-selected"/>`;
+  };
 
   if (tab === "fields") {
     const fields = getFilteredAuditFields();
     const selIdx = state.auditSelectedField;
     const dim = selIdx != null;
+    const spanSelIdx = state.auditSelectedSpanIndex;
+
+    // Resolve the selected span by reference (via the raw all-pages array
+    // — same order shown in the Bounding Box card). Used below to find
+    // which merged group on the current page contains it.
+    let selectedSpanRef = null;
+    if (selIdx != null && fields[selIdx] && spanSelIdx != null) {
+      selectedSpanRef = extractBoxSpans(fields[selIdx].bounding_box)[spanSelIdx] || null;
+    }
+
+    if (selIdx != null && fields[selIdx]) {
+      const selSpans = extractBoxSpans(fields[selIdx].bounding_box).filter(sp => {
+        const spanPage = sp.page ?? fields[selIdx].page ?? curPage;
+        return spanPage === curPage;
+      });
+      hullRects += buildHull(selSpans);
+    }
     fields.forEach((f, i) => {
-      const spans = extractBoxSpans(f.bounding_box);
-      spans.forEach(sp => {
-        // Accept span-level, record-level, or default to current page
-        // (page data endpoint is already page-scoped).
+      // Accept span-level, record-level, or default to current page
+      // (page data endpoint is already page-scoped). Page filter must run
+      // BEFORE merging so multi-page spans never end up in the same group.
+      const pageSpans = extractBoxSpans(f.bounding_box).filter(sp => {
         const spanPage = sp.page ?? f.page ?? curPage;
-        if (spanPage !== curPage) return;
-        const x = (sp.x || 0) * W;
-        const y = (1 - (sp.y || 0) - (sp.height ?? sp.h ?? 0)) * H;
-        const w = (sp.width ?? sp.w ?? 0) * W;
-        const h = (sp.height ?? sp.h ?? 0) * H;
+        return spanPage === curPage;
+      });
+      if (pageSpans.length === 0) return;
+      const groups = mergeAdjacentFieldSpans(pageSpans);
+
+      // Locate the group containing the sub-selected span, if any. Reference
+      // equality works because mergeAdjacentFieldSpans keeps original span
+      // refs in sources[]. Null when the selected span is on a different
+      // page or doesn't apply to this field.
+      let spanSelectedGroup = null;
+      if (selIdx === i && selectedSpanRef) {
+        spanSelectedGroup = groups.find(g => g.sources.indexOf(selectedSpanRef) >= 0) || null;
+      }
+
+      groups.forEach(g => {
+        const x = g.x * W;
+        const y = (1 - g.y - g.height) * H;
+        const w = g.width * W;
+        const h = g.height * H;
+        // Class assignment hierarchy:
+        //   selected field + span sub-selection on this group → spansel
+        //   selected field + span sub-selection on a different group → groupdim
+        //   selected field + no span sub-selection → sel
+        //   different field while something is selected → dim
         let cls = "box-field";
-        if (selIdx === i) cls += " sel";
-        else if (dim) cls += " dim";
+        if (selIdx === i) {
+          if (spanSelIdx != null) {
+            cls += (spanSelectedGroup && g === spanSelectedGroup) ? " spansel" : " groupdim";
+          } else {
+            cls += " sel";
+          }
+        } else if (dim) {
+          cls += " dim";
+        }
         rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" onclick="selectAuditField(${i})"/>`;
-        if (sp.value_x != null) {
+        // Value sub-boxes stay per-source-span — they are narrower
+        // provenance and belong to the original captured span, not the
+        // merged display group. Visual state mirrors the parent group.
+        g.sources.forEach(sp => {
+          if (sp.value_x == null) return;
           const vx = sp.value_x * W;
           const vy = (1 - (sp.value_y || 0) - (sp.value_height ?? sp.value_h ?? 0)) * H;
           const vw = (sp.value_width ?? sp.value_w ?? 0) * W;
           const vh = (sp.value_height ?? sp.value_h ?? 0) * H;
           let vcls = "box-field-val";
-          if (selIdx === i) vcls += " sel";
-          else if (dim) vcls += " dim";
+          if (selIdx === i) {
+            if (spanSelIdx != null) {
+              vcls += (spanSelectedGroup && g === spanSelectedGroup) ? " spansel" : " groupdim";
+            } else {
+              vcls += " sel";
+            }
+          } else if (dim) {
+            vcls += " dim";
+          }
           rects += `<rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" class="${vcls}" onclick="selectAuditField(${i})"/>`;
-        }
+        });
       });
     });
   }
@@ -789,6 +925,13 @@ function updateAuditOverlay() {
     const phi = getDedupedPhiBoxes();
     const selIdx = state.auditSelectedPhi;
     const dim = selIdx != null;
+    if (selIdx != null && phi[selIdx]) {
+      const selSpans = extractPhiBoxSpans(phi[selIdx]).filter(sp => {
+        const spanPage = sp.page ?? phi[selIdx].page ?? curPage;
+        return spanPage === curPage;
+      });
+      hullRects += buildHull(selSpans);
+    }
     phi.forEach((p, i) => {
       const spans = extractPhiBoxSpans(p);
       spans.forEach(sp => {
@@ -808,7 +951,8 @@ function updateAuditOverlay() {
     });
   }
 
-  svg.innerHTML = rects;
+  // Hull drawn first so individual span rects paint on top.
+  svg.innerHTML = hullRects + rects;
 }
 
 function getDedupedPhiBoxes() {
@@ -1170,9 +1314,16 @@ function renderAuditFieldsTab() {
     const tier = f.tier ?? f.tier_level ?? null;
     const tierCls = tier ? `t${tier}` : '';
     const isSel = state.auditSelectedField === i;
+    // Total span count across ALL pages — a fragmented match indicator
+    // for the auditor. Single-span fields get no badge to keep the row
+    // clean. Multi-page spans count here too, so a 2-page wrapped match
+    // still surfaces as "2s".
+    const spanCount = extractBoxSpans(f.bounding_box).length;
+    const spanBadge = spanCount > 1 ? `<span class="spans" title="${spanCount} spans across all pages">${spanCount}s</span>` : '';
     html += `<div class="adi-field-row ${isSel ? 'selected' : ''}" onclick="selectAuditField(${i})">
       <span class="type-badge ${ftBadge}">${ftLabel}</span>
       <span class="kind">${escapeHtml(String(kind))}</span>
+      ${spanBadge}
       <span class="conf">${conf}</span>
       ${tier != null ? `<span class="tier ${tierCls}">T${tier}</span>` : ''}
     </div>`;
@@ -1184,50 +1335,118 @@ function renderAuditFieldsTab() {
 function setAuditFieldFilter(filter) {
   state.auditFieldFilter = filter;
   state.auditSelectedField = null;
-  render();
+  state.auditSelectedSpanIndex = null;
+  patchAuditTabContent();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
-    setTimeout(() => updateAuditOverlay(), 30);
+    updateAuditOverlay();
   }
 }
 
 function selectAuditField(idx) {
+  // Selecting a different field clears any prior span sub-selection so
+  // the new field's overlay starts in the standard .sel state.
+  if (state.auditSelectedField !== idx) state.auditSelectedSpanIndex = null;
   state.auditSelectedField = idx;
   state.auditFieldView = "detail";
-  render();
+  patchAuditTabContent();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
-    setTimeout(() => {
-      updateAuditOverlay();
-      scrollAuditFieldIntoView(idx);
-    }, 30);
+    updateAuditOverlay();
+    scrollAuditFieldIntoView(idx);
   }
 }
 
 function backToAuditFieldsList() {
   state.auditFieldView = "list";
   state.auditSelectedField = null;
-  render();
+  state.auditSelectedSpanIndex = null;
+  patchAuditTabContent();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
-    setTimeout(() => updateAuditOverlay(), 30);
+    updateAuditOverlay();
+  }
+}
+
+// Toggle span sub-selection within the currently selected field. The span
+// index is into the raw extractBoxSpans() array (all pages) so the order
+// matches the Bounding Box card listing in the detail panel. Clicking the
+// same row twice clears the sub-selection and returns the field to its
+// standard .sel state.
+function selectAuditSpan(si) {
+  console.log("[selectAuditSpan] click", { spanIndex: si, prevSpanIndex: state.auditSelectedSpanIndex, selectedField: state.auditSelectedField });
+  state.auditSelectedSpanIndex = (state.auditSelectedSpanIndex === si) ? null : si;
+  patchAuditTabContent();
+  if (state.auditPdfDoc && state.auditPageIndex != null) {
+    updateAuditOverlay();
+    scrollAuditFieldIntoView(state.auditSelectedField);
   }
 }
 
 function scrollAuditFieldIntoView(idx) {
   const area = document.getElementById("adi-canvas-area");
-  if (!area) return;
+  if (!area) { console.log("[scrollAuditFieldIntoView] no .adi-canvas-area"); return; }
   const fields = getFilteredAuditFields();
   const f = fields[idx];
-  if (!f) return;
+  if (!f) { console.log("[scrollAuditFieldIntoView] no field at idx", idx); return; }
   const curPage = state.auditCurrentPage || state.auditPageIndex || 1;
-  const sp = extractBoxSpans(f.bounding_box).find(s => (s.page || 1) === curPage);
-  if (!sp) return;
+  const allSpans = extractBoxSpans(f.bounding_box);
+
+  // Span sub-selection (Step 2) takes priority when set AND the selected
+  // span is on the current page. Otherwise scroll to the first
+  // current-page span of the selected field. Cross-page span selections
+  // do not auto-navigate pages — that's the auditor's manual call via
+  // the "Also spans: Page N" indicator.
+  const spanSelIdx = state.auditSelectedSpanIndex;
+  let targetSpan = null;
+  if (spanSelIdx != null && allSpans[spanSelIdx]) {
+    const candidate = allSpans[spanSelIdx];
+    const candidatePage = candidate.page ?? f.page ?? curPage;
+    if (candidatePage === curPage) targetSpan = candidate;
+  }
+  if (!targetSpan) {
+    targetSpan = allSpans.find(s => (s.page ?? f.page ?? curPage) === curPage) || null;
+  }
+  if (!targetSpan) { console.log("[scrollAuditFieldIntoView] no current-page span for field idx", idx, "page", curPage); return; }
+
   const H = state.auditCanvasHeight;
-  const y = (sp.y || 0) * H;
-  const h = (sp.height ?? sp.h ?? 0) * H;
-  // Canvas sits inside .pdf-container which is inside .adi-canvas-area with padding.
+  if (!H) { console.log("[scrollAuditFieldIntoView] auditCanvasHeight is 0 — canvas not yet rendered"); return; }
+  const spY = targetSpan.y || 0;
+  const spH = targetSpan.height ?? targetSpan.h ?? 0;
+  // Same Vision bottom-left → canvas top-left y-flip the overlay uses.
+  // The previous version of this function omitted the inversion and
+  // scrolled to the wrong place.
+  const canvasY = (1 - spY - spH) * H;
+  const spanHeightPx = spH * H;
+
+  // .pdf-container sits inside .adi-canvas-area with padding. Its
+  // offsetTop is the canvas top in the scroll container's coordinate
+  // space, so the span's center in scroll space is containerTop + canvasY
+  // + spanHeight/2. Subtracting half the viewport height centers it.
   const container = area.querySelector(".pdf-container");
   const containerTop = container ? (container.offsetTop || 0) : 0;
-  const target = containerTop + y + (h / 2) - (area.clientHeight / 2);
-  area.scrollTo({ top: Math.max(0, target), behavior: "smooth" });
+  const spanCenterInScroll = containerTop + canvasY + (spanHeightPx / 2);
+  const target = spanCenterInScroll - (area.clientHeight / 2);
+  const finalTarget = Math.max(0, target);
+
+  console.log("[scrollAuditFieldIntoView]", {
+    idx,
+    spanSelIdx,
+    canvasY,
+    spanHeightPx,
+    containerTop,
+    spanCenterInScroll,
+    target,
+    finalTarget,
+    areaScrollTop: area.scrollTop,
+    areaScrollHeight: area.scrollHeight,
+    areaClientHeight: area.clientHeight,
+    H,
+    spY,
+    spH,
+  });
+
+  // Direct scrollTop assignment instead of scrollTo({behavior:'smooth'}).
+  // Synchronous, fully reliable across browsers, and easier to reason about
+  // when debugging because the value applies on the next layout pass.
+  area.scrollTop = finalTarget;
 }
 
 function renderAuditFieldDetail() {
@@ -1289,9 +1508,11 @@ function renderAuditFieldDetail() {
   html += `<div class="adi-card">
     <div class="adi-card-title">Bounding Box</div>
     ${kv('Span count', spans.length)}`;
+  const spanSelIdxRender = state.auditSelectedSpanIndex;
   spans.forEach((sp, si) => {
     const coordStr = `x=${fmt3(sp.x)}, y=${fmt3(sp.y)}, w=${fmt3(sp.width ?? sp.w)}, h=${fmt3(sp.height ?? sp.h)}`;
-    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+    const spanRowSel = spanSelIdxRender === si ? ' selected' : '';
+    html += `<div class="adi-span-row${spanRowSel}" onclick="selectAuditSpan(${si})">
       ${kv(`Span ${si+1}`, `Page ${sp.page || 1}`)}
       <div style="font-size:10px;color:var(--text-dim);font-family:var(--font-mono);padding:4px 0">${coordStr}</div>`;
     if (sp.value_x != null) {
@@ -1304,6 +1525,19 @@ function renderAuditFieldDetail() {
     html += `<div style="margin-top:8px">${kv('Tight bbox', 'Yes — value bounds differ from span')}</div>`;
   }
   html += `</div>`;
+
+  // Multi-page span indicator — a field with spans on pages other than
+  // the current page is "Fail Loud Not Silent" surfaced here so the
+  // auditor knows there is more captured provenance that the current
+  // page viewport cannot show.
+  const curPageForIndicator = state.auditCurrentPage || state.auditPageIndex || 1;
+  const otherPages = Array.from(new Set(
+    spans.map(sp => sp.page || 1).filter(p => p !== curPageForIndicator)
+  )).sort((a, b) => a - b);
+  if (otherPages.length > 0) {
+    const label = otherPages.map(p => `Page ${p}`).join(', ');
+    html += `<div style="margin: -4px 0 12px; padding: 8px 12px; background: var(--surface); border: 1px dashed var(--border); border-radius: 6px; font-size: 10px; font-family: var(--font-mono); color: var(--text-muted);">Also spans: ${label}</div>`;
+  }
 
   html += `<div class="adi-card">
     <div class="adi-card-title">ADI Training</div>
@@ -1439,6 +1673,7 @@ function switchAuditTab(tab) {
   state.auditFieldView = 'list';
   state.auditPhiView = 'list';
   state.auditSelectedField = null;
+  state.auditSelectedSpanIndex = null;
   state.auditSelectedPhi = null;
   render();
   if (state.auditPdfDoc && state.auditPageIndex != null) {
@@ -1669,6 +1904,24 @@ function renderWorkspace() {
       ${panelContent}
     </div>
   </div>`;
+}
+
+// Partial DOM update for right-pane-only state changes (field selection,
+// span sub-selection, filter changes, back-nav). Avoids a full render()
+// because render() does app.innerHTML=… which destroys the left-pane PDF
+// canvas. The replacement canvas is empty until renderAuditPdfPage
+// async-repaints it ~100-300ms later — during that gap, area.scrollHeight
+// is ~190px (padding + default canvas) and any scrollTo() call clamps to
+// near zero. Patching only .adi-tab-content keeps the canvas intact so
+// scroll math runs against live dimensions.
+function patchAuditTabContent() {
+  const el = document.querySelector(".adi-tab-content");
+  const doc = state.auditDocDetail;
+  if (!el || !doc) { render(); return; }
+  const tab = state.auditTab || "detail";
+  if (tab === 'detail') el.innerHTML = renderAuditDetailTab(doc);
+  else if (tab === 'fields') el.innerHTML = renderAuditFieldsTab();
+  else if (tab === 'phi') el.innerHTML = renderAuditPhiTab();
 }
 
 // ─── Main Render ─────────────────────────────────────────
