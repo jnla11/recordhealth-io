@@ -2,3 +2,6 @@
 *.psd
 *.scriv/
 ProjectBible_Roadmap/
+SeedCorpus/data/
+SeedCorpus/mimic-iv/
+SeedCorpus/admin/config.js

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Record Health — Seed Corpus Recursive Training Starter Kit</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b0d;
+  --bg2: #111318;
+  --bg3: #181c22;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --dim: #3d4452;
+  --green: #4ade80;
+  --cyan: #22d3ee;
+  --purple: #a78bfa;
+  --amber: #fb923c;
+  --red: #f87171;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.6; }
+
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dim) transparent;
+  display: flex; flex-direction: column;
+}
+.sidebar-top { padding: 20px 16px 16px; border-bottom: 1px solid var(--border); }
+.kit-label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--green); text-transform: uppercase; margin-bottom: 6px; }
+.kit-title { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.nav-group { padding: 10px 0 2px; }
+.nav-group-label { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; padding: 0 16px 5px; }
+.nav-link {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 16px; font-size: 12px; color: var(--muted);
+  cursor: pointer; border-left: 2px solid transparent;
+  transition: all .1s; text-decoration: none;
+}
+.nav-link:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-link.active { color: var(--text); border-left-color: var(--green); font-weight: 500; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* MAIN */
+.main { height: 100vh; overflow-y: auto; }
+.page { display: none; padding: 36px 44px; max-width: 820px; animation: fi .15s ease; }
+.page.active { display: block; }
+@keyframes fi { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+/* TYPOGRAPHY */
+.eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .13em; color: var(--green); text-transform: uppercase; margin-bottom: 8px; }
+.page-title { font-size: 24px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.2; }
+.page-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.7; max-width: 600px; }
+h3 { font-size: 12px; font-weight: 500; color: var(--text); letter-spacing: .03em; margin: 24px 0 10px; text-transform: uppercase; font-family: var(--mono); }
+p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 10px; }
+
+/* DO-THIS STEPS */
+.do-list { list-style: none; margin-bottom: 20px; }
+.do-item {
+  display: grid; grid-template-columns: 28px 1fr;
+  gap: 0 12px; margin-bottom: 2px; position: relative;
+}
+.do-item::before {
+  content: ''; width: 1px; background: var(--border);
+  position: absolute; left: 13px; top: 36px; bottom: -2px;
+}
+.do-item:last-child::before { display: none; }
+.do-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  flex-shrink: 0; margin-top: 12px; position: relative; z-index: 1;
+}
+.do-num.green { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.25); color: var(--green); }
+.do-num.cyan { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.25); color: var(--cyan); }
+.do-num.amber { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.25); color: var(--amber); }
+.do-body { padding: 12px 0 18px; }
+.do-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.do-ref { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 5px; }
+.do-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.do-warn { font-size: 11px; color: var(--amber); margin-top: 5px; font-family: var(--mono); }
+.do-block { font-size: 11px; color: var(--red); margin-top: 5px; font-family: var(--mono); }
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+.card-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.card-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+/* TAGS */
+.tag { display: inline-block; font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 4px; margin: 2px 2px 2px 0; }
+.tg { background: rgba(74,222,128,0.08); color: var(--green); border: 1px solid rgba(74,222,128,0.18); }
+.tc { background: rgba(34,211,238,0.08); color: var(--cyan); border: 1px solid rgba(34,211,238,0.18); }
+.tp { background: rgba(167,139,250,0.08); color: var(--purple); border: 1px solid rgba(167,139,250,0.18); }
+.ta { background: rgba(251,146,60,0.08); color: var(--amber); border: 1px solid rgba(251,146,60,0.18); }
+.tr { background: rgba(248,113,113,0.08); color: var(--red); border: 1px solid rgba(248,113,113,0.18); }
+.td { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+
+/* CODE */
+.mono { font-family: var(--mono); font-size: 11px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; margin: 8px 0 12px; color: #a0aec0; line-height: 1.85; white-space: pre; overflow-x: auto; }
+.mono .g { color: var(--green); }
+.mono .c { color: var(--cyan); }
+.mono .a { color: var(--amber); }
+.mono .r { color: var(--red); }
+.mono .d { color: var(--dim); }
+
+/* MISSION */
+.mission-block {
+  border: 1px solid rgba(74,222,128,0.15);
+  border-radius: 12px; padding: 22px 24px; margin-bottom: 24px;
+  background: rgba(74,222,128,0.03);
+}
+.mission-text { font-size: 15px; color: var(--text); line-height: 1.75; font-weight: 300; font-style: italic; }
+.mission-credit { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 10px; }
+
+/* TABLE */
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0 16px; }
+th { text-align: left; padding: 7px 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; color: var(--dim); text-transform: uppercase; border-bottom: 1px solid var(--border); font-weight: 400; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+td:first-child { color: var(--text); font-weight: 500; font-family: var(--mono); font-size: 11px; }
+tr:last-child td { border-bottom: none; }
+
+/* RULE */
+hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-top">
+    <div class="kit-label">Record Health</div>
+    <div class="kit-title">Seed Corpus Recursive Training Starter Kit</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Start here</div>
+    <a class="nav-link active" onclick="go('mission')"><div class="nav-dot" style="background:var(--green)"></div>Mission</a>
+    <a class="nav-link" onclick="go('howit')"><div class="nav-dot" style="background:var(--green)"></div>How it works</a>
+    <a class="nav-link" onclick="go('rules')"><div class="nav-dot" style="background:var(--green)"></div>The rules</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Build it</div>
+    <a class="nav-link" onclick="go('setup')"><div class="nav-dot" style="background:var(--cyan)"></div>1. Setup</a>
+    <a class="nav-link" onclick="go('corpus')"><div class="nav-dot" style="background:var(--cyan)"></div>2. Seed corpus</a>
+    <a class="nav-link" onclick="go('annotate')"><div class="nav-dot" style="background:var(--cyan)"></div>3. Annotate</a>
+    <a class="nav-link" onclick="go('train')"><div class="nav-dot" style="background:var(--cyan)"></div>4. Train</a>
+    <a class="nav-link" onclick="go('promote')"><div class="nav-dot" style="background:var(--cyan)"></div>5. Promote</a>
+    <a class="nav-link" onclick="go('device')"><div class="nav-dot" style="background:var(--cyan)"></div>6. Ship to device</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Operate it</div>
+    <a class="nav-link" onclick="go('weekly')"><div class="nav-dot" style="background:var(--amber)"></div>Weekly rhythm</a>
+    <a class="nav-link" onclick="go('stages')"><div class="nav-dot" style="background:var(--amber)"></div>Stage gates</a>
+    <a class="nav-link" onclick="go('docs')"><div class="nav-dot" style="background:var(--amber)"></div>Spec docs</a>
+  </div>
+</nav>
+
+<!-- PAGES -->
+<div class="main">
+
+<!-- MISSION -->
+<div class="page active" id="p-mission">
+  <div class="eyebrow">Why this exists</div>
+  <div class="page-title">The mission</div>
+
+  <div class="mission-block">
+    <div class="mission-text">A true patient-advocate guiding their health journey using evidence based medicine and removing layers of abstraction and errors that lead to negative health outcomes. Available in all languages.</div>
+    <div class="mission-credit">— Jason Nolte</div>
+  </div>
+
+  <h3>The five layers being removed</h3>
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num green">1</div><div class="do-body"><div class="do-title">Document layer</div><div class="do-desc">Records scattered across portals and folders → assembled from every document, every provider.</div></div></li>
+    <li class="do-item"><div class="do-num green">2</div><div class="do-body"><div class="do-title">Comprehension layer</div><div class="do-desc">Numbers without context → trends and patterns surfaced with clinical meaning.</div></div></li>
+    <li class="do-item"><div class="do-num green">3</div><div class="do-body"><div class="do-title">Language layer</div><div class="do-desc">English-only healthcare → any language in, any language out.</div></div></li>
+    <li class="do-item"><div class="do-num green">4</div><div class="do-body"><div class="do-title">Coordination layer</div><div class="do-desc">Each provider has a fragment → one longitudinal patient model across all of them.</div></div></li>
+    <li class="do-item"><div class="do-num green">5</div><div class="do-body"><div class="do-title">Evidence layer</div><div class="do-desc">Clinical guidelines never reach the patient → evidence-based questions the patient can act on.</div></div></li>
+  </ul>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="page" id="p-howit">
+  <div class="eyebrow">The loop</div>
+  <div class="page-title">How the recursion works</div>
+  <div class="page-desc">Two completely separate systems. System A trains offline. System B runs on device. System A output feeds System B. System B never feeds System A automatically.</div>
+
+  <div class="mono"><span class="g">SYSTEM A — Offline training (AWS, no live traffic)</span>
+Expert annotation → training run → benchmark gate → promote artifact
+        ↓
+<span class="c">SYSTEM B — On-device production (live users)</span>
+Receives pre-validated rules + model → runs extraction → user sees result
+User flags something → anomaly review queue → L0 decides
+<span class="d">NOT → automatic training → NOT → PatternLibrary</span></div>
+
+  <h3>Three device layers</h3>
+  <div class="grid3">
+    <div class="card"><div class="card-title">Layer 1 — Rules</div><div class="card-body">PatternLibrary deltas. Cross-user. Frequent silent sync. Explicit and inspectable.</div></div>
+    <div class="card"><div class="card-title">Layer 2 — Model</div><div class="card-body">Fine-tuned CoreML. Cross-user. Periodic staged rollout. Generalizes beyond rules.</div></div>
+    <div class="card"><div class="card-title">Layer 3 — Personal</div><div class="card-body">MLUpdateTask on device. This user only. Continuous. Never transmitted.</div></div>
+  </div>
+
+  <h3>The recursion cycle</h3>
+  <div class="mono"><span class="g">Annotate</span> → add expert-labeled examples to corpus
+<span class="g">Train</span>    → AWS fine-tuning run produces candidate model
+<span class="g">Benchmark</span>→ score candidate against held-out test silo
+<span class="g">Gate</span>     → passes threshold → route to delivery channel
+<span class="g">Ship</span>     → rules or model lands on device
+<span class="g">Distill</span>  → model learns → extract rules it discovered
+<span class="g">Repeat</span>   → better extraction → fewer errors → higher-signal annotations</div>
+</div>
+
+<!-- RULES -->
+<div class="page" id="p-rules">
+  <div class="eyebrow">Non-negotiable</div>
+  <div class="page-title">The rules</div>
+  <div class="page-desc">These never change. If a sprint prompt conflicts with any of these, the prompt is wrong.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">PHI never leaves the device in raw form</div><div class="do-desc">Tokenization happens before any transmission. Always.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">FactStore is append-only</div><div class="do-desc">No updates. No deletes. Full provenance chain preserved forever.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Atomic writes only</div><div class="do-desc">No try?. Failures surface to the caller, never silently swallowed.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Audit before implement</div><div class="do-desc">Every sprint reads existing code before writing a line of new code.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">MIMIC source content stays local</div><div class="do-desc">Never transmitted to any external API. Tokenized extraction only crosses the wire.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Test silo is locked</div><div class="do-desc">Never annotated, never trained on. Used only to score benchmark runs.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Bedrock is inference only</div><div class="do-desc">Never training. Stateless. Nothing persists after a call.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Every Bedrock suggestion requires your approval</div><div class="do-desc">Nothing enters the corpus automatically.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">pattern_library is only written by the consensus CRON</div><div class="do-desc">No component writes to it directly. All promotions go through the gate.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body">
+      <div class="do-title">User corrections are not cross-user training signal</div>
+      <div class="do-desc">They feed anomaly detection only. Expert annotation is the sole source of cross-user training data.</div>
+      <div class="do-block">✕ Never write user corrections to pattern_atoms directly</div>
+      <div class="do-block">✕ Never pipe user corrections to candidate_rules</div>
+    </div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Correction form UI is admin-only</div><div class="do-desc">Class A–E correction interface lives in SEED Master Control only. End users see a simple flag button.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Stage transitions are manual</div><div class="do-desc">No automatic phase advancement. Requires your explicit sign-off.</div></div></li>
+    <li class="do-item"><div class="do-num green">✓</div><div class="do-body"><div class="do-title">Never touch animateIn() in DashboardView.swift</div><div class="do-desc">Never touch CareGraphBuilder.swift line 390 — P6b deferred.</div></div></li>
+  </ul>
+</div>
+
+<!-- SETUP -->
+<div class="page" id="p-setup">
+  <div class="eyebrow">Build step 1</div>
+  <div class="page-title">Setup</div>
+  <div class="page-desc">Do these before anything else. Step 3 (Neon migration) must happen before any pipeline code is written.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num cyan">1</div><div class="do-body">
+      <div class="do-title">Create a Neon staging branch</div>
+      <div class="do-ref">Neon dashboard → Branch → Create branch from main</div>
+      <div class="do-desc">Free, instant. Add staging DATABASE_URL to wrangler.toml [env.staging]. All dev work hits staging, never production.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">2</div><div class="do-body">
+      <div class="do-title">Sign the Neon BAA</div>
+      <div class="do-ref">Neon Business plan required</div>
+      <div class="do-desc">Contact Neon before any PHI-adjacent data hits the database in production. AWS BAA already in place — covers Bedrock and future EC2. Cloudflare BAA not required yet (Worker never touches raw PHI).</div>
+      <div class="do-warn">⚠ Do not go live without Neon BAA</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">3</div><div class="do-body">
+      <div class="do-title">Run Neon schema migration</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §4.2 — sprint prompt included</div>
+      <div class="do-desc">Creates all tables: pattern_atoms, candidate_rules, pattern_library, consensus_log, seed_documents, expert_annotations, negative_space_annotations, extraction_runs, benchmark_runs, bedrock_analysis_runs, terminology_suggestions, rule_suggestions, user_consent_tier, anomaly_flags.</div>
+      <div class="do-warn">⚠ Do this before writing any other server code</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">4</div><div class="do-body">
+      <div class="do-title">Add daily consensus CRON trigger</div>
+      <div class="do-ref">SERVER_INFRASTRUCTURE.md §6.2</div>
+      <div class="do-desc">Add "0 2 * * *" to wrangler.toml triggers alongside the existing monthly token drip. The consensus handler branches on schedule string.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">5</div><div class="do-body">
+      <div class="do-title">Add ADI env bindings to Cloudflare</div>
+      <div class="do-ref">SERVER_INFRASTRUCTURE.md §8</div>
+      <div class="do-desc">ADI_PHI_PATTERN_BLOCKLIST, ADI_CONSENSUS_MIN_N, ADI_BURST_WINDOW_HOURS, ADI_LIBRARY_CACHE_TTL, ANNOTATOR_KEY, ADMIN_KEY via wrangler secret put or dashboard.</div>
+    </div></li>
+  </ul>
+</div>
+
+<!-- SEED CORPUS -->
+<div class="page" id="p-corpus">
+  <div class="eyebrow">Build step 2</div>
+  <div class="page-title">Seed corpus</div>
+  <div class="page-desc">Build the foundation documents before the first training run. These are the expert-annotated examples the system starts with.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num cyan">1</div><div class="do-body">
+      <div class="do-title">Run MIMIC extractor locally</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §2.3 — sprint prompt included</div>
+      <div class="do-desc">Python script reads MIMIC-IV CSVs locally. Outputs structured JSON by document type. No network calls. Stays on disk.</div>
+      <div class="do-warn">⚠ MIMIC source content never leaves local machine</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">2</div><div class="do-body">
+      <div class="do-title">Render documents</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §3.2 — sprint prompt included</div>
+      <div class="do-desc">ReportLab pipeline renders MIMIC JSON into realistic PDFs. Four layouts: LabCorpStyle, QuestStyle, DischargeSummaryStyle, RadiologyStyle. Ground truth JSON produced alongside each PDF. Apply degradation filters for Domain 1 coverage.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">3</div><div class="do-body">
+      <div class="do-title">Lock the corpus split before annotating</div>
+      <div class="do-ref">SEED_CORPUS_AND_TAXONOMY.md §4.5</div>
+      <div class="do-desc">Stratified 60/20/20 split (training/validation/test) assigned by providerLayoutHash before any annotation begins. Deterministic — same document always gets the same split. Test silo is physically isolated and never annotated.</div>
+      <div class="do-block">✕ Do not annotate first and split later</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">4</div><div class="do-body">
+      <div class="do-title">Run Swift extraction pipeline runner</div>
+      <div class="do-ref">SEED_CORPUS_RECURSIVE_TRAINING_STARTER_KIT.md §5.2 — sprint prompt included</div>
+      <div class="do-desc">SeedCorpusRunner Xcode target runs existing iOS extraction pipeline against rendered PDFs. PHI tokenization pass before posting. Only tokenized extraction + accuracy scores transmitted to Worker. Audit UIKit dependencies before implementing.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">5</div><div class="do-body">
+      <div class="do-title">Build and deploy SEED Master Control</div>
+      <div class="do-ref">SEED_CORPUS_RECURSIVE_TRAINING_STARTER_KIT.md §6b.3 — full sprint prompt included</div>
+      <div class="do-desc">Standalone Cloudflare Pages app. Four screens: Dashboard, Annotation queue, Corpus manager, PatternLibrary. Role-gated via ANNOTATOR_KEY:L0/L1/L2/L3. Deploy before starting annotation sessions.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">2b</div><div class="do-body">
+      <div class="do-title">Run augmentation engine after each annotation session</div>
+      <div class="do-ref">SEED_CORPUS_RECURSIVE_TRAINING_STARTER_KIT.md §3b — sprint prompt included</div>
+      <div class="do-desc">augment_batch.py reads completed annotations, generates 5–8 targeted variants per base document along its identified confusion class axis. 600 annotated docs → 3,000–4,800 training examples. Shifts the bottleneck from training volume to test silo size.</div>
+      <div class="do-warn">⚠ Unit variant augmentation requires L0 review — conversion math must be verified</div>
+      <div class="do-block">✕ Never augment augmented documents (generation max = 1)</div>
+      <div class="do-block">✕ Augmented documents never enter Silo B or Silo C test silos</div>
+    </div></li>
+  </ul>
+
+  <h3>The three benchmark silos</h3>
+  <table>
+    <tr><th>Silo</th><th>Source</th><th>Gate role</th><th>Target N</th></tr>
+    <tr><td>A — MIMIC synthetic</td><td>Augmented rendered PDFs</td><td>Necessary, not sufficient</td><td>Unlimited — generate as needed</td></tr>
+    <tr><td>B — Real PDFs</td><td>Real patient docs, annotated</td><td>The promotion trigger</td><td>300 (±3% F1 at 95% conf)</td></tr>
+    <tr><td>C — Edge cases</td><td>Real PDFs, Class B/D/E only</td><td>Zero regression — blocks if any class declines</td><td>50–80 of the 300</td></tr>
+  </table>
+
+  <h3>Target before first training run</h3>
+  <div class="grid3">
+    <div class="card"><div class="card-title">300 real PDFs in Silo B</div><div class="card-body">The honest gate. Detects ±3% F1 delta at 95% confidence.</div></div>
+    <div class="card"><div class="card-title">600 annotated → 3k–4.8k training</div><div class="card-body">With augmentation. Well into saturation for all Stage 2 classes.</div></div>
+    <div class="card"><div class="card-title">50–80 edge case docs — Silo C</div><div class="card-body">Class B/D/E. Zero regression tolerance. Hard block on promotion.</div></div>
+  </div>
+</div>
+
+<!-- ANNOTATE -->
+<div class="page" id="p-annotate">
+  <div class="eyebrow">Build step 3</div>
+  <div class="page-title">Annotate</div>
+  <div class="page-desc">The annotation session is the core of the operation. Bedrock pre-fills the form. You confirm, modify, or reject. Your judgment is the gate.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num cyan">1</div><div class="do-body">
+      <div class="do-title">Open SEED Master Control → Annotation queue</div>
+      <div class="do-desc">Queue loads highest-value documents first (active learning ordering). Each document is pre-annotated by Bedrock before you open it — forms are pre-filled.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">2</div><div class="do-body">
+      <div class="do-title">Review each extraction against the source document</div>
+      <div class="do-desc">Bounding boxes on the rendered PDF: amber = unreviewed, red = flagged wrong, green = confirmed, blue dashed = missing field. Click a box to load it into the correction form.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">3</div><div class="do-body">
+      <div class="do-title">For each extraction: accept, modify, or reject Bedrock's suggestion</div>
+      <div class="do-desc">Accept → hit Enter (8 seconds). Modify → change the class or rationale, then save. Reject → select correct class yourself. Use keyboard shortcuts: 1–5 for correction class, Enter to save and advance.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">4</div><div class="do-body">
+      <div class="do-title">Flag negative space — fields present in document but not extracted</div>
+      <div class="do-desc">Press N → add missing field form → select field type, canonical ID, clinical significance. This is Class E — the most clinically important correction type and the hardest to catch.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">5</div><div class="do-body">
+      <div class="do-title">Complete session → generates PatternAtoms</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §7.2</div>
+      <div class="do-desc">POST /v1/seed/generate-atoms runs PHI strip verification and writes pattern_atoms from your completed annotations. PHI strip verified before any atom enters the pipeline.</div>
+    </div></li>
+  </ul>
+
+  <h3>Correction classes — quick reference</h3>
+  <table>
+    <tr><th>Class</th><th>What happened</th><th>Example</th><th>Time</th></tr>
+    <tr><td><span class="tag tg">A</span></td><td>Correct value, wrong label</td><td>Glucose value in Sodium field</td><td>~30 sec</td></tr>
+    <tr><td><span class="tag tc">B</span></td><td>Correct atoms, wrong association</td><td>Two values linked incorrectly</td><td>~2 min</td></tr>
+    <tr><td><span class="tag tp">C</span></td><td>Correct, missing qualifier</td><td>"Borderline" stripped from result</td><td>~90 sec</td></tr>
+    <tr><td><span class="tag ta">D</span></td><td>Locally correct, globally wrong</td><td>Differential parsed as confirmed</td><td>~2 min</td></tr>
+    <tr><td><span class="tag tr">E</span></td><td>Silent — field never extracted</td><td>Creatinine in doc, not in output</td><td>~2 min</td></tr>
+  </table>
+</div>
+
+<!-- TRAIN -->
+<div class="page" id="p-train">
+  <div class="eyebrow">Build step 4</div>
+  <div class="page-title">Train</div>
+  <div class="page-desc">All training is offline. Spin up an instance, run the job, terminate. The training environment never touches live user traffic.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num amber">1</div><div class="do-body">
+      <div class="do-title">Export annotation corpus to JSONL</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §5.1</div>
+      <div class="do-desc">export_corpus.py reads expert_annotations from Neon (not CorrectionStore), outputs training/validation JSONL files. Each record: input = document region context, output = structured extraction JSON.</div>
+      <div class="do-block">✕ Do not export from CorrectionStore — user corrections are not training data</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">2</div><div class="do-body">
+      <div class="do-title">Launch AWS training instance</div>
+      <div class="do-ref">EXPERT_ANNOTATION_AND_MODEL_TRAINING.md §5.2</div>
+      <div class="do-desc">Stage 2: g4dn.2xlarge spot (~$0.23/hr). 2–4 hour run = ~$1. Stage 3: g4dn.12xlarge. Stage 4: p3.8xlarge. Use spot instances for training — terminate when done, zero ongoing cost.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">3</div><div class="do-body">
+      <div class="do-title">Run LoRA fine-tuning script</div>
+      <div class="do-desc">Hugging Face Trainer + PEFT library. Base model: Phi-3 Mini at Stage 2. LoRA config: r=16, lora_alpha=32, target_modules q_proj/v_proj. 3–5 epochs. Monitor loss curve — stop before overfitting.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">4</div><div class="do-body">
+      <div class="do-title">Evaluate candidate against validation silo</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §8.2</div>
+      <div class="do-desc">eval.py runs candidate model against validation corpus. Computes F1 per field type. Compare to current production model. If positive delta → proceed to gate. If flat or negative → investigate before proceeding.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">5</div><div class="do-body">
+      <div class="do-title">Run production gate against test silo</div>
+      <div class="do-ref">SEED_CORPUS_AND_TAXONOMY.md §4.9</div>
+      <div class="do-desc">gate.py runs candidate against held-out test silo. Must clear all field-type thresholds. No regression vs prior approved version. Gate result logged to benchmark_runs. If approved → write training_artifacts row.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">6</div><div class="do-body">
+      <div class="do-title">Run distillation analysis</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §5.2</div>
+      <div class="do-desc">Compare new model against rule engine on validation corpus. Where model wins → can this pattern be expressed as an explicit rule? If yes → generate candidate rule → enters PatternLibrary pipeline as Route A. Faster to device than the model itself.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">10</div><div class="do-body">
+      <div class="do-title">Step 10 — Sampled Bedrock recursion + context expectation engine</div>
+      <div class="do-ref">SEED_CORPUS_RECURSIVE_TRAINING_STARTER_KIT.md §13 — build after 200+ annotated docs</div>
+      <div class="do-desc">Two self-improving mechanisms. (1) Sampled Bedrock recursion: statistically samples uncertain extractions (confidence &lt; 0.75), runs Bedrock review pass, batch-approves high-confidence corrections into corpus at 0.7x weight. Cap 50 docs/run — not full recursion. Re-samples automatically when Bedrock model version upgrades. (2) Context expectation engine: mines co-occurrence patterns across corpus, learns what each document type should contain, tightens ingest pass proactively. Conservative activation — expectations only set when sample size is sufficient.</div>
+      <div class="do-warn">⚠ Build after benchmark_runs has 10+ stable runs and corpus has 200+ annotated documents</div>
+      <div class="do-block">✕ Full recursion on every document — cost and signal quality both fail</div>
+      <div class="do-block">✕ Context expectations from thin data — activation thresholds are hard limits</div>
+    </div></li>
+  </ul>
+
+  <h3>Model progression</h3>
+  <table>
+    <tr><th>Stage</th><th>Base model</th><th>Hardware</th><th>Run cost</th></tr>
+    <tr><td><span class="tag tg">S2 start</span></td><td>Phi-3 Mini 3.8B</td><td>g4dn.2xlarge spot</td><td>~$1–3</td></tr>
+    <tr><td><span class="tag tc">S2 mature</span></td><td>Llama 3.1 8B</td><td>g4dn.2xlarge spot</td><td>~$3–8</td></tr>
+    <tr><td><span class="tag tp">S3</span></td><td>Phi-3 Medium 14B</td><td>g4dn.12xlarge spot</td><td>~$15–25</td></tr>
+    <tr><td><span class="tag ta">S4a</span></td><td>Llama 3.1 70B</td><td>p3.8xlarge</td><td>~$80–300</td></tr>
+  </table>
+</div>
+
+<!-- PROMOTE -->
+<div class="page" id="p-promote">
+  <div class="eyebrow">Build step 5</div>
+  <div class="page-title">Promote</div>
+  <div class="page-desc">The gate decides what ships and where. Every artifact is routed before distribution begins. You approve — nothing promotes automatically.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num cyan">1</div><div class="do-body">
+      <div class="do-title">Open SEED Master Control → PatternLibrary screen</div>
+      <div class="do-desc">Two queues: seed corpus candidates (from expert annotations) and Bedrock suggestions (terminology, rules, classification disagreements). Both require your approval before anything promotes.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">2</div><div class="do-body">
+      <div class="do-title">Review each candidate — approve or reject</div>
+      <div class="do-ref">SEED_CORPUS_STARTER_KIT.md §9.2</div>
+      <div class="do-desc">POST /v1/admin/seed/approve → candidate promotes at next 2AM CRON. POST /v1/admin/seed/reject → logged, no promotion. Approved seed candidates bypass the validation window — manually verified by you.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">3</div><div class="do-body">
+      <div class="do-title">Confirm artifact route before distribution</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §4</div>
+      <div class="do-desc">PatternLibrary rule delta → Route A (silent device sync). CoreML model update → Route B (staged rollout). Private instance update → Route C (blue/green). Schema change → Route D (App Store). Routing determined automatically — you confirm it makes sense.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">4</div><div class="do-body">
+      <div class="do-title">For Route B model updates — initiate staged rollout</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §4.2</div>
+      <div class="do-desc">10% of users day 1 → monitor anomaly_flag rate delta vs control group. 50% day 3 if positive. 100% day 7 if positive. Halt and rollback if flag rate increases. Prior model retained on device for 14 days.</div>
+    </div></li>
+  </ul>
+
+  <h3>Four routes — quick reference</h3>
+  <table>
+    <tr><th>Route</th><th>What ships</th><th>How</th><th>App update?</th></tr>
+    <tr><td><span class="tag tg">A</span></td><td>PatternLibrary delta, distilled rules</td><td>CDN → silent sync on app open</td><td>No</td></tr>
+    <tr><td><span class="tag tc">B</span></td><td>CoreML model (arch unchanged)</td><td>CloudFront → staged rollout</td><td>No</td></tr>
+    <tr><td><span class="tag tp">C</span></td><td>Private instance update</td><td>Blue/green on AWS VPC</td><td>No</td></tr>
+    <tr><td><span class="tag tr">D</span></td><td>Schema change, new enum case</td><td>App Store review</td><td>Yes</td></tr>
+  </table>
+</div>
+
+<!-- DEVICE -->
+<div class="page" id="p-device">
+  <div class="eyebrow">Build step 6</div>
+  <div class="page-title">Ship to device</div>
+  <div class="page-desc">Two delivery mechanisms for device intelligence. Both happen silently. Users get better extraction without knowing anything changed.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num cyan">1</div><div class="do-body">
+      <div class="do-title">PatternLibrary delta sync (Route A)</div>
+      <div class="do-ref">ADAPTIVE_DOCUMENT_INTELLIGENCE.md §10.3</div>
+      <div class="do-desc">iOS app checks version on app open. If behind: download delta, validate patch signature, apply atomically, trigger retroactive re-scoring on prior documents under the old version. Silent. No user action. Happens every app open if there's a new version.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">2</div><div class="do-body">
+      <div class="do-title">CoreML model download (Route B)</div>
+      <div class="do-desc">Host compiled .mlmodelc on CloudFront. App checks for new model version on open (same pattern as PatternLibrary sync). Background download. Hot-swap via MLModel(contentsOf:). No App Store update for architecture-unchanged model updates.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">3</div><div class="do-body">
+      <div class="do-title">Monitor real-world performance during Route B staged rollout</div>
+      <div class="do-desc">Watch anomaly_flag rate in the SEED Master Control dashboard. Flag rate should stay flat or decrease after a model update. If it increases — the new model is worse in the real world regardless of benchmark scores. Halt and rollback immediately.</div>
+      <div class="do-warn">⚠ Real-world flag rate is ground truth. Benchmark approximates it.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num cyan">4</div><div class="do-body">
+      <div class="do-title">Retroactive re-scoring triggers automatically</div>
+      <div class="do-ref">ADAPTIVE_DOCUMENT_INTELLIGENCE.md §10.4</div>
+      <div class="do-desc">When a new library version applies, FactStore is queried for extractions under prior versions. Affected fields re-run against new rules. High-confidence improvements auto-accept. Lower-confidence improvements surface for user review. Users' old documents get smarter.</div>
+    </div></li>
+  </ul>
+</div>
+
+<!-- WEEKLY RHYTHM -->
+<div class="page" id="p-weekly">
+  <div class="eyebrow">Operations</div>
+  <div class="page-title">Weekly rhythm</div>
+  <div class="page-desc">Monday is the operational day. Everything automated runs overnight. You review and act in the morning.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num amber">1</div><div class="do-body">
+      <div class="do-title">6:00 AM UTC — Automated benchmark runs</div>
+      <div class="do-desc">30 documents, training split. Benchmark scores written to benchmark_runs. Bedrock analysis chain fires automatically: failure classification, terminology gaps, rule suggestions. All queued in /v1/admin/seed/analysis-review.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">2</div><div class="do-body">
+      <div class="do-title">Morning — Open SEED Master Control</div>
+      <div class="do-desc">Dashboard shows: accuracy delta from prior week, pending review counts, system maturity phase, silent miss rate. Review Bedrock classification disagreements → approve/reject terminology suggestions → approve/reject rule suggestions.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">3</div><div class="do-body">
+      <div class="do-title">Session — Annotation queue</div>
+      <div class="do-desc">Active learning serves highest-value documents first. Target: 80–90 documents/hour with Bedrock pre-annotation. Focus on the failure class the benchmark flagged as worst this week. Each annotation session directly funds the next training run.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">4</div><div class="do-body">
+      <div class="do-title">Review PatternLibrary candidates</div>
+      <div class="do-desc">GET /v1/admin/seed/candidates — any candidates that cleared the threshold appear here. Approve → promotes at next 2AM CRON. Keep approval sessions short — if something looks wrong, reject and investigate.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num amber">5</div><div class="do-body">
+      <div class="do-title">Review user anomaly flags</div>
+      <div class="do-desc">GET /v1/seed/anomaly-flags/pending. Classify each: misunderstanding, known class, novel failure, or data quality. Only novel failures create expert_annotations rows. Everything else is closed. Most weeks this is under 10 flags total.</div>
+    </div></li>
+  </ul>
+
+  <h3>Periodic tasks</h3>
+  <table>
+    <tr><th>When</th><th>Do this</th></tr>
+    <tr><td>Monthly</td><td>LOINC/RxNorm refresh — check for new terminology variants to add to the variant table</td></tr>
+    <tr><td>Quarterly</td><td>Formal test silo benchmark checkpoint — this is the defensible accuracy number</td></tr>
+    <tr><td>Annually</td><td>Test silo rotation — retire 50% to training, add fresh unseen documents, reset baseline</td></tr>
+    <tr><td>When ready</td><td>Training run — when corpus has grown enough. Not on a fixed schedule.</td></tr>
+  </table>
+</div>
+
+<!-- STAGE GATES -->
+<div class="page" id="p-stages">
+  <div class="eyebrow">Operations</div>
+  <div class="page-title">Stage gates</div>
+  <div class="page-desc">Phase transitions are benchmark-driven, not user-count-driven. Every transition is manual — you sign off before the system advances.</div>
+
+  <ul class="do-list">
+    <li class="do-item"><div class="do-num green">0</div><div class="do-body">
+      <div class="do-title">Phase 0 → Phase 1</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §2.2</div>
+      <div class="do-desc">Expert annotation corpus ≥ 500 Tier A documents AND benchmark overall F1 > 0.61 on test silo. System is ready for limited use.</div>
+      <div class="do-warn">⚠ Do not open to users before F1 > 0.61</div>
+    </div></li>
+    <li class="do-item"><div class="do-num green">1</div><div class="do-body">
+      <div class="do-title">Phase 1 → Phase 2 (acceptable UX)</div>
+      <div class="do-ref">FUNCTION_DISTINCTION.md §2.2, §7.1</div>
+      <div class="do-desc">Benchmark overall F1 > 0.78 on test silo AND Tier 1 auto-accept rate > 82% on validation silo. System works well enough that users don't need to correct it to trust it.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num green">2</div><div class="do-body">
+      <div class="do-title">Stage 2 → Stage 3 (document-level model)</div>
+      <div class="do-ref">EXPERT_ANNOTATION_AND_MODEL_TRAINING.md §4.3</div>
+      <div class="do-desc">3,000 annotated documents, 1,500 Tier A, fine-tuned model outperforms rule engine on test silo, L4 informaticist has reviewed annotation schema.</div>
+    </div></li>
+    <li class="do-item"><div class="do-num green">3</div><div class="do-body">
+      <div class="do-title">Stage 3 → Stage 4a (clinical reasoning)</div>
+      <div class="do-desc">7,000+ annotated documents, MIMIC-IV access active, private AWS instance operational, HIPAA BAA with AWS confirmed for EC2, institutional partnership or funding secured.</div>
+      <div class="do-warn">⚠ Engage FDA regulatory counsel before Stage 4 — not after</div>
+    </div></li>
+    <li class="do-item"><div class="do-num green">4</div><div class="do-body">
+      <div class="do-title">Stage 4a → Stage 4b (consented corpus)</div>
+      <div class="do-desc">Tier 3 consent framework legally reviewed, IRB determination completed, research DUA executed. Consented corpus reaches 10,000+ documents. MIMIC becomes validation baseline, not training source.</div>
+      <div class="do-block">✕ Do not activate Tier 3 without regulatory counsel sign-off</div>
+    </div></li>
+  </ul>
+</div>
+
+<!-- SPEC DOCS -->
+<div class="page" id="p-docs">
+  <div class="eyebrow">Reference</div>
+  <div class="page-title">Spec documents</div>
+  <div class="page-desc">The MD files have the depth. This page has the sequence. When something in this kit conflicts with an MD file, the MD file governs.</div>
+
+  <table>
+    <tr><th>Document</th><th>Version</th><th>When to open it</th></tr>
+    <tr><td>FUNCTION_DISTINCTION.md</td><td><span class="tag tr">v1.0 — OVERRIDE</span></td><td>Before building anything touching user corrections, training flow, or artifact routing. Section 9 has the sprint prompt lookup table.</td></tr>
+    <tr><td>ADAPTIVE_DOCUMENT_INTELLIGENCE.md</td><td><span class="tag tc">v2.2</span></td><td>ADI pipeline, consensus engine, PatternLibrary versioning, opt-in tiers. Section 8.2 superseded by FUNCTION_DISTINCTION.md.</td></tr>
+    <tr><td>SERVER_INFRASTRUCTURE.md</td><td><span class="tag tc">v1.1</span></td><td>Worker routes, Neon tables, Stage 4 private AWS instance. Full route surface and schema tables.</td></tr>
+    <tr><td>SEED_CORPUS_AND_TAXONOMY.md</td><td><span class="tag tc">v1.2</span></td><td>36 confusion classes, corpus construction, train/val/test split, production gate thresholds.</td></tr>
+    <tr><td>EXPERT_ANNOTATION_AND_MODEL_TRAINING.md</td><td><span class="tag tc">v1.3</span></td><td>Stage progression, proficiency ladder L0–L5, annotation cost estimates, Tier 3 consent, Stage 4b.</td></tr>
+    <tr><td>SEED_CORPUS_RECURSIVE_TRAINING_STARTER_KIT.md</td><td><span class="tag tc">v1.7</span></td><td>Full sprint prompts for all 10 build steps + Claude.ai planning prompts. Open this before any Claude Code session.</td></tr>
+    <tr><td>MASTER_REFERENCE_SCHEMA.md</td><td><span class="tag td">v1.0</span></td><td>Full index with all table names, route lists, build estimates, cadence detail.</td></tr>
+  </table>
+
+  <h3>Sprint prompt format</h3>
+  <div class="mono"><span class="g">Reference:</span> FUNCTION_DISTINCTION.md section [N]
+<span class="g">Reference:</span> SEED_CORPUS_STARTER_KIT.md section [N.N]
+<span class="g">Reference:</span> SERVER_INFRASTRUCTURE.md section [N.N]
+
+<span class="c">Audit first:</span> [what to read before writing any code]
+
+<span class="d">[Implementation instructions]</span>
+
+<span class="c">Device test:</span> [what to verify before proceeding]</div>
+
+  <h3>The one question before every sprint</h3>
+  <div class="card">
+    <div class="card-body" style="font-size:13px;color:var(--text);line-height:1.7">Does this component touch user corrections, training flow, or artifact routing? If yes — open FUNCTION_DISTINCTION.md section 9 first and get the governing section numbers before writing a prompt.</div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+function go(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+  document.getElementById('p-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

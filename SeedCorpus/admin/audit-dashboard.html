@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Dashboard — Record Health</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #f5f5f5; color: #1a1a1a; font-size: 14px; line-height: 1.5;
+  }
+  #app { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #111; }
+  h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #333; }
+  h3 { font-size: 13px; font-weight: 600; margin: 16px 0 8px; color: #555; }
+  .back-btn {
+    background: none; border: 1px solid #ccc; border-radius: 4px;
+    padding: 4px 12px; font-size: 13px; cursor: pointer; margin-bottom: 16px;
+    color: #333;
+  }
+  .back-btn:hover { background: #e8e8e8; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+  th { background: #fafafa; font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover { background: #f0f4ff; }
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: #fff; border-radius: 6px; padding: 14px 16px;
+    border: 1px solid #e5e5e5;
+  }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #888; margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 600; color: #111; }
+  .stat-value.mono { font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace; font-size: 16px; }
+  .page-selector { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 16px; }
+  .page-btn {
+    width: 36px; height: 30px; border: 1px solid #ccc; border-radius: 4px;
+    background: #fff; cursor: pointer; font-size: 13px; color: #333;
+  }
+  .page-btn:hover { background: #e8e8e8; }
+  .page-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .json-block {
+    background: #1e1e1e; color: #d4d4d4; padding: 14px 16px; border-radius: 6px;
+    font-family: "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    max-height: 400px; overflow-y: auto; margin-bottom: 12px;
+  }
+  .section-label {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.4px; color: #555; margin: 16px 0 6px;
+  }
+  .status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+  }
+  .status-complete { background: #dcfce7; color: #166534; }
+  .status-open { background: #fef3c7; color: #92400e; }
+  .loading { color: #888; font-style: italic; padding: 20px 0; }
+  .error-msg { color: #dc2626; padding: 12px; background: #fef2f2; border-radius: 6px; margin: 12px 0; }
+  .empty-msg { color: #888; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>Audit Dashboard</h1>
+  <div id="view-container"></div>
+</div>
+<script>
+(function() {
+  const BASE_URL = 'https://recordhealth-api-staging.jason-nolte.workers.dev';
+  const STORAGE_KEY = 'audit_admin_key';
+
+  let currentSessionId = null;
+  let currentDocumentId = null;
+  let currentPageData = null;
+
+  function getAdminKey() {
+    let key = sessionStorage.getItem(STORAGE_KEY);
+    if (!key) {
+      key = prompt('Enter ADI_ADMIN_KEY:');
+      if (!key) return null;
+      sessionStorage.setItem(STORAGE_KEY, key);
+    }
+    return key;
+  }
+
+  async function apiFetch(path) {
+    const key = getAdminKey();
+    if (!key) throw new Error('No admin key provided');
+    const res = await fetch(BASE_URL + path, {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        sessionStorage.removeItem(STORAGE_KEY);
+        throw new Error('Authentication failed — key cleared. Reload to retry.');
+      }
+      throw new Error('API error: ' + res.status + ' ' + res.statusText);
+    }
+    return res.json();
+  }
+
+  function el(tag, attrs, children) {
+    const node = document.createElement(tag);
+    if (attrs) Object.entries(attrs).forEach(function(kv) {
+      if (kv[0] === 'onclick') node.addEventListener('click', kv[1]);
+      else if (kv[0] === 'className') node.className = kv[1];
+      else if (kv[0] === 'textContent') node.textContent = kv[1];
+      else if (kv[0] === 'innerHTML') node.innerHTML = kv[1];
+      else node.setAttribute(kv[0], kv[1]);
+    });
+    if (children) children.forEach(function(c) {
+      if (typeof c === 'string') node.appendChild(document.createTextNode(c));
+      else if (c) node.appendChild(c);
+    });
+    return node;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatJSON(obj) {
+    return JSON.stringify(obj, null, 2);
+  }
+
+  function render(node) {
+    var container = document.getElementById('view-container');
+    container.innerHTML = '';
+    container.appendChild(node);
+  }
+
+  function renderError(msg) {
+    render(el('div', { className: 'error-msg', textContent: msg }));
+  }
+
+  // VIEW 1 — Session List
+  async function showSessionList() {
+    currentSessionId = null;
+    currentDocumentId = null;
+    render(el('div', { className: 'loading', textContent: 'Loading sessions...' }));
+    try {
+      var sessions = await apiFetch('/v1/admin/audit/sessions');
+      if (!Array.isArray(sessions)) sessions = sessions.sessions || sessions.data || [];
+      var wrap = el('div');
+      wrap.appendChild(el('h2', { textContent: 'Audit Sessions' }));
+      if (sessions.length === 0) {
+        wrap.appendChild(el('div', { className: 'empty-msg', textContent: 'No audit sessions found.' }));
+        render(wrap);
+        return;
+      }
+      var table = el('table');
+      var thead = el('thead', null, [
+        el('tr', null, [
+          el('th', { textContent: 'Created' }),
+          el('th', { textContent: 'Label' }),
+          el('th', { textContent: 'Documents' }),
+          el('th', { textContent: 'Status' })
+        ])
+      ]);
+      table.appendChild(thead);
+      var tbody = el('tbody');
+      sessions.forEach(function(s) {
+        var isComplete = !!s.completed_at;
+        var badge = el('span', {
+          className: 'status-badge ' + (isComplete ? 'status-complete' : 'status-open'),
+          textContent: isComplete ? 'Complete' : 'Open'
+        });
+        var statusTd = el('td');
+        statusTd.appendChild(badge);
+        var row = el('tr', { className: 'clickable', onclick: function() { showSessionDetail(s.id); } }, [
+          el('td', { textContent: formatDate(s.created_at) }),
+          el('td', { textContent: s.session_label || s.label || '—' }),
+          el('td', { textContent: String(s.document_count || 0) }),
+          statusTd
+        ]);
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      render(wrap);
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  // VIEW 2 — Session Detail
+  async function showSessionDetail(sessionId) {
+    currentSessionId = sessionId;
+    currentDocumentId = null;
+    render(el('div', { className: 'loading', textContent: 'Loading session...' }));
+    try {
+      var data = await apiFetch('/v1/admin/audit/session/' + sessionId);
+      var summary = data.summary || data;
+      var documents = data.documents || [];
+      var wrap = el('div');
+      wrap.appendChild(el('button', { className: 'back-btn', textContent: '\u2190 Sessions', onclick: showSessionList }));
+      wrap.appendChild(el('h2', { textContent: 'Session Detail' }));
+
+      var grid = el('div', { className: 'stats-grid' });
+      var stats = [
+        ['Total Extractions', summary.total_extractions],
+        ['Tier 1 Rate', summary.tier1_rate != null ? (summary.tier1_rate * 100).toFixed(1) + '%' : '—'],
+        ['PHI by Token Type', null],
+        ['Negative Regions', summary.total_negative_regions]
+      ];
+      stats.forEach(function(s) {
+        var card = el('div', { className: 'stat-card' });
+        card.appendChild(el('div', { className: 'stat-label', textContent: s[0] }));
+        if (s[0] === 'PHI by Token Type') {
+          var val = el('div', { className: 'stat-value mono' });
+          val.textContent = summary.phi_by_token_type ? formatJSON(summary.phi_by_token_type) : '—';
+          card.appendChild(val);
+        } else {
+          card.appendChild(el('div', { className: 'stat-value', textContent: s[1] != null ? String(s[1]) : '—' }));
+        }
+        grid.appendChild(card);
+      });
+      wrap.appendChild(grid);
+
+      wrap.appendChild(el('h3', { textContent: 'Documents' }));
+      if (documents.length === 0) {
+        wrap.appendChild(el('div', { className: 'empty-msg', textContent: 'No documents in this session.' }));
+      } else {
+        var table = el('table');
+        table.appendChild(el('thead', null, [
+          el('tr', null, [
+            el('th', { textContent: 'Filename' }),
+            el('th', { textContent: 'Category' }),
+            el('th', { textContent: 'Pages' }),
+            el('th', { textContent: 'T1' }),
+            el('th', { textContent: 'T2' }),
+            el('th', { textContent: 'T3' })
+          ])
+        ]));
+        var tbody = el('tbody');
+        documents.forEach(function(doc) {
+          var row = el('tr', { className: 'clickable', onclick: function() { showDocumentDetail(doc.id); } }, [
+            el('td', { textContent: doc.document_filename || doc.filename || '—' }),
+            el('td', { textContent: doc.document_category || doc.category || '—' }),
+            el('td', { textContent: String(doc.page_count || 0) }),
+            el('td', { textContent: String(doc.total_fields_accepted || 0) }),
+            el('td', { textContent: String(doc.total_fields_review || 0) }),
+            el('td', { textContent: String(doc.total_fields_escalated || 0) })
+          ]);
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+      }
+      render(wrap);
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  // VIEW 3 — Document Detail + Page Browser
+  async function showDocumentDetail(documentId) {
+    currentDocumentId = documentId;
+    render(el('div', { className: 'loading', textContent: 'Loading document...' }));
+    try {
+      var doc = await apiFetch('/v1/admin/audit/document/' + documentId);
+      if (doc.document) doc = doc.document;
+      var wrap = el('div');
+      wrap.appendChild(el('button', { className: 'back-btn', textContent: '\u2190 Session', onclick: function() { showSessionDetail(currentSessionId); } }));
+      wrap.appendChild(el('h2', { textContent: doc.document_filename || doc.filename || 'Document Detail' }));
+
+      // Document stats
+      var grid = el('div', { className: 'stats-grid' });
+      var pairs = [
+        ['Category', doc.document_category || doc.category],
+        ['Pages', doc.page_count],
+        ['Total Fields', doc.total_fields_extracted],
+        ['T1 Accepted', doc.total_fields_accepted],
+        ['T2 Review', doc.total_fields_review],
+        ['T3 Escalated', doc.total_fields_escalated],
+        ['Processing (ms)', doc.processing_duration_ms],
+        ['OCR Engine', doc.ocr_engine]
+      ];
+      pairs.forEach(function(p) {
+        var card = el('div', { className: 'stat-card' });
+        card.appendChild(el('div', { className: 'stat-label', textContent: p[0] }));
+        card.appendChild(el('div', { className: 'stat-value', textContent: p[1] != null ? String(p[1]) : '—' }));
+        grid.appendChild(card);
+      });
+      wrap.appendChild(grid);
+
+      // Page selector
+      var pageCount = doc.page_count || 0;
+      wrap.appendChild(el('h3', { textContent: 'Pages' }));
+      if (pageCount === 0) {
+        wrap.appendChild(el('div', { className: 'empty-msg', textContent: 'No pages.' }));
+      } else {
+        var selector = el('div', { className: 'page-selector' });
+        for (var i = 0; i < pageCount; i++) {
+          (function(pageIndex) {
+            var btn = el('button', {
+              className: 'page-btn',
+              textContent: String(pageIndex + 1),
+              onclick: function() { loadPage(documentId, pageIndex, wrap); }
+            });
+            selector.appendChild(btn);
+          })(i);
+        }
+        wrap.appendChild(selector);
+      }
+
+      // Page data container
+      wrap.appendChild(el('div', { id: 'page-data' }));
+      render(wrap);
+    } catch (e) {
+      renderError(e.message);
+    }
+  }
+
+  async function loadPage(documentId, pageIndex, wrap) {
+    // Update active button
+    var buttons = document.querySelectorAll('.page-btn');
+    buttons.forEach(function(b) { b.className = 'page-btn'; });
+    if (buttons[pageIndex]) buttons[pageIndex].className = 'page-btn active';
+
+    var container = document.getElementById('page-data');
+    if (!container) return;
+    container.innerHTML = '<div class="loading">Loading page ' + (pageIndex + 1) + '...</div>';
+
+    try {
+      var data = await apiFetch('/v1/admin/audit/document/' + documentId + '/page/' + pageIndex);
+      container.innerHTML = '';
+
+      var sections = [
+        ['Fields', data.fields],
+        ['PHI Detections', data.phi],
+        ['Negative Space', data.negative_space]
+      ];
+      sections.forEach(function(s) {
+        container.appendChild(el('div', { className: 'section-label', textContent: s[0] + ' (' + (Array.isArray(s[1]) ? s[1].length : 0) + ')' }));
+        var block = el('pre', { className: 'json-block' });
+        block.textContent = Array.isArray(s[1]) && s[1].length > 0 ? formatJSON(s[1]) : '[]';
+        container.appendChild(block);
+      });
+    } catch (e) {
+      container.innerHTML = '';
+      container.appendChild(el('div', { className: 'error-msg', textContent: e.message }));
+    }
+  }
+
+  // Init
+  showSessionList();
+})();
+</script>
+</body>
+</html>
