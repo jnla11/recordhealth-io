@@ -721,6 +721,13 @@ detection as a first-class observation.
    (schema) and 6cedf57 (endpoints) on recordhealth-api main.
 
 3. GT-1.6c — Pass 2 prompt v2 (expanded entity_kind enum)
+
+   **Status: Complete (2026-04-16).** pass2_extraction v2 registered
+   on staging. FactKind and InterpretationKind expanded with 7 new
+   entity kinds. FHIR coding capture threaded to
+   FHIRBackgroundObservation. Commits cc149cd, 959255b, 98db26c on
+   iOS design-v2; c34079e on parent main.
+
 4. GT-1.6d — Ontology lookup service (NPPES, RxNav, UMLS, NLM +
    `ontology_resolution_v1` prompt). MUST land before GT-2.
 5. GT-1.6e — iOS data model update (can parallel with GT-2)

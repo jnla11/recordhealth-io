@@ -687,6 +687,9 @@ GT-1.6 design (this document) → execution sprints, in order:
      codes field on FHIRImportCandidate that propagates to FactStore.
    The three are bundled because AI output, iOS types, and FHIR
    imports must all agree on the expanded entity kind set.
+   **Status: Complete (2026-04-16).** v2 prompt registered, FactKind
+   expanded, FHIR coding capture live through FHIRBackgroundObservation.
+   FactStore threading deferred to GT-1.6e.
 
 4. **GT-1.6d — Ontology lookup service.** Worker endpoint +
    ontology_resolution_v1 prompt registration + API integrations
