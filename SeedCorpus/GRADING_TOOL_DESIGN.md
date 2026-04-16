@@ -1115,34 +1115,97 @@ in commit messages and other docs without ambiguity.
 
 ### GT-INGEST-1 — PDF text layer audit
 
-**Status:** Pending.
+**Status:** Complete (2026-04-15).
 
-**Question:** Does the on-device ingest pipeline check for an
-existing text layer in incoming PDFs before running Vision OCR,
-or does it Vision-OCR all PDFs unconditionally?
+**Question asked:** Does the on-device ingest pipeline check for
+an existing text layer in incoming PDFs before running Vision
+OCR, or does it Vision-OCR all PDFs unconditionally?
 
-**Why it matters:** PDFs from EHR portals, hospital downloads,
-and lab portals typically arrive with high-quality native text
-layers from the source system. Vision OCR is excellent for
-scanned/photographed documents but introduces character
-substitutions, layout breaks, and table-reading errors compared
-to extracting an existing text layer directly. Re-OCRing
-already-perfect text degrades extraction quality before AI
-extraction even runs.
+**Headline finding:** The pipeline already uses existing PDF text
+layers preferentially — the audit question's framing did not
+match reality. PDFKit text is canonical throughout the text-layer
+path; Vision is used only to upgrade bounding-box precision,
+never to overwrite text content.
 
-**Scope:** Read-only audit. Trace the PDF ingest path from
-RecordIngestPipeline through PageCodex / PDFKit / Vision. Identify
-whether existing text layers are detected and used preferentially,
-or whether Vision OCR runs unconditionally. Report findings.
+**Actual bug surfaced:** Mixed-content PDFs silently lose their
+scanned pages. The whole-document gate at
+`FileTextExtractor.extractWithDetails` is binary: "any text layer
+anywhere → route the whole PDF to the PDFKit path." Image-only
+pages inside otherwise-text-layer documents return empty
+`OCRPage`s because `PageCodexBuilder` has no per-page Vision
+fallback. A PDF with a one-sentence text cover page plus 19
+scanned body pages extracts only the cover page. This failure
+mode is silent — no error raised, just missing content the AI
+never sees.
 
-**Out of scope:** Any code changes. If the audit confirms
-unnecessary re-OCR is happening, that's a follow-on sprint
-(tentatively GT-INGEST-2).
+**Frequency assessment:** Not rare in the patient-uploads domain.
+Hospital discharge packets (typed cover + scanned notes),
+insurance EOBs (typed header + scanned claims), and similar
+mixed-source PDFs are common and currently losing most of their
+content during extraction.
 
-### GT-INGEST-2 — Text layer fix (conditional)
+**Recommendation:** Scope GT-INGEST-2 to fix the per-page
+routing gap.
 
-**Status:** Conditional on GT-INGEST-1 findings. Will only be
-scoped if GT-INGEST-1 confirms unnecessary re-OCR is occurring.
+### GT-INGEST-2 — Per-page text-layer/Vision routing
+
+**Status:** Scoped, pending. Promoted from conditional based on
+GT-INGEST-1 findings.
+
+**Goal:** A PDF with mixed text-layer and scanned pages extracts
+correctly on every page, regardless of which pages have text
+layers.
+
+**Scope:** Three files modified.
+
+1. `Data/Import/FileTextExtractor.swift` — replace whole-document
+  text-layer gate (`extractWithDetails`) with per-page iteration.
+  For each page: if `page.string` is non-empty, use PDFKit text;
+  else invoke Vision OCR fallback. Return a single
+  `ExtractionResult` whose aggregate text reflects the per-page
+  mix.
+2. `Data/Import/PageCodexBuilder.swift` — on empty `pdfkitBlocks`,
+  invoke Vision OCR (via
+  `SearchablePDFCreator.performOCRWithPositions` or equivalent)
+  to recover text and positions from scanned pages. Return a
+  populated `OCRPage` instead of an empty one.
+3. `Data/Persistence/RecordsStore.swift` — consolidate the
+  `wasOCR` branch. With per-page routing inside PageCodex, the
+  scanned-whole-document branch becomes unnecessary. Consider
+  whether `SearchablePDFCreator.createSearchablePDF` should
+  still run for its invisible-text-overlay side effect (for
+  iOS's PDF viewer to render selectable text) and, if so, how
+  to avoid duplicate Vision work.
+
+**Provenance preservation:** Add a new `PositionSource` enum
+value (tentatively `.visionOCR`) to distinguish "Vision read
+this word on a scanned page" from "Vision upgraded the position
+of this PDFKit-sourced word" (the existing `.vision` case). This
+preserves per-block provenance for the grading tool. No schema
+change needed on the grading tool side — the tag lives on the
+iOS `OCRTextBlock`.
+
+**Smoke test cases:**
+
+1. Pure text-layer PDF (regression).
+2. Pure scanned PDF (regression).
+3. Mixed: page 1 text layer + pages 2-3 scanned — all three
+  pages should produce non-empty text with correct per-page
+  content.
+4. One-sentence text cover letter + 10 scanned report pages —
+  all 11 pages extracted.
+5. Text-layer PDF with one scanned diagram page in the middle —
+  diagram page extracted via per-page fallback.
+
+**Estimated size:** Small-to-medium. Contained to three files
+plus the enum extension. SearchablePDFCreator consolidation
+(deduplicating Vision work between PageCodex and the searchable
+PDF overlay) is a nice-to-have that can be deferred.
+
+**Ordering note:** GT-INGEST-2 should land BEFORE GT-1.6a so
+that annotation work in GT-2 sees properly-extracted documents
+rather than partially-extracted ones. Mixed-content PDFs in the
+current test corpus are silently missing content today.
 
 ---
 
