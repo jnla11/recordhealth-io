@@ -454,42 +454,193 @@ CREATE INDEX idx_knowledge_gaps_related_atoms ON knowledge_gaps USING gin(relate
 
 ### 5.6 canonical_codes JSONB shape
 
-Each entry in the `canonical_codes` array on `data_atoms`:
+Each entry in the `canonical_codes` array on `data_atoms`
+represents a terminology code associated with this clinical
+fact. Codes are artifacts with provenance, not assertions of
+truth. The system holds multiple attestations from different
+sources and lets downstream consumers (reviewers, providers,
+billing specialists, patients) make informed decisions based
+on the full evidence chain.
+
+**Core fields:**
 
 ```json
 {
   "system": "SNOMED-CT",
-  "code": "65363002",
-  "display": "Otitis media",
+  "code": "19030005",
+  "display": "Recurrent otitis media",
   "specificity": "exact",
-  "source": "human_confirmed_from_ai_suggestion",
-  "confidence": 0.92,
-  "ai_suggested_code": "65363002",
-  "ai_suggested_display": "Otitis media",
-  "resolved_at": "2026-04-15T22:30:00Z",
-  "resolved_by": "<reviewer_id>"
+  "derivation": "api_match_with_selection",
+  "attestation": "ai_suggested",
+  "confidence": 0.88,
+  "confidence_basis": "initial_ai_assignment",
+  "reasoning": "NLM Clinical Tables returned 3 SNOMED candidates for 'otitis media recurrent'. Selected 19030005 (Recurrent otitis media) over parent concept 65363002 (Otitis media) because the document explicitly states 'recurrent'.",
+  "caveats": [
+    "Laterality not specified — if bilateral, a more specific SNOMED qualifier applies",
+    "Recurrence count not documented — if >=4 episodes/12mo, additional specificity available"
+  ]
 }
 ```
 
-**Allowed `system` values:** SNOMED-CT, ICD-10-CM, RxNorm, RxNorm-IN,
-LOINC, CPT, HCPCS, CVX, NPI, NDC, UDI, UCUM.
+**Allowed `system` values:** SNOMED-CT, ICD-10-CM, RxNorm,
+RxNorm-IN, LOINC, CPT, HCPCS, CVX, NPI, NDC, UDI, UCUM.
 
-**Allowed `specificity` values:** exact, class_level, category_level.
+**Allowed `specificity` values:** exact, class_level,
+category_level.
 
-**Allowed `source` values:** human_confirmed, ai_suggested,
-ai_auto_accepted, human_confirmed_from_ai_suggestion,
-human_overrode_ai_suggestion, api_lookup, fhir_import,
-human_typed, unresolved.
+**Allowed `derivation` values:**
 
-**`fhir_import`** indicates the code was preserved verbatim from
-a FHIR resource at import time (e.g. Apple Health export). These
-codes are deterministic, high-confidence, and bypass the
-ontology lookup service. No AI suggestion delta is captured for
-fhir_import codes since no AI was involved.
+- `verbatim_from_source` — code was present in the source
+  document (FHIR import, printed on PDF)
+- `deterministic_api_match` — API returned exact match, no
+  interpretation needed
+- `api_match_with_selection` — API returned multiple candidates,
+  AI or reviewer selected best fit
+- `ai_inferred_from_context` — AI derived this from clinical
+  reasoning, not direct textual evidence
+- `human_assigned` — reviewer typed the code manually
 
-**`ai_suggested_code` and `ai_suggested_display`** are populated only
-when `source = human_overrode_ai_suggestion`. They preserve the AI's
-proposal so the override delta becomes training data.
+**Allowed `attestation` values:**
+
+- `source_document` — this code appeared in the source artifact
+  (FHIR coding, printed on the PDF)
+- `provider_documented` — a provider explicitly assigned this
+  code in the clinical record
+- `api_resolved` — deterministic API match from verbatim text
+- `ai_suggested` — AI proposed this based on extraction + context
+- `reviewer_assessed` — reviewer evaluated and accepted/modified
+- `patient_reported` — patient stated this
+- `fhir_import` — code preserved verbatim from a FHIR resource
+  at import time (e.g. Apple Health). Deterministic,
+  high-confidence, bypasses the ontology lookup service.
+- `amended` — a prior attestation was questioned; this entry
+  represents the amendment (see amendments array)
+
+**Allowed `confidence_basis` values:**
+
+- `initial_ai_assignment` — confidence is the AI's initial
+  score, not yet updated by any subsequent evidence
+- `reviewer_assigned` — confidence was set by a human reviewer
+- `bayesian_composite` — confidence was computed from the
+  attestation_history (future capability; schema supports it
+  now, computation deferred)
+- `cross_source_corroborated` — confidence was boosted by
+  independent corroboration from a different source type
+
+**`reasoning`** (string) — human-readable explanation of how
+this code was derived. Powers the "i" button in the reviewer
+UI. Stored permanently alongside the code for long-term
+explainability. The AI lookup prompt produces this; reviewers
+can also add reasoning when manually assigning codes.
+
+**`caveats`** (string array) — explicit uncertainty flags.
+Things the AI (or reviewer) identified as unresolved or
+potentially incorrect about this code assignment. Surfaced
+alongside reasoning in the "i" button. Empty array when no
+caveats apply.
+
+**Attestation history and amendments:**
+
+For codes that accumulate evidence over time (cross-source
+corroboration, reviewer assessment on top of AI suggestion,
+later amendment), the canonical_codes entry carries two
+additional arrays:
+
+```json
+{
+  "attestation_history": [
+    {
+      "attestation": "ai_suggested",
+      "confidence": 0.88,
+      "by": "ontology_resolution_v1",
+      "by_authority": "ai_pipeline",
+      "at": "2026-04-16T22:30:00Z",
+      "source_document_id": "abc-123"
+    },
+    {
+      "attestation": "reviewer_assessed",
+      "confidence": 0.95,
+      "by": "reviewer-jason",
+      "by_authority": "domain_informed_non_clinical",
+      "at": "2026-04-16T23:00:00Z",
+      "action": "confirmed"
+    },
+    {
+      "attestation": "source_corroboration",
+      "confidence": 0.97,
+      "by": "fhir_import",
+      "by_authority": "ehr_system",
+      "at": "2026-04-17T10:00:00Z",
+      "source_document_id": "def-456",
+      "note": "Apple Health FHIR MedicationStatement carried identical coding"
+    }
+  ],
+  "amendments": [
+    {
+      "prior_code": "H66.90",
+      "amended_to": "H66.93",
+      "amended_by": "reviewer-jason",
+      "amended_by_authority": "domain_informed_non_clinical",
+      "amended_at": "2026-04-17T14:00:00Z",
+      "reason": "Bilateral documented on page 3. H66.93 is more specific than H66.90."
+    }
+  ]
+}
+```
+
+**Allowed `by_authority` values** (for attestation_history
+entries and amendments):
+
+- `ai_pipeline` — AI system (lowest initial weight)
+- `mechanical_annotator` — basic QA annotator
+- `domain_informed_non_clinical` — trained power user without
+  medical credentials
+- `clinical_data_specialist` — medical degree + data science
+- `licensed_clinician` — practicing MD/DO/NP
+- `ehr_system` — Epic/Cerner/Athena or similar EHR FHIR export
+- `certified_lab` — CLIA-certified laboratory result
+- `patient_self_report` — patient-stated information
+
+**Design notes on attestation and amendments:**
+
+- Everything is an artifact with provenance. There is no
+  binary "true/false" gate on codes. Healthcare records
+  contain what was documented, not what is objectively true.
+  The system holds all attestations and lets downstream
+  consumers make informed decisions.
+- Amendments are append-only. The original code stays in the
+  record permanently. An amendment says "here is what we
+  believe is more accurate, and here is why." Neither
+  overwrites the other. Both are first-class artifacts.
+- The top-level `confidence` starts as the AI's initial
+  assignment. Future sprints may implement Bayesian composite
+  scoring from `attestation_history`, where each new
+  attestation updates the score weighted by the attester's
+  authority. Until then, `confidence` is either the initial
+  AI score or the most recent reviewer's assessment.
+  `confidence_basis` indicates which.
+- `attestation_history` captures the raw evidence chain.
+  The grading tool's scoring logic (GT-5, future) uses
+  attestation to determine scoring eligibility: only codes
+  where `attestation` is `reviewer_assessed`,
+  `source_document`, or `fhir_import` enter the scoring
+  corpus. AI suggestions that haven't been reviewed exist
+  in the data for workflow and training capture but do not
+  count as ground truth for F1 scoring.
+- The `amendments` chain is itself high-value training data.
+  When a reviewer amends an AI suggestion, the (original,
+  amended, reason) triple teaches the future model why its
+  suggestion was wrong in this context.
+
+**Fields preserved from prior design (GT-1.5a):**
+
+- `ai_suggested_code` and `ai_suggested_display` — populated
+  when a reviewer overrides an AI suggestion (now captured
+  more richly in amendments, but preserved for backwards
+  compatibility with existing GT-1.5a registrations)
+- `resolved_at` and `resolved_by` — still valid as shorthand
+  for "when and who last touched this code." The full chain
+  lives in attestation_history.
 
 ### 5.7 Migration from GT-1 annotations table
 
@@ -562,14 +713,28 @@ This means:
 
 ### 7.3 Reviewer flow
 
-1. AI runs lookup, populates `canonical_codes` with `source: ai_suggested`
-2. Reviewer sees suggestions ranked by confidence in the ADI tool
+1. AI runs lookup, populates `canonical_codes` with
+   `attestation: ai_suggested`, `derivation` per lookup path,
+   `reasoning` explaining the resolution chain, and `caveats`
+   flagging uncertainty.
+2. Reviewer sees suggestions ranked by confidence in the ADI
+   tool. Each suggestion has an "i" button that surfaces the
+   reasoning and caveats.
 3. Reviewer either:
-   - Confirms top suggestion → entry becomes `human_confirmed_from_ai_suggestion`
-   - Picks different option → entry becomes `human_overrode_ai_suggestion`,
-     AI's original proposal preserved in `ai_suggested_code`
-   - Types a code manually → entry becomes `human_typed`
-   - Marks as unresolvable → entry becomes `unresolved`
+   - Confirms top suggestion → new attestation_history entry
+     with `attestation: reviewer_assessed`, `action: confirmed`
+   - Amends to a different code → amendment entry with
+     prior_code, amended_to, and reason. Original code
+     preserved.
+   - Types a code manually → new code entry with
+     `attestation: reviewer_assessed`,
+     `derivation: human_assigned`
+   - Marks as unresolvable → attestation stays `ai_suggested`,
+     a caveat is added noting the reviewer could not resolve
+4. The lookup prompt's self-questioning (caveats and reviewer
+   questions) guides the reviewer to the specific decision
+   points that need human judgment, reducing the medical
+   expertise required for effective review.
 
 ### 7.4 FHIR-sourced atoms bypass the lookup
 
