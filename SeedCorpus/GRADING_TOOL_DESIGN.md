@@ -1105,6 +1105,47 @@ annotate → score → export JSON → save to DB → retrieve.
 
 ---
 
+## Open Investigations
+
+Pending audits and pre-sprint investigations that have been
+identified but not yet executed. These are not formal sprints —
+they are read-only audits whose findings inform later sprint
+scoping. Each carries a stable identifier so it can be referenced
+in commit messages and other docs without ambiguity.
+
+### GT-INGEST-1 — PDF text layer audit
+
+**Status:** Pending.
+
+**Question:** Does the on-device ingest pipeline check for an
+existing text layer in incoming PDFs before running Vision OCR,
+or does it Vision-OCR all PDFs unconditionally?
+
+**Why it matters:** PDFs from EHR portals, hospital downloads,
+and lab portals typically arrive with high-quality native text
+layers from the source system. Vision OCR is excellent for
+scanned/photographed documents but introduces character
+substitutions, layout breaks, and table-reading errors compared
+to extracting an existing text layer directly. Re-OCRing
+already-perfect text degrades extraction quality before AI
+extraction even runs.
+
+**Scope:** Read-only audit. Trace the PDF ingest path from
+RecordIngestPipeline through PageCodex / PDFKit / Vision. Identify
+whether existing text layers are detected and used preferentially,
+or whether Vision OCR runs unconditionally. Report findings.
+
+**Out of scope:** Any code changes. If the audit confirms
+unnecessary re-OCR is happening, that's a follow-on sprint
+(tentatively GT-INGEST-2).
+
+### GT-INGEST-2 — Text layer fix (conditional)
+
+**Status:** Conditional on GT-INGEST-1 findings. Will only be
+scoped if GT-INGEST-1 confirms unnecessary re-OCR is occurring.
+
+---
+
 ## Prompt Version Increment Discipline
 
 Every time a registered prompt's text changes, before the sprint
