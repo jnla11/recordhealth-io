@@ -696,6 +696,38 @@ Do not commit. Surface diffs for review.
 
 ---
 
+### Sprint GT-1.6 — Clinical Shape Extension
+**Scope:** Replace the GT-1 single-row annotation schema with a
+clinically rich, FHIR-aligned, four-table data model.
+
+Full design captured in CLINICAL_SHAPE_DESIGN.md (this directory).
+
+**Summary:** Replaces the GT-1 single-row annotation schema with a
+four-table structure (`data_atoms`, `source_regions`,
+`atom_region_links`, `knowledge_gaps`) supporting 20 entity kinds,
+FHIR-shaped clinical metadata per kind, multi-system canonical
+coding (SNOMED, ICD-10-CM, RxNorm, LOINC, CPT, HCPCS, CVX, NPI,
+UDI, NDC, UCUM), append-only provenance, and knowledge gap
+detection as a first-class observation.
+
+**Implementation decomposes into five sub-sprints:**
+
+1. GT-1.6b — Pre-design FactStore audit (runs first)
+2. GT-1.6a — Schema deployment to staging Worker
+3. GT-1.6c — Pass 2 prompt v2 (expanded entity_kind enum)
+4. GT-1.6d — Ontology lookup service (NPPES, RxNav, UMLS, NLM +
+   `ontology_resolution_v1` prompt). MUST land before GT-2.
+5. GT-1.6e — iOS data model update (can parallel with GT-2)
+
+GT-2 (PDF annotation drawing) builds against GT-1.6a/c/d and lands
+after them.
+
+See CLINICAL_SHAPE_DESIGN.md for the full schema, FHIR field subsets
+per entity kind, ontology lookup design, six grading dimensions, and
+design rationale.
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
