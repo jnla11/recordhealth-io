@@ -358,6 +358,10 @@ CREATE TYPE gap_type_enum AS ENUM (
 ```sql
 CREATE TABLE data_atoms (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Client-supplied IDs accepted on INSERT; default fires only
+  -- when caller omits id. iOS HealthFact.id passes through as
+  -- data_atoms.id so reviewer corrections in the grading tool
+  -- can round-trip to the iOS atom by ID match.
   document_id     UUID NOT NULL,
   patient_id      UUID NOT NULL,
   entity_kind     entity_kind_enum NOT NULL,
@@ -474,7 +478,14 @@ LOINC, CPT, HCPCS, CVX, NPI, NDC, UDI, UCUM.
 
 **Allowed `source` values:** human_confirmed, ai_suggested,
 ai_auto_accepted, human_confirmed_from_ai_suggestion,
-human_overrode_ai_suggestion, api_lookup, human_typed, unresolved.
+human_overrode_ai_suggestion, api_lookup, fhir_import,
+human_typed, unresolved.
+
+**`fhir_import`** indicates the code was preserved verbatim from
+a FHIR resource at import time (e.g. Apple Health export). These
+codes are deterministic, high-confidence, and bypass the
+ontology lookup service. No AI suggestion delta is captured for
+fhir_import codes since no AI was involved.
 
 **`ai_suggested_code` and `ai_suggested_display`** are populated only
 when `source = human_overrode_ai_suggestion`. They preserve the AI's
@@ -560,6 +571,35 @@ This means:
    - Types a code manually → entry becomes `human_typed`
    - Marks as unresolvable → entry becomes `unresolved`
 
+### 7.4 FHIR-sourced atoms bypass the lookup
+
+Atoms originating from FHIR imports (Apple Health, EHR portal
+syncs, CCDA attachments) come pre-coded by the source system.
+Their `coding[]` arrays carry SNOMED, ICD-10-CM, RxNorm, LOINC,
+CVX, UCUM, and other terminology codes that are authoritative.
+
+These atoms bypass the AI ontology lookup entirely. At import,
+each `coding[]` entry becomes a canonical_codes entry with
+`source: fhir_import`, full system + code + display preserved
+verbatim from the FHIR resource.
+
+This has two important implications:
+
+1. **Deterministic shortcut.** FHIR-sourced facts skip the
+   AI lookup cost and arrive fully coded. Only PDF-extracted
+   facts (or other unstructured sources) need the AI lookup.
+
+2. **Free training corpus.** FHIR-sourced (verbatim, code) pairs
+   are reviewer-grade training data with zero annotation effort.
+   When the BioMistral fine-tuning corpus is assembled, these
+   pairs contribute alongside reviewer-confirmed pairs from the
+   grading tool.
+
+The iOS FHIR import path (FHIRRecordMapper.swift in the iOS
+repo) currently discards `coding[].code` and `coding[].system`,
+keeping only `display`. This is a known gap (GT-1.6b finding #2)
+and is addressed in GT-1.6c.
+
 ---
 
 ## 8. Six Grading Dimensions
@@ -623,32 +663,48 @@ GT-1.6 design (this document) → execution sprints, in order:
 1. **GT-1.6b — Pre-design FactStore audit.** Verify stable atom IDs,
    JSONB query patterns, document-vs-patient fact separation in current
    iOS code. Findings only, no changes. Runs FIRST so findings can
-   inform schema deployment.
+   inform schema deployment. **Status: complete (2026-04-15).**
 
-2. **GT-1.6a — Schema deployment.** Run CREATE TYPE / CREATE TABLE
-   statements on staging Worker. Add typed wrappers in Worker code.
-   Smoke test with manual atom insert/query.
+2. **GT-1.6a — Schema deployment + Worker endpoints + auth.**
+   Run CREATE TYPE / CREATE TABLE statements on staging Worker
+   (data_atoms, source_regions, atom_region_links, knowledge_gaps).
+   Build Worker endpoints for atom + region + link CRUD, with auth
+   model supporting both isADIAdminAuthorized (for grading tool
+   reviewer writes) and a separate iOS-write auth (for ingest
+   pipeline writes). Smoke test with manual insert/query.
 
-3. **GT-1.6c — Pass 2 prompt v2.** Add familyHistory, immunization,
-   socialHistory, device, referral, carePlan, coverage to the
-   entity_kind enum in the Pass 2 prompt. Update extraction rules
-   (specifically: rule #3 changes from "do NOT extract family history"
-   to "extract family history as entity_kind: familyHistory").
-   Bump pass2_extraction to v2 in the prompt registry. Update iOS
-   promptVersion constant.
+3. **GT-1.6c — Pass 2 prompt v2 + FactKind expansion + FHIR coding capture.**
+   Three coordinated changes:
+   - Add familyHistory, immunization, socialHistory, device, referral,
+     carePlan, coverage to the entity_kind enum in the Pass 2 prompt.
+     Update extraction rules. Bump pass2_extraction to v2 in the
+     prompt registry.
+   - Expand iOS FactKind enum with the same seven new cases.
+   - Update FHIRRecordMapper to capture `coding[].code` and
+     `coding[].system` (not just display). Persist as a structured
+     codes field on FHIRImportCandidate that propagates to FactStore.
+   The three are bundled because AI output, iOS types, and FHIR
+   imports must all agree on the expanded entity kind set.
 
 4. **GT-1.6d — Ontology lookup service.** Worker endpoint +
    ontology_resolution_v1 prompt registration + API integrations
-   (NPPES, RxNav, UMLS, NLM). MUST land before GT-2 — the non-medical
-   reviewer cannot annotate without lookup support.
+   (NPPES, RxNav, UMLS, NLM Clinical Tables Search). MUST land
+   before GT-2 — the non-medical reviewer cannot annotate without
+   lookup support. FHIR-sourced atoms bypass this service entirely
+   per §7.4.
 
-5. **GT-2 — PDF annotation drawing in ADI console.** Builds against
-   GT-1.6a/c/d. First user-visible grading tool feature.
+5. **GT-2 — PDF annotation drawing in ADI console.** Builds
+   against GT-1.6a/c/d. First user-visible grading tool feature.
 
-6. **GT-1.6e — iOS data model.** Update FactStore types to match
-   the new schema. Update DeduplicationEngine to handle the
-   many-to-many atom/region relationship. Can run in parallel with
-   GT-2 once GT-1.6a lands.
+6. **GT-1.6e — iOS data model + SourceRegion persistence.** Update
+   FactStore types to match the new schema. Update DeduplicationEngine
+   (currently EntityReconciliationService) to handle the many-to-many
+   atom/region relationship. **Mandatory:** persist `sourceRegion`
+   from PendingInterpretation through `writeToFactStore` into a new
+   field on FactProvenance (or HealthFact). The data is already
+   extracted today but discarded at acceptance — closing this gap is
+   the most important iOS refactor in GT-1.6 (per GT-1.6b finding #7).
+   Can run in parallel with GT-2 once GT-1.6a lands.
 
 ---
 
@@ -681,3 +737,14 @@ implementation sprints:
   reclassified as `diagnosis`, do we mutate the row or create a
   new atom and deprecate the old? Provenance favors the latter but
   doubles row count for what's conceptually a correction.
+
+- **Existing PDF text layers vs Vision re-OCR.** When a PDF arrives
+  via FHIR import (e.g. CCDA attachments, DiagnosticReport
+  presentedForm) it may already contain a high-quality text layer
+  from the source EHR. The current PageCodex architecture may be
+  Vision-OCRing all PDFs unconditionally, discarding existing text
+  layers and introducing OCR errors that didn't exist in the
+  original. A separate audit is needed to confirm whether this is
+  happening and, if so, to design a "use existing text layer when
+  present, fall back to Vision OCR otherwise" pattern. Out of
+  GT-1.6 scope but flagged here for follow-up.
