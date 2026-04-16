@@ -1215,7 +1215,52 @@ current test corpus are silently missing content today.
 - Vision OCR runs twice per scanned page in mixed docs (once
   for text aggregation in FileTextExtractor, once for position
   capture in PageCodexBuilder). Consistent with the existing
-  pure-scanned pattern but a caching optimization is available.
+  pure-scanned pattern but addressed by GT-INGEST-3 below.
+
+### GT-INGEST-3 — Single-pass Vision caching
+
+**Status:** Registered, pending.
+
+**Problem:** Vision OCR runs twice per page on scanned content —
+once in FileTextExtractor (for text) and once in
+PageCodexBuilder (for bounding box coordinates). Both passes call
+`VNRecognizeTextRequest`, which returns text AND coordinates in a
+single response. The second pass exists because the two code
+paths were built in separate sprints and neither reuses the
+other's output.
+
+**Impact:** ~1-2 seconds per page per pass at 300 DPI. A
+10-page scanned document incurs ~20-40 seconds of Vision work
+today; single-pass caching cuts this to ~10-20 seconds. For
+mixed-content documents after GT-INGEST-2, scanned pages within
+the mix are also double-processed.
+
+**Scope:**
+
+1. First Vision pass (in FileTextExtractor or a shared
+   primitive) captures both text AND per-word bounding boxes,
+   caches both (keyed by document + page).
+2. PageCodexBuilder reads bounding boxes from cache instead of
+   re-running Vision.
+3. FileTextExtractor reads text from cache instead of
+   re-running Vision on the codex path.
+4. Net result: one Vision pass per page, roughly half the ingest
+   latency for scanned content, identical output quality.
+
+**Files likely touched:**
+- `Data/Import/FileTextExtractor.swift`
+- `Data/Import/PageCodexBuilder.swift`
+- `AI/Pipeline/SearchablePDFCreator.swift` (may also benefit
+  from reading cache)
+- New: shared Vision cache type (keyed by document ID + page
+  index, holds text + bounding boxes + confidence per word)
+
+**Estimated size:** Small-to-medium. The Vision call is already
+correct; this is plumbing to cache and reuse its output.
+
+**Not blocking GT-1.6.** Coordinates are captured either way —
+currently at 2x the cost. This is a latency optimization, not a
+correctness fix.
 
 ---
 
