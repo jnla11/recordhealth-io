@@ -672,6 +672,8 @@ GT-1.6 design (this document) → execution sprints, in order:
    model supporting both isADIAdminAuthorized (for grading tool
    reviewer writes) and a separate iOS-write auth (for ingest
    pipeline writes). Smoke test with manual insert/query.
+   **Status: Complete (2026-04-16).** Schema deployed, 12 CRUD
+   endpoints live, smoke tests passing.
 
 3. **GT-1.6c — Pass 2 prompt v2 + FactKind expansion + FHIR coding capture.**
    Three coordinated changes:

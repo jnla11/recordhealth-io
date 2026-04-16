@@ -714,6 +714,12 @@ detection as a first-class observation.
 
 1. GT-1.6b — Pre-design FactStore audit (runs first)
 2. GT-1.6a — Schema deployment to staging Worker
+
+   **Status: Complete (2026-04-16).** Schema deployed to staging
+   (4 enums, 4 tables, 14 indexes). 12 CRUD endpoints live on
+   staging Worker. All smoke tests passing. Commits 583a8a4
+   (schema) and 6cedf57 (endpoints) on recordhealth-api main.
+
 3. GT-1.6c — Pass 2 prompt v2 (expanded entity_kind enum)
 4. GT-1.6d — Ontology lookup service (NPPES, RxNav, UMLS, NLM +
    `ontology_resolution_v1` prompt). MUST land before GT-2.
