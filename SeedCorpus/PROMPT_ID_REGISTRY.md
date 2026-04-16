@@ -11,6 +11,8 @@ population is sprint GT-1.5a.
 
 Populated by GT-1.5a on 2026-04-15. 16 prompts registered at v1.
 pass2_extraction bumped to v2 on 2026-04-16 (GT-1.6c).
+ontology_resolution v1 added on 2026-04-16 (GT-1.6d) — Worker-side,
+invoked by POST /v1/admin/lookup with Bedrock tool use.
 
 ## Registry
 
@@ -32,6 +34,7 @@ pass2_extraction bumped to v2 on 2026-04-16 (GT-1.6c).
 | ask_ai_button_what_was_decided | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "What was decided?" (visit notes) |
 | ask_ai_button_key_findings_default | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain key findings" (default category) |
 | ask_ai_button_key_findings_followup | v1 | button | RecordHealth/Domain/Models/ConversationModels.swift | Suggested-question button: "Explain key findings" (follow-up) |
+| ontology_resolution | v1 | resolution | recordhealth-api/src/index.js | Worker-side. AI-led canonical-code resolution with Bedrock tool use. Tools: rxnav_search (RxNorm), nppes_search (NPI), clinical_tables_search (SNOMED, ICD-10-CM, LOINC, CPT). Invoked by POST /v1/admin/lookup. Full agent trace stored in ontology_traces; output shape matches CLINICAL_SHAPE_DESIGN.md §5.6. Added GT-1.6d (2026-04-16). |
 
 ## Discipline
 
