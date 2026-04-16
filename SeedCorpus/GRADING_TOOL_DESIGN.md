@@ -1149,8 +1149,7 @@ routing gap.
 
 ### GT-INGEST-2 — Per-page text-layer/Vision routing
 
-**Status:** Scoped, pending. Promoted from conditional based on
-GT-INGEST-1 findings.
+**Status:** Complete (2026-04-16). Commit bb8d4a0 on design-v2.
 
 **Goal:** A PDF with mixed text-layer and scanned pages extracts
 correctly on every page, regardless of which pages have text
@@ -1206,6 +1205,17 @@ PDF overlay) is a nice-to-have that can be deferred.
 that annotation work in GT-2 sees properly-extracted documents
 rather than partially-extracted ones. Mixed-content PDFs in the
 current test corpus are silently missing content today.
+
+**Follow-up items (not blocking):**
+
+- Mixed docs are treated as `.high` confidence by
+  RecordAskAIViewModel and RecordTextPreparer. Should be
+  `.medium` since they contain OCR content. One-line fix,
+  separate sprint.
+- Vision OCR runs twice per scanned page in mixed docs (once
+  for text aggregation in FileTextExtractor, once for position
+  capture in PageCodexBuilder). Consistent with the existing
+  pure-scanned pattern but a caching optimization is available.
 
 ---
 
