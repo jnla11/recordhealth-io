@@ -730,6 +730,15 @@ detection as a first-class observation.
 
 4. GT-1.6d — Ontology lookup service (NPPES, RxNav, UMLS, NLM +
    `ontology_resolution_v1` prompt). MUST land before GT-2.
+
+   **Status: Complete (2026-04-16).** ontology_resolution v1
+   registered on staging. POST /v1/admin/lookup endpoint live
+   with AI-led tool use (rxnav_search, nppes_search,
+   clinical_tables_search). Agent traces stored in
+   ontology_traces table. All smoke tests passing. Commits
+   d8a7105 (schema), 7d74e63 (endpoint) on recordhealth-api
+   main; a6deb5b (registry) on parent main.
+
 5. GT-1.6e — iOS data model update (can parallel with GT-2)
 
 GT-2 (PDF annotation drawing) builds against GT-1.6a/c/d and lands

@@ -862,6 +862,8 @@ GT-1.6 design (this document) → execution sprints, in order:
    before GT-2 — the non-medical reviewer cannot annotate without
    lookup support. FHIR-sourced atoms bypass this service entirely
    per §7.4.
+   **Status: Complete (2026-04-16).** Lookup endpoint live,
+   agent traces captured, all smoke tests passing.
 
 5. **GT-2 — PDF annotation drawing in ADI console.** Builds
    against GT-1.6a/c/d. First user-visible grading tool feature.
