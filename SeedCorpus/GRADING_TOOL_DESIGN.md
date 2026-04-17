@@ -739,7 +739,12 @@ detection as a first-class observation.
    d8a7105 (schema), 7d74e63 (endpoint) on recordhealth-api
    main; a6deb5b (registry) on parent main.
 
-5. GT-1.6e — iOS data model update (can parallel with GT-2)
+5. GT-1.6e — iOS data model update — **Complete.** Device-validated
+   2026-04-17. FactProvenance now carries `sourceRegion: SourceRegion?`.
+   InterpretationAcceptanceService threads item.sourceRegion through
+   to FactStore. 11/13 auto-accepted facts carry sourceRegion with
+   correct span counts (2 nils are CoordMatch misses — expected).
+   Backwards-compatible: existing .facts.enc decode with nil.
 
 GT-2 (PDF annotation drawing) builds against GT-1.6a/c/d and lands
 after them.

@@ -868,15 +868,14 @@ GT-1.6 design (this document) → execution sprints, in order:
 5. **GT-2 — PDF annotation drawing in ADI console.** Builds
    against GT-1.6a/c/d. First user-visible grading tool feature.
 
-6. **GT-1.6e — iOS data model + SourceRegion persistence.** Update
-   FactStore types to match the new schema. Update DeduplicationEngine
-   (currently EntityReconciliationService) to handle the many-to-many
-   atom/region relationship. **Mandatory:** persist `sourceRegion`
-   from PendingInterpretation through `writeToFactStore` into a new
-   field on FactProvenance (or HealthFact). The data is already
-   extracted today but discarded at acceptance — closing this gap is
-   the most important iOS refactor in GT-1.6 (per GT-1.6b finding #7).
-   Can run in parallel with GT-2 once GT-1.6a lands.
+6. **GT-1.6e — iOS data model + SourceRegion persistence.**
+   **Complete.** Device-validated 2026-04-17. Added
+   `sourceRegion: SourceRegion?` to FactProvenance.
+   InterpretationAcceptanceService.writeToFactStore and
+   writeAutoAccepted both thread item.sourceRegion through.
+   11/13 auto-accepted facts carry sourceRegion (2 nils are
+   CoordMatch misses). Backwards-compatible with existing
+   .facts.enc. Closes GT-1.6b finding #7.
 
 ---
 
