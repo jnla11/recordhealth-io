@@ -1241,7 +1241,7 @@ current test corpus are silently missing content today.
 
 ### GT-INGEST-3 — Single-pass Vision caching
 
-**Status:** Registered, pending.
+**Status:** Complete. Device-validated 2026-04-17.
 
 **Problem:** Vision OCR runs twice per page on scanned content —
 once in FileTextExtractor (for text) and once in
@@ -1257,32 +1257,71 @@ today; single-pass caching cuts this to ~10-20 seconds. For
 mixed-content documents after GT-INGEST-2, scanned pages within
 the mix are also double-processed.
 
-**Scope:**
+**Implementation (2026-04-17):**
 
-1. First Vision pass (in FileTextExtractor or a shared
-   primitive) captures both text AND per-word bounding boxes,
-   caches both (keyed by document + page).
-2. PageCodexBuilder reads bounding boxes from cache instead of
-   re-running Vision.
-3. FileTextExtractor reads text from cache instead of
-   re-running Vision on the codex path.
-4. Net result: one Vision pass per page, roughly half the ingest
-   latency for scanned content, identical output quality.
+Cache added as static storage on `SearchablePDFCreator`
+(`pageCache: [Int: OCRPageResult]`), keyed by page index,
+scoped to a single document ingest.
 
-**Files likely touched:**
-- `Data/Import/FileTextExtractor.swift`
-- `Data/Import/PageCodexBuilder.swift`
-- `AI/Pipeline/SearchablePDFCreator.swift` (may also benefit
-  from reading cache)
-- New: shared Vision cache type (keyed by document ID + page
-  index, holds text + bounding boxes + confidence per word)
+1. `OCRService.extractTextFromPage` now calls
+   `performOCRWithPositions` (which caches) instead of running
+   a separate Vision pass. Returns `cached.fullText`.
+2. `SearchablePDFCreator.createSearchablePDF` checks cache
+   before calling `performOCRWithPositions` per page.
+3. `PageCodexBuilder.visionOCRFallback` checks cache before
+   calling `performOCRWithPositions` for scanned pages in
+   mixed-content documents.
+4. Cache cleared at `FileTextExtractor.extractWithDetails`
+   entry (fresh per document) and after coordinate processing
+   in `RecordsStore`. Photo import path clears before
+   `createSearchablePDF` to prevent stale cross-doc hits.
 
-**Estimated size:** Small-to-medium. The Vision call is already
-correct; this is plumbing to cache and reuse its output.
+No new files. No behavior change — text and bounding boxes
+produced are identical to prior output.
 
-**Not blocking GT-1.6.** Coordinates are captured either way —
-currently at 2x the cost. This is a latency optimization, not a
-correctness fix.
+**Files modified:**
+- `Data/Import/SearchablePDFCreator.swift` (cache + hit logic)
+- `Data/Import/OCRService.swift` (cache-aware extractTextFromPage)
+- `Data/Import/PageCodexBuilder.swift` (cache-aware visionOCRFallback)
+- `Data/Import/FileTextExtractor.swift` (cache clear at entry)
+- `Data/Persistence/RecordsStore.swift` (cache clear after processing)
+
+**Device test results:**
+- Text-layer PDF: 8/8 coordinate matches, Vision single-pass confirmed
+- Scanned PDF: entities extracted correctly, 0/8 coordinate
+  matches (confirmed pre-existing — see GT-INGEST-4)
+
+### GT-INGEST-4 — Scanned PDF coordinate matching (pre-existing)
+
+**Status:** Registered, pending.
+
+**Problem:** Coordinate matching (`[CoordMatch]`) returns 0/8
+matches on pure-scanned PDFs. Confirmed pre-existing — not a
+GT-INGEST-3 regression. The structural issue is a text-chain
+inconsistency: for scanned PDFs, the AI sees tokenized Vision
+OCR text, but the coordinate matcher searches raw Vision OCR
+blocks. Whitespace, line-break, or word-segmentation differences
+between the AI's sourceText and the block concatenation produce
+misses.
+
+**Contrast with text-layer PDFs:** Text-layer PDFs achieve 8/8
+coordinate matches because the text chain is consistent (PDFKit
+canonical text → tokenize → AI → detokenize → match against
+PDFKit-sourced blocks).
+
+**Impact:** Scanned PDF entities are extracted correctly but
+have no source region coordinates. This means the tap-to-highlight
+feature doesn't work for scanned documents, and the grading
+tool's source_regions table won't have bounding boxes for
+scanned-document atoms until this is fixed.
+
+**Scope:** Investigate the text normalization chain in
+SourceTextCoordinateMatcher for scanned PDFs. Likely fix is
+normalizing both the AI's sourceText and the OCR block text
+through the same pipeline before matching.
+
+**Not blocking GT-2** but should be fixed before the grading
+tool is used to annotate scanned documents.
 
 ---
 
