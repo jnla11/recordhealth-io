@@ -755,6 +755,34 @@ design rationale.
 
 ---
 
+### Sprint GT-2a — Document Transit (device → Worker)
+**Status:** Complete. Device-validated 2026-04-17.
+
+iOS submits processed documents to the Worker for ADI review.
+Batch sync from Settings (superuser-gated). DocumentTransitService
+packages PDF (base64) + OCR result + extractions as JSON, uploads
+to Worker. SHA-256 hash-based idempotency prevents duplicates.
+
+**Worker endpoints:**
+- `POST /v1/admin/documents/upload` — stores PDF in R2, creates
+  review_documents row, populates provisional data_atoms and
+  source_regions from extraction data.
+- `GET /v1/admin/documents` — list with `?status=` filter.
+- `GET /v1/admin/documents/:id` — detail with atoms and regions.
+- `GET /v1/admin/documents/:id/pdf` — streams PDF from R2.
+- `POST /v1/admin/documents/check-hash` — pre-upload dedup check.
+
+**Device test results:**
+- Otolaryngology visit note: 85 atoms, 4 pages, 40KB
+- X-ray shoulder: 6 atoms, 2 pages, 235KB
+- Idempotency confirmed: re-sync returns "1 new, 1 already synced"
+
+**Commits:**
+- Worker: d1fc5c2 (schema), 5a98e2b (endpoints)
+- iOS: d400b82 (DocumentTransitService), 3a81089 (Settings UX)
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
