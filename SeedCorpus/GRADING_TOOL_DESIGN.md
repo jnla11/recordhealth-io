@@ -783,6 +783,44 @@ to Worker. SHA-256 hash-based idempotency prevents duplicates.
 
 ---
 
+### Sprint GT-2b — ADI Console Shell
+**Status:** Complete. 2026-04-17.
+
+Three-panel PDF viewer: thumbnails left, pdf.js viewport center,
+atom list + metadata dashboard right. Document list from Worker
+API. Plain HTML/JS/CSS, no build step. Deployed to Cloudflare
+Pages. pdf.js 5.4.149 (ES module). Dark theme. Keyboard shortcuts.
+CORS fix on PDF stream endpoint.
+
+**Commits:**
+- Worker: 1848a67 (CORS fix), f776903 (console shell)
+
+---
+
+### Sprint GT-2c — Annotation Overlay + Verdict System
+**Status:** Complete. Device-validated 2026-04-18.
+
+Full chain: iOS extraction → CoordMatch → sourceRegion → transit
+→ Worker stores on clinical_fields.source_region → console renders
+SVG overlays colored by entity kind with confidence-based opacity.
+
+Features ported from old ADI console: SVG region overlays (6 types),
+click-to-select with dim unselected, entity kind and verdict status
+filters, verdict buttons (confirm/correct/reject) with confusion
+classes, region drawing for discoveries, keyboard shortcuts (S/D).
+Wired to PATCH /v1/admin/atoms and POST /v1/admin/atoms.
+
+**sourceRegion transit fix:** Initial GT-2a atoms lacked bounding
+boxes. Fixed by adding sourceRegion serialization to iOS
+DocumentTransitService and storing it in clinical_fields JSONB.
+Backfilled by re-submitting from iOS after deleting old atoms.
+
+**Commits:**
+- Worker: 7b0116b (overlay + verdict), f398cbf (sourceRegion storage)
+- iOS: 0be135c (sourceRegion in payload), 195be8f (diagnostic log)
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
