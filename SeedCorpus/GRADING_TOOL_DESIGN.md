@@ -821,6 +821,64 @@ Backfilled by re-submitting from iOS after deleting old atoms.
 
 ---
 
+### Sprint GT-2d — Grading Submission Lock-In
+**Status:** Complete. Deployed to staging 2026-04-18.
+
+Layer 3 of the ADI console: the reviewer's final assessment,
+submitted as ground truth for training. The delta between
+data_atoms (Layer 1, what the AI said) and the verdicts stored
+in grading_submissions (Layer 3, what the reviewer said) is
+the training signal.
+
+**Architectural correction:** GT-2c's Submit All button PATCHed
+`resolution_status` on data_atoms, mutating the pipeline's
+output and destroying the training delta. GT-2d removes that
+path. Atoms remain immutable pipeline output. Verdicts live in
+a separate append-only `grading_submissions` table.
+
+**Schema:**
+- `grading_submissions` (UUID PK, document_id FK → review_documents,
+  reviewer, reviewer_authority, submitted_at, pipeline_version
+  JSONB, verdicts JSONB, discoveries JSONB, summary JSONB, notes,
+  is_locked). Append-only — amendments create new rows.
+
+**Server F1:** precision = confirmed / (confirmed + corrected +
+rejected); recall = (confirmed + corrected) / (confirmed +
+corrected + discoveries); f1 = 2·p·r / (p + r). Computed
+server-side so the client cannot drift from the canonical
+formula.
+
+**Endpoints (ADI_ADMIN_KEY):**
+- POST /v1/admin/grading/submit
+- GET  /v1/admin/grading/submissions[?document_id=X]
+- GET  /v1/admin/grading/submissions/:id
+- GET  /v1/admin/grading/stats
+
+**Console:**
+- "Lock In & Submit Grading" button with confirmation modal
+- F1 result modal after submit
+- Locked state — read-only verdicts, draw tool disabled
+- sessionStorage workspace persistence keyed by document_id
+  (survives browser refresh, cleared after lock-in)
+- Grading Stats view (aggregate metrics + per-kind breakdown
+  + per-submission table)
+- Corrected-kind dropdown for correction verdicts
+- Discoveries: entity-kind dropdown + optional rationale
+
+**Known deferrals:**
+- Reviewer identity hardcoded to 'jason' (wire to login later)
+- `review_documents.pipeline_version` column not yet added;
+  synthesized at submit time from `extraction_method +
+  uploaded_at + record_category`
+- Document list does not badge F1 on reviewed docs — stats
+  view covers this for now
+
+**Commits:**
+- Worker: f60bbe6 (schema), 887ab14 (endpoints)
+- Console: 4686955 (lock-in UI + sessionStorage + stats)
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
