@@ -879,6 +879,66 @@ formula.
 
 ---
 
+### Sprint GT-2e — Pass 2 prompt v3 + finding/encounter
+**Status:** Complete. Staging deployed 2026-04-18. Production
+prompt registration deferred (same ADI_ADMIN_KEY issue as GT-1.6c).
+
+Closes the two biggest taxonomy gaps surfaced by GT-2d grading:
+
+- **`finding`** — clinical observations that aren't clinical
+  problems. Physical exam observations ("tympanic membranes
+  clear bilaterally"), imaging findings ("well-preserved joint
+  spaces"), normal results. These were previously being
+  misclassified as `condition` or `diagnosis` because there
+  was no home for them. Maps to FHIR `Observation (category:
+  exam)`. Normal findings are now explicitly distinguished —
+  a normal observation asserts the absence of a problem; it
+  is not itself a problem.
+
+- **`encounter`** — visit type, distinct from visit date.
+  "Office Visit", "ED Visit", "Telehealth", "Inpatient
+  Admission". Previously this information was lost because
+  `visitDate` only captured *when*. Maps to FHIR `Encounter`.
+
+**Changes (iOS, design-v2 branch):**
+- FactKind + InterpretationKind: +2 cases (compile-required
+  switch sites in PendingInterpretation, EntityReconciliation,
+  InterpretationAcceptanceService, TieredReviewView).
+- phiTier `.low`, phiAccessLevel `.standard` for both.
+- Reconciliation: `classifyExactMatch` (same pattern as the
+  GT-1.6c additions).
+- Tier assignment: `finding → tier2 (smartReview)` like
+  labValue; `encounter → tier1 (autoAccept ≥ 0.90)` like
+  visitDate/reportDate.
+- AIExtractionService `promptVersion` → `"v3"`; kind enum
+  in JSON schema extended; rules 29-30 added to the Swift
+  prompt body matching the registered text.
+- TieredReviewView.autoAcceptGroupedKinds `kindOrder` array
+  extended to include all GT-1.6c + GT-2e kinds (closed a
+  pre-existing gap where GT-1.6c kinds were silently absent
+  from the grouped auto-accept display).
+
+**Changes (Worker, main branch):**
+- Neon staging `entity_kind_enum` extended via `ALTER TYPE …
+  ADD VALUE` for `'finding'` and `'encounter'`.
+- `/v1/admin/lookup` `VALID_KINDS` array extended to accept
+  the two new kinds (kind-guard paired with the enum).
+
+**Prompt registration:**
+Staging `pass2_extraction v3` registered via
+`POST /v1/admin/prompts/register` (201). Production
+registration deferred with GT-1.6c.
+
+**Commits:**
+- iOS (design-v2): 0221421 (FactKind/InterpretationKind +
+  switch sites + v3 prompt body)
+- Worker (main): e1cce34 (VALID_KINDS fix)
+- Parent (main): acbc04e (docs: PROMPT_ID_REGISTRY v3 +
+  CLINICAL_SHAPE_DESIGN §4 finding/encounter FHIR mapping),
+  155d627 (submodule pointer bump)
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
