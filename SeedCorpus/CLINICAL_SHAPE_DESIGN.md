@@ -313,6 +313,47 @@ v1 of the grading tool.
   - `related_condition_atom_id`
 - **Canonical codes:** SNOMED
 
+### Findings & Encounters (GT-2e)
+
+#### `finding`
+- Clinical observations without the diagnostic weight of a problem —
+  physical exam observations, imaging findings (including normal
+  findings), and observational lab interpretations. Added to close
+  the GT-2d gap where normal imaging observations were being
+  misclassified as `condition` or `diagnosis`.
+- **FHIR resource:** Observation (category: exam)
+- **Fields:**
+  - `finding_text` — verbatim observation
+  - `exam_type` — physical exam | imaging | lab interpretation
+  - `body_site`
+  - `status` — normal | abnormal | not_stated
+  - `related_procedure_atom_id` (optional — links to the procedure
+    that produced the finding, e.g. a radiology study)
+- **Canonical codes:** SNOMED (physical finding subset), LOINC
+  (observation), RadLex (imaging)
+- **Rule:** normal findings are Observations with
+  `interpretation = normal`, not Conditions. A Condition asserts
+  a problem; a normal finding asserts the absence of one.
+
+#### `encounter`
+- The clinical encounter itself — visit type, setting, reason for
+  visit. Distinct from `visitDate` (when) and from the clinical
+  content produced during the encounter. Added to close the GT-2d
+  gap where visit-type information had no home.
+- **FHIR resource:** Encounter
+- **Fields:**
+  - `visit_type` — office_visit | ed_visit | telehealth |
+    inpatient_admission | surgical_encounter | follow_up |
+    consultation | other
+  - `class` — AMB | EMER | IMP | HH | VR (FHIR ActCode)
+  - `department` / `specialty`
+  - `setting` — outpatient | inpatient | emergency | virtual
+  - `reason_for_visit` — free text or related `symptom` atom id
+  - `encounter_date_atom_id` — links to the corresponding
+    `visitDate` atom
+- **Canonical codes:** SNOMED (encounter type), CPT E/M codes
+  (if billing-coded)
+
 ### Catch-All
 
 #### `uncategorized`
@@ -335,6 +376,8 @@ CREATE TYPE entity_kind_enum AS ENUM (
   'labValue', 'vitalSign', 'socialHistory', 'immunization',
   'symptom', 'condition', 'diagnosis', 'medication', 'allergy', 'procedure',
   'familyHistory', 'device', 'referral', 'carePlan',
+  -- GT-2e additions
+  'finding', 'encounter',
   'uncategorized'
 );
 

@@ -13,13 +13,15 @@ Populated by GT-1.5a on 2026-04-15. 16 prompts registered at v1.
 pass2_extraction bumped to v2 on 2026-04-16 (GT-1.6c).
 ontology_resolution v1 added on 2026-04-16 (GT-1.6d) — Worker-side,
 invoked by POST /v1/admin/lookup with Bedrock tool use.
+pass2_extraction bumped to v3 on 2026-04-18 (GT-2e) — staging registered,
+production deferred (same ADI_ADMIN_KEY issue as GT-1.6c).
 
 ## Registry
 
 | prompt_id | current_version | type | location | notes |
 |-----------|-----------------|------|----------|-------|
 | pass1_document_read | v1 | core | RecordHealth/AI/Pipeline/DocumentReadService.swift | Pass 1 document classification and context extraction |
-| pass2_extraction | v2 | core | RecordHealth/AI/Pipeline/AIExtractionService.swift | Pass 2 structured entity extraction, JSON output. v2 (GT-1.6c): +7 kinds (familyHistory, immunization, socialHistory, device, referral, carePlan, coverage); rule #3 rewritten to extract family history as familyHistory; rules 23-28 added. |
+| pass2_extraction | v3 | core | RecordHealth/AI/Pipeline/AIExtractionService.swift | Pass 2 structured entity extraction, JSON output. v2 (GT-1.6c): +7 kinds (familyHistory, immunization, socialHistory, device, referral, carePlan, coverage); rule #3 rewritten to extract family history as familyHistory; rules 23-28 added. v3 (GT-2e): +2 kinds (finding, encounter); rules 29-30 added. Finding covers exam/imaging observations and normal findings previously misclassified as conditions. Encounter captures visit type distinct from visitDate. |
 | ask_ai_single_record | v1 | core | RecordHealth/AI/Pipeline/AIContextBuilder.swift | Ask AI base system prompt for single-record Q&A |
 | ask_ai_structured_summary | v1 | modifier | RecordHealth/AI/Pipeline/AIContextBuilder.swift | Structured-card response modifier layered on ask_ai_single_record |
 | appointment_prep_summary | v1 | synthesis | RecordHealth/AI/Prompts/AppointmentPrepPrompt.swift | Appointment prep system prompt — tokenized context assembly |
