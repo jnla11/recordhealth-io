@@ -962,3 +962,63 @@ implementation sprints:
   happening and, if so, to design a "use existing text layer when
   present, fall back to Vision OCR otherwise" pattern. Out of
   GT-1.6 scope but flagged here for follow-up.
+
+---
+
+## 13. iOS Persistence Sidecars
+
+Per-record artifacts captured at ingest on-device and transited to the
+Worker with the document upload. Each is AES-256-GCM encrypted at rest
+and cascades off the owning record — when the record is deleted, all
+sidecars are removed. These complement the Worker-side schema in §5;
+they do NOT replace it. Think of each sidecar as the iOS source-of-truth
+for one dimension of per-record provenance.
+
+### PHISpatialStore
+
+**Location:** `Documents/records/{recordId}.phi_spatial.enc`
+**Shape:** `[String: PHISpatialEntry]` keyed by PHI token placeholder
+(e.g. `{{PHI:PROVIDER:dr1}}`).
+
+```swift
+struct PHISpatialEntry: Codable {
+    let token: String          // the placeholder
+    let tokenType: String      // PHITokenType.rawValue
+    let realValue: String?     // captured at tokenization
+    let region: SourceRegion   // OCR spans from SourceTextCoordinateMatcher
+}
+```
+
+**Capture contract:** populated in `RecordTokenizer.tokenize(...)` at
+the moment each PHI value is identified. The tokenizer receives the
+document's OCRResult, calls `SourceTextCoordinateMatcher.findCoordinates
+(forPlainValue:in:)` on the raw value, and stores the resulting
+SourceRegion in the returned `TokenizationResult.spatialMap`. Caller
+persists via `PHISpatialStore.shared.save(_:for:)`.
+
+**Consumers:**
+- `DocumentTransitService.scanPHIDetections()` reads the sidecar and
+  emits each entry as a `detected_phi[]` payload item (includes
+  page_index + bounding_box + real_value) on the ADI review upload.
+  Replaces the former regex scan of `.anon.enc` — first-class data,
+  zero reconstruction.
+- `RecordIngestPipeline` audit path reads the sidecar to build
+  `PHIDetectionSummary` items for `AuditService.sendPHIDetections`.
+  Replaces the former patient-wide `PHITokenMap` dump that
+  overcounted tokens on every record after the first.
+
+**Provenance doctrine alignment:** satisfies §1 (Capture at Source) —
+the location metadata is produced in the same pass that identifies the
+PHI value, not reconstructed later via PDF search. See
+`CLAUDE.md > Provenance Doctrine` in the iOS repo.
+
+### Related sidecars (pre-existing)
+
+- `Documents/records/{recordId}.ocr.enc` — `OCRResult` (full OCR,
+  word-level coordinates). Owned by `OCRResultStore`.
+- `Documents/records/{recordId}.anon.enc` — tokenized AI-ready text.
+- `Documents/records/{recordId}.txt` — canonical plaintext body.
+- `Documents/originals/{recordId}.{ext}` — the original file.
+
+Together these constitute the per-record provenance bundle consumed
+by the ADI review pipeline at transit time.

@@ -939,6 +939,190 @@ registration deferred with GT-1.6c.
 
 ---
 
+### Sprint GT-2f — PHI detection transit + ADI console PHI tab
+**Status:** Complete. Staging deployed 2026-04-18.
+
+Per-document PHI inventory now transits end-to-end from the
+iOS review path to a new Worker table and a new right-panel
+tab in the ADI console. Fixes the patient-wide-dump overcount
+(each document previously reported every PHI placeholder ever
+tokenized for the patient) and lays the groundwork for PHI
+spatial overlays (next sprint).
+
+**Schema:**
+- `review_phi_detections` (UUID PK, document_id FK → review_documents
+  ON DELETE CASCADE, token_type, token_placeholder,
+  nullable page_index + bounding_box + real_value,
+  UNIQUE(document_id, token_placeholder)). Populated at transit.
+  Permanent (not audit TTL). ADI review path only.
+- `review_documents.phi_reverse_map JSONB` — full per-patient
+  `{token → real value}` captured at tokenization, shipped so
+  the console can detokenize any displayed field. PDF in same
+  payload already carries raw PHI, so the reverse map is not
+  additional exposure.
+
+**iOS:**
+- `DocumentTransitService` scans this record's `.anon.enc` for
+  `{{PHI:...}}` placeholders and emits `detected_phi[]` in the
+  upload body. Per-document, deduplicated — replaces the
+  patient-wide dump.
+
+**Worker:**
+- `POST /v1/admin/documents/upload` accepts `detected_phi` +
+  `phi_reverse_map`, persists to the new table + column.
+- `GET /v1/admin/documents/:id` returns `phi[]` + `phi_count`.
+- Purge handler drops review_phi_detections via cascade and
+  reports count.
+
+**Console:**
+- Third tab "PHI" alongside Atoms / Info. Grouped by token_type
+  (PHITokenType order), one row per placeholder with real value
+  primary + type badge + placeholder secondary. `detokenize()`
+  helper applies across atom cards, detail view, overlay
+  tooltips. Unmapped placeholders marked `(unmapped)`.
+
+**Commits:**
+- iOS (design-v2): f365294 (reverse map transit)
+- Worker (main): 8d39225 (reverse map column + console
+  detokenize), 42ab191 (real_value column)
+- Parent (main): 79db64d, c1503b9 (submodule bumps)
+
+---
+
+### Sprint — First-class PHI spatial provenance
+**Status:** Complete 2026-04-18.
+
+Captures PHI bounding boxes at the moment the tokenizer
+identifies the value — not reconstructed at display time.
+Applies the Provenance Doctrine §1 (Capture at Source) to the
+PHI path end-to-end. Replaces two reconstruction paths.
+
+**New persistence:** `PHISpatialStore` — per-record encrypted
+sidecar at `Documents/records/{id}.phi_spatial.enc` mapping
+each placeholder to a `PHISpatialEntry { token, tokenType,
+realValue, region }`. See `CLINICAL_SHAPE_DESIGN.md §13`.
+
+**Tokenizer:** `RecordTokenizer.tokenize(...)` both overloads
+gain an optional `ocrResult` parameter. At every PHI
+token-emission site, the tokenizer calls
+`SourceTextCoordinateMatcher.findCoordinates(forPlainValue:in:)`
+and stores the resulting SourceRegion alongside the token in
+`TokenizationResult.spatialMap`.
+
+**Matcher:** `SourceTextCoordinateMatcher` refactored —
+`@MainActor` dropped from the enum. Pure OCR helpers marked
+`nonisolated` so the nonisolated tokenizer can call them
+directly. A new `findCoordinates(forPlainValue:in:)` overload
+skips the patient-scoped detokenize step that required
+MainActor.
+
+**Replaced reconstruction paths:**
+1. `DocumentTransitService.scanPHIDetections` — deleted the
+   regex scan of `.anon.enc`. Now reads `PHISpatialStore` and
+   emits each entry with `page_index` + `bounding_box`.
+2. `AuditService.sendPHIDetections` call site — replaced the
+   patient-wide `PHITokenMap` dump with a per-record read
+   from `PHISpatialStore`. Fixes the document-#21 overcount
+   bug explicitly.
+
+**`PHISpatialEntry.realValue`** — co-located on the entry so
+the ADI console can render real values from first-class
+per-document data rather than cross-referencing the
+patient-wide `phi_reverse_map` at display time. The reverse
+map remains as a fallback for pre-sprint rows where
+`real_value` is NULL.
+
+**Commits:**
+- iOS (design-v2): 89b4dad (first-class spatial provenance),
+  e837088 (realValue co-located on PHISpatialEntry)
+- Worker (main): 8d39225 / 42ab191 (GT-2f support),
+  47ef9c (grading fixes — see next sprint)
+- Parent (main): multiple submodule pointer bumps
+
+---
+
+### Sprint — PHI grading layer
+**Status:** Complete. Staging deployed 2026-04-18.
+
+Reviewers can now score the tokenizer's PHI detections the
+same way they score clinical atoms — Confirm / Correct /
+Reject per detection, plus discoveries of missed PHI — and
+the ADI console's Draw tool is now context-aware (Atoms tab
+→ atom discovery; PHI tab → PHI discovery).
+
+**Schema (`grading_submissions`):**
+- `ALTER TABLE ADD COLUMN phi_verdicts JSONB`
+- `ALTER TABLE ADD COLUMN phi_discoveries JSONB`
+- Nullable so pre-sprint rows remain valid.
+
+**Worker:**
+- `POST /v1/admin/grading/submit` accepts and persists both
+  new arrays.
+- `computeGradingSummary` refactored around a shared
+  `computeMetrics(totalPipeline, verdicts, discoveries)`
+  helper so clinical and PHI metrics use identical
+  precision/recall/F1 formulas. Summary now carries
+  `phi_total / phi_reviewed / phi_confirmed / phi_corrected /
+  phi_rejected / phi_unreviewed / phi_discoveries /
+  phi_precision / phi_recall / phi_f1`. Clinical field names
+  unchanged — backward-compatible.
+- Grading list endpoint SELECT fixed to include `verdicts`,
+  `discoveries`, `phi_verdicts`, `phi_discoveries` (root
+  cause of the three-times-reported empty-array bug — the
+  LIST endpoint was dropping these columns from its SELECT
+  projection; the INSERT had always been correct).
+
+**Console:**
+- Selected PHI row expands with verdict buttons; Correct
+  shows corrected-type dropdown + corrected-value input +
+  rationale; Reject shows rationale input. Clicks inside
+  verdict section don't bubble as row-toggle clicks.
+- Draw tool routes by `activeTab`. PHI discoveries render
+  on the overlay with a thicker red-dashed stroke to read
+  distinctly from the tokenizer's own detections.
+- Submit bar shows both Clin and PHI summary lines.
+- Lock-in confirmation dialog renders separate Clinical and
+  PHI count sections.
+- F1 result modal shows both headlines when the document
+  had PHI. Locked banner includes both F1 scores.
+
+**Commits:**
+- Worker + console (main): 4a8e50c (PHI grading), 06aa974
+  (list SELECT fix), 047ef9c (debug cleanup), 6cb5f6f
+  (sql.query INSERT form)
+- Parent (main): submodule pointer bumps
+
+---
+
+### Sprint — Purge-all endpoint + console button
+**Status:** Complete 2026-04-18.
+
+Development-time reset for ADI review data. Single button in
+the ADI console's document list header.
+
+**Worker:**
+- `POST /v1/admin/documents/purge-all` (ADI_ADMIN_KEY).
+  Body guard: `{ confirm: "PURGE_ALL" }` or 400.
+- FK-safe delete order:
+  1. `grading_submissions` (blocks review_documents)
+  2. `data_atoms` (cascades atom_region_links + ontology_traces)
+  3. `source_regions` (cascades remaining atom_region_links)
+  4. `review_documents` (cascades review_phi_detections)
+  5. R2 objects under `documents/` prefix (paginated
+     list + delete)
+- Returns `{ purged, deleted: { documents, atoms, regions,
+  submissions, phi, r2_objects } }`.
+
+**Console:**
+- "Purge All Review Data" button in the list header,
+  red-outline danger style.
+- Two-stage modal: confirm → counts-result → reload list.
+
+**Commits:**
+- Worker + console: 0bdeaf9
+
+---
+
 ### Sprint GT-2 — PDF Canvas Annotation UI
 **Scope:** Rectangle drawing on PDF canvas in ADI console. No scoring yet.
 
