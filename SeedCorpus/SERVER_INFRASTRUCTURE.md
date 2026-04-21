@@ -61,6 +61,8 @@ New ADI routes follow this same pattern. No new auth mechanism required.
 
 ## 4. Database — Neon Postgres
 
+> **Branch architecture.** Staging Neon contains ADI-pipeline tables only (grading, audit, seed corpus). User-flow tables (`users`, `subscriptions`, `health_records`, `audit_log`) exist in production Neon only, by design — the split prevents grading/training artifacts from contaminating real user data. Any migration touching user-flow tables runs against production Neon; staging has no `users` table and never will.
+
 ### 4.1 Connection
 
 Driver: `@neondatabase/serverless` (HTTP-based, compatible with Cloudflare Worker runtime)  
