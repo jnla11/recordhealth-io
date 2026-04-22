@@ -86,6 +86,94 @@ After Phase 2, `codes_l1` and `codes_l3` in the TRAINING_MEDIA_DESIGN §6 schema
 - Track B: prompt improvements can now include "here's how the reviewer disambiguated ICD-10 E10 vs E11"
 - Track C: coding training signal unlocks; BioMistral fine-tune has target codes to learn toward, not just target kinds
 
+### 3.8 Kind Assignment Wizard
+
+Decision-tree UI that walks reviewers through kind assignment
+via plainspoken questions ("What kind of information is this?" →
+"What kind of date is this?") rather than requiring FHIR
+fluency or taxonomy memorization. Each branch terminates in
+either a kind assignment or a reject recommendation (for
+non-clinical content like report metadata dates).
+
+Sibling to the AI-assisted kind suggestion in §3.2. The two
+approach the same problem differently: wizard is deterministic
+tree-walking with upfront content work; AI-assist is
+probabilistic classification with model inference. Both may
+coexist — wizard as reviewer training and AI-fallback tool,
+AI-assist as experienced-reviewer accelerator.
+
+Content scope: approximately 40-60 decision nodes covering
+the 20 entity kinds. Needs upfront design work on tree
+structure + wording. Replaces the current `i` button as the
+primary kind-disambiguation surface; `i` button is retired
+or repurposed when the wizard ships.
+
+Why Phase 2: too much scope to fold into Phase 1. Content-heavy
+(decision tree design + wording across 20 kinds). Co-designs
+with AI-assist; the two systems inform each other's
+architecture.
+
+Context for this addition (2026-04-22): Surfaced during Sprint
+1.3 design discussion when ADI reviewer flow revealed that
+(a) the `i` button popover is insufficient for resolving
+commonly-confused kinds (symptom vs condition vs diagnosis,
+visitDate vs reportDate vs report metadata dates), and (b) the
+current taxonomy includes date kinds that need reviewer
+guidance to distinguish from administrative metadata that
+should be rejected rather than classified.
+
+### 3.9 Submitted Documents Review Flow
+
+Today the ADI console shows documents in pending-review states
+only. Once locked, a document disappears from the workflow and
+the reviewer has no way to revisit their prior grading.
+
+This gap matters for several reviewer workflows:
+
+- Spot-checking prior verdicts ("I think I misjudged that atom")
+- Reviewing grading patterns across submitted documents
+- Re-grading when the AI pipeline has been re-run on a
+  previously-submitted document and new atoms exist
+- Auditing consistency of one's own grading across time
+
+Scope includes:
+
+- New section or filter in the document list showing
+  previously-submitted documents
+- Read-only drill-down into the prior grading state (atoms,
+  verdicts, corrections, rationale, bbox edits)
+- Ability to create an amendment — a new grading submission
+  that supersedes the prior one. Since `grading_submissions`
+  is append-only, amendments are new rows with a reference
+  back to the superseded submission.
+- UI to distinguish "original submission" from "amended by
+  reviewer" state at the document level
+
+Architectural questions to resolve in detail design:
+
+- Which grading submission wins for training media export —
+  the latest? The one flagged canonical? All of them with
+  attribution? This is a non-trivial design call with
+  implications for Phase 5 export shape.
+- How re-graded atoms interact with negative-space annotations
+  (Phase 4) — if a reviewer initially rejected an atom as
+  template boilerplate, then on re-grading decides it's a
+  real condition, does the original negative-space
+  annotation stay as training signal or get superseded?
+- Whether amendments require a reason/rationale themselves
+  (probably yes, for audit trail)
+
+Why Phase 2: not required for initial grading throughput;
+surfaces once reviewers have grading history worth
+re-examining. Touches document list UI, drill-down state,
+grading_submissions semantics, and training media export
+filter logic. Meaningful scope.
+
+Context for this addition (2026-04-22): Surfaced during
+Sprint 1.3 design discussion when reviewer noted that no
+path currently exists to revisit submitted documents. Related
+to but distinct from audit-trail needs for HIPAA/compliance.
+
 ## 4. Phase 3 — Per-patient grouping + patient profile
 
 ### 4.1 Goal
