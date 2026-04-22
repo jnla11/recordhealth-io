@@ -57,6 +57,13 @@ Auth0 was removed in Sprint 24e. The worker is now the sole JWT issuer.
 
 New ADI routes follow this same pattern. No new auth mechanism required.
 
+**Admin authorization (AUTH-1):** Admin endpoints additionally require the
+`adi_admin` role in the `rh:roles` claim. The `requireRole` helper in
+`src/index.js` enforces this; it falls back to accepting the legacy
+`env.ADI_ADMIN_KEY` bearer during the AUTH-2 transition for the ADI console.
+Users' roles come from the `roles TEXT[]` column on the `users` table,
+populated at JWT mint time in `/auth/apple`.
+
 ---
 
 ## 4. Database — Neon Postgres

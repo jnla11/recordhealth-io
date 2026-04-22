@@ -236,8 +236,11 @@ CREATE INDEX idx_audit_sessions_created ON audit_sessions (created_at DESC);
 
 ## 5. Worker Endpoints
 
-All endpoints require admin key authentication (separate from user JWT).
-Admin key stored in `env.ADI_ADMIN_KEY`.
+All audit endpoints require admin authorization. The primary path is the user
+JWT with `adi_admin` in its `rh:roles` claim; the Worker's `requireRole`
+helper enforces this. A legacy `env.ADI_ADMIN_KEY` bearer is still accepted
+as a transitional fallback (ADI console only; AUTH-2 removes it). iOS always
+sends the user JWT.
 
 ### 5.1 Session management
 ```
@@ -422,13 +425,17 @@ DELETE FROM audit_session_summary WHERE updated_at < NOW() - INTERVAL '90 days';
 
 ---
 
-## 9. New Environment Binding
+## 9. Environment Bindings
 
 ```
-env.ADI_ADMIN_KEY    Secret key for admin endpoint authentication
-                     Set via wrangler secret put ADI_ADMIN_KEY
-                     Never expose in client code — dashboard uses this directly
-                     Generate: openssl rand -hex 32
+env.JWT_SECRET       HMAC-SHA256 secret for worker-minted user JWTs.
+                     Primary auth path for all authenticated endpoints,
+                     including audit. Rotation invalidates all tokens.
+
+env.ADI_ADMIN_KEY    Legacy static bearer, still accepted by requireRole
+                     as a fallback for the ADI console only. iOS does not
+                     read or send this. Removed in AUTH-2.
+                     Generate (if rotating): openssl rand -hex 32
 ```
 
 ---
