@@ -235,7 +235,7 @@ The GET /v1/admin/documents/:id response already returns a `regions` array from 
 
 ## 7. Schema additions (sprint 1.1)
 
-Four columns to add. SQL runs against `RecordHealth-ADI / staging` via Neon browser editor (Jason executes; Claude never runs production SQL).
+Two columns to add. SQL runs against `RecordHealth-ADI / staging` via Neon browser editor (Jason executes; Claude never runs production SQL).
 
 ```sql
 -- 1. bbox_edit_history on grading_submissions
@@ -244,26 +244,30 @@ ALTER TABLE grading_submissions
 -- Keyed by atom_id, value is array of edit ops.
 -- Example: { "a_123": [ { "op": "modify", "before": {...}, "after": {...} } ] }
 
--- 2. char_offset_start / char_offset_end on source_regions
-ALTER TABLE source_regions
-  ADD COLUMN char_offset_start INTEGER,
-  ADD COLUMN char_offset_end INTEGER;
--- Nullable — existing rows have no offsets until the iOS side populates them.
--- Added now for training media export (Phase 6 prerequisite).
-
--- 3. sequence_index on data_atoms
+-- 2. sequence_index on data_atoms
 ALTER TABLE data_atoms
   ADD COLUMN sequence_index INTEGER;
 -- Nullable — existing rows have no index until the pipeline populates them.
 -- Added now for sequence accuracy metric in PPS (§TRAINING_MEDIA_DESIGN §9).
 
--- 4. rationale support on grading_submissions.verdicts entries
+-- 3. rationale support on grading_submissions.verdicts entries
 -- NO SCHEMA CHANGE. Existing verdicts JSONB column already supports
 -- arbitrary fields per atom entry. Just ensure client always writes
 -- the field (null-safe).
 ```
 
-Three actual ALTERs. The fourth is a code-side contract. Sprint 1.1's SQL is short; the bulk of the sprint is Worker-side plumbing to accept and return the new payload fields.
+Char offsets live on atom-level spans in
+`data_atoms.clinical_fields.source_region.spans[]` JSONB,
+populated by iOS `SourceTextCoordinateMatcher` during
+extraction. They are NOT stored on the `source_regions`
+table — that table holds per-OCR-block rows (1 row per
+Vision OCR block), which are not the right granularity
+for atom-span char offsets.
+
+See PLUMBING_FIX.md for the broader architectural issue
+around `source_regions` vs `data_atoms` region storage.
+
+Two actual ALTERs. The third item is a code-side contract. Sprint 1.1's SQL is short; the bulk of the sprint is Worker-side plumbing to accept and return the new payload fields.
 
 ## 8. Sub-sprint breakdown
 
