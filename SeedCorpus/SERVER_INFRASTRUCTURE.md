@@ -68,7 +68,16 @@ populated at JWT mint time in `/auth/apple`.
 
 ## 4. Database — Neon Postgres
 
-> **Branch architecture.** Staging Neon contains ADI-pipeline tables only (grading, audit, seed corpus). User-flow tables (`users`, `subscriptions`, `health_records`, `audit_log`) exist in production Neon only, by design — the split prevents grading/training artifacts from contaminating real user data. Any migration touching user-flow tables runs against production Neon; staging has no `users` table and never will.
+> See `../RecordHealth_App/docs/DATABASE_LAYOUT.md` for the
+> authoritative Neon project/branch layout and Worker binding map.
+
+> **Project/branch architecture.** Three table groups live across two Neon projects, spanning four branches:
+>
+> - **User-flow** (`users`, `subscriptions`, `health_records`, `audit_log`, `token_usage`, `token_boosts`, `referrals`) → `RecordHealth / production`
+> - **ADI review pipeline** (grading, audit, `review_documents`, `data_atoms`, etc. — 19 tables) → `RecordHealth-ADI / staging`
+> - **Seed corpus** (`seed_documents`, `expert_annotations`, annotation sessions, benchmark runs) → `RecordHealth / staging-seed-corpus`
+>
+> The split prevents grading/training artifacts from contaminating real user data. Any migration touching user-flow tables runs against `RecordHealth / production`; the ADI and seed-corpus branches have no `users` table and never will. The `RecordHealth-Seed` project was renamed to `RecordHealth-ADI` on 2026-04-21 — the previous name was misleading because the ADI pipeline (not the seed corpus) lives there.
 
 ### 4.1 Connection
 
