@@ -174,6 +174,31 @@ Sprint 1.3 design discussion when reviewer noted that no
 path currently exists to revisit submitted documents. Related
 to but distinct from audit-trail needs for HIPAA/compliance.
 
+### 3.10 Bbox modify (drag handles)
+
+Deferred from Sprint 1.4. Cancel + Add ships in 1.4 as the
+single bbox-edit interaction. Drag-resize handles are not
+built.
+
+Rationale: the dominant bbox failure mode observed in current
+grading is disparate information grouped together (wrong
+region entirely), not small boundary slips. Cancel + Add
+cleanly handles wrong-region, missing-region, and extra-region
+errors — the four-case matrix where drag-handles only addresses
+boundary refinement.
+
+Build gate: extended grading reveals a meaningful fraction of
+errors are small boundary slips that cancel-and-redraw makes
+painful. Empirical, not speculative. If after grading 100+
+atoms the reviewer is constantly redrawing for tiny nudges,
+revisit. Otherwise this stays unbuilt.
+
+Note: this supersedes `PHASE_1_DESIGN.md §9 Risk 1`, which
+proposed the inverse fallback (ship modify, defer cancel+add).
+That direction was rejected — modify-only blocks the reviewer
+on wrong/missing/extra regions, which are the actual common
+failure modes.
+
 ## 4. Phase 3 — Per-patient grouping + patient profile
 
 ### 4.1 Goal
