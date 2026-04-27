@@ -3,8 +3,13 @@
 **Purpose:** decompose the six-sprint v1.0 arc into mini-sprints small enough to vibe-code, each with audit and smoke test requirements called out. This is the execution plan; detail sprint briefs happen per mini-sprint at commit time.
 
 **Source document:** `SeedCorpus/ATOM_UNIFICATION_DESIGN.md` v1.0
-**Last revised:** 2026-04-24
+**Last revised:** 2026-04-27
 **Scope:** execution planning only. No new architectural decisions.
+
+> **Status (as of 2026-04-27):** U.1 and U.2 arcs complete on iOS.
+> Worker schema migration (U.1b/c) complete on staging. Next:
+> U.3 (review_phi_detections → data_atoms migration). U.F.*
+> runnable in parallel.
 
 ---
 
@@ -523,27 +528,35 @@ Rough total: **17 mini-sprints.**
 
 ## Summary — sprint count and sequencing
 
-| Sprint | Scope | Repo | Audit | Smoke |
-|---|---|---|---|---|
-| U.1a | Vocabulary constants | iOS + Worker | No | Yes |
-| U.1b | Worker data_atoms columns | Worker | Yes | Yes |
-| U.1c | Worker enum expansion | Worker | Yes | Yes |
-| U.1d | Transit version validation | Worker + iOS | Yes | Yes |
-| U.2a | iOS model extension | iOS | Yes | Yes |
-| U.2b | iOS AI unified output | iOS | Yes | Yes |
-| U.2c | iOS unified transit | iOS | Yes | Yes |
-| U.F.1 | FHIR raw preservation | iOS | Yes | Yes |
-| U.F.2 | FHIR resource branches | iOS | Yes | Yes |
-| U.F.3 | FHIR-to-atom bridge | iOS | Yes | Yes |
-| U.F.4 | Worker FHIR transit (optional) | Worker | Yes | Yes |
-| U.3 | Data migration | Worker | Yes | Yes |
-| U.4a | Worker unified submit | Worker | Yes | Yes |
-| U.4b | Console state unification | Console | Yes | Yes |
-| U.4c | Console unified list | Console | Yes | Yes |
-| U.4d | Red-for-PHI cleanup | Console | Yes | Yes |
-| U.5 | Cleanup (3 commits) | All | Yes | Yes |
+| Sprint | Scope | Repo | Audit | Smoke | Status |
+|---|---|---|---|---|---|
+| U.1a | Vocabulary constants | iOS + Worker | No | Yes | ✅ COMPLETE (ca9fd57 iOS / 0af52cc Worker) |
+| U.1b | Worker data_atoms columns | Worker | Yes | Yes | ✅ COMPLETE (40d9561) |
+| U.1c | Worker enum expansion | Worker | Yes | Yes | ✅ COMPLETE (c0d127a) |
+| U.1d | Transit version validation | Worker + iOS | Yes | Yes | ✅ COMPLETE (30788bf Worker / 47fc703 iOS) |
+| U.1e | Vocabulary extension | iOS + Worker | Yes | Yes | ✅ COMPLETE (b0cc89c+4267ec9 iOS / 5513155+53a4f10 Worker) — unplanned but landed |
+| U.2a | iOS model extension | iOS | Yes | Yes | ✅ COMPLETE (2a6b44d) |
+| U.2a.5 | FactKind→AtomKind collapse | iOS | — | — | ✅ COMPLETE (8ba536f) — unplanned but landed |
+| U.2a.6 | InterpretationKind→AtomKind collapse | iOS | — | — | ✅ COMPLETE (2712e82) — unplanned but landed |
+| U.2b | iOS AI unified output | iOS | Yes | Yes | ✅ COMPLETE (decomposed into U.2b.1–3.c) |
+| U.2b.1 | Pass 2 prompt restructure | iOS | — | — | ✅ COMPLETE (40b1812) |
+| U.2b.2 | Pass 2 parser update | iOS | — | — | ✅ COMPLETE (b798d26) |
+| U.2b.3.a | Token vocabulary bridge | iOS | — | — | ✅ COMPLETE (938a880) |
+| U.2b.3.b | AI tokenization driver | iOS | — | — | ✅ COMPLETE (8a03320) |
+| U.2b.3.c | Regex PHI identification deleted | iOS | — | — | ✅ COMPLETE (d5a11f2) |
+| U.2c | iOS unified transit | iOS | Yes | Yes | ✅ COMPLETE (absorbed into U.2b.3.a/b/c) |
+| U.F.1 | FHIR raw preservation | iOS | Yes | Yes | pending |
+| U.F.2 | FHIR resource branches | iOS | Yes | Yes | pending |
+| U.F.3 | FHIR-to-atom bridge | iOS | Yes | Yes | pending |
+| U.F.4 | Worker FHIR transit (optional) | Worker | Yes | Yes | pending |
+| U.3 | Data migration | Worker | Yes | Yes | pending |
+| U.4a | Worker unified submit | Worker | Yes | Yes | pending |
+| U.4b | Console state unification | Console | Yes | Yes | pending |
+| U.4c | Console unified list | Console | Yes | Yes | pending |
+| U.4d | Red-for-PHI cleanup | Console | Yes | Yes | pending |
+| U.5 | Cleanup (3 commits) | All | Yes | Yes | pending |
 
-17 mini-sprints (16 if U.F.4 skipped).
+17 mini-sprints in the original plan (16 if U.F.4 skipped). Eight unplanned sub-sprints landed during U.1/U.2 execution: U.1e (vocabulary extension), U.2a.5/6 (enum collapses), and the U.2b.1–3.c decomposition of the original U.2b row.
 
 ## Sprint sizing
 

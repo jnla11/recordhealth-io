@@ -4,6 +4,14 @@
 **Supersedes:** v0.1 (2026-04-22)
 **Last revised:** 2026-04-24
 **Location at rest:** `SeedCorpus/ATOM_UNIFICATION_DESIGN.md`
+
+**Implementation status (2026-04-27):** v1.0 design committed.
+Sprints U.1a–U.2b.3.c complete on iOS (db_unification branch).
+Worker schema migration U.1b/U.1c/U.1d/U.1e complete on staging.
+Remaining: U.3 (data migration), U.4 (ADI console), U.5 (cleanup),
+U.F (FHIR import). v1.0 decisions are not under debate; execution
+continues per ATOM_UNIFICATION_SPRINT_ARC.md.
+
 **Related:**
 - `PLUMBING_FIX.md` — sibling architectural debt (source_regions duplication)
 - `CLINICAL_SHAPE_DESIGN.md` — current atom/PHI schema
