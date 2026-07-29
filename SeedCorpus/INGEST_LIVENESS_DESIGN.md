@@ -75,22 +75,22 @@ The ledger is simultaneously the attempt counter, the spend meter, the idempoten
 
 **Hard spend ceiling**, vendor-native units, two per-job ceilings checked at intent-write time, terminal on breach:
 
-- LlamaCloud credits: ceiling = pages_estimate × per-page rate × submit cap × safety factor.
-- Bedrock tokens: running sum of ledger actualUnits plus projected cost of the call about to be made.
+- LlamaCloud credits: ceiling = pages_estimate × per-page rate × submit cap × safety factor. Locked now (ruling 1) — enforced from rung 1.
+- Bedrock tokens: running sum of ledger actualUnits plus projected cost of the call about to be made. Deferred (ruling 1): no real cap is enforced until rung 1's own ledger data gives a basis for one. Rung 1 ships with a deliberately loose placeholder ceiling that logs breaches without terminating the job — it observes, it does not gate. This dependency carries forward into F-NEW-MX and F-NEW-MY.
 
-Because the check happens at intent time and intents are fenced, unbounded spend requires either a ledger bypass or a vendor billing us for calls we never made. Exact numbers are an open ruling.
+Because the check happens at intent time and intents are fenced, unbounded spend requires either a ledger bypass or a vendor billing us for calls we never made. Exact numeric values for both ceilings remain an open ruling; what's locked is that LlamaCloud enforces from the start and Bedrock does not until rung-1 data exists.
 
 **Circuit breaker per vendor boundary.** Breaker state must be cross-job and cross-user, so one VendorHealthDO per vendor, consulted before submits:
 
 - Trip: 3 consecutive deterministic-vendor failures (402, 401/403) trips immediately; 5 transient failures within 5 minutes trips for transients.
-- Open behavior: submits are not attempted. The queue entry parks as blocked with reason `vendor_unavailable`, reusing the F-NEW-KO blocked-entry machinery. The user sees "processing delayed," not a failure.
+- Open behavior: submits are not attempted. The queue entry parks as blocked with reason `vendor_unavailable`, reusing the F-NEW-KO blocked-entry machinery. The user-facing meaning is locked (ruling 4): "Processing delayed due to server issues. We will resolve and process your records shortly. No action is needed on your part." Exact wording is deferred to F-NEW-MV — design against the meaning, not the string.
 - Probe: half-open admits one real job on a backoff schedule (60s doubling to 15 min). Probe success closes the breaker and pokes coordinators to re-evaluate blocked entries.
 - One extra DO hop per submit. Submits are rare; acceptable.
 
 **Admission control:** instant slot refill stays for successes. For failures, the terminal path gains a failure-class-keyed cooldown in the recent ring:
 
-- vendor_fault / our_timeout / spend_cap: resubmit of the same content_hash is held for a cooldown.
-- document_fault: resubmit blocked for a long window.
+- vendor_fault / our_timeout / spend_cap: resubmit of the same content_hash is held for 15 minutes (locked ruling 2).
+- document_fault: no clock (locked ruling 2) — resubmit stays blocked until something changes on our side (prompt version, app version, pipeline version), never merely until a timer expires.
 - superseded / canceled: no cooldown.
 - The slot itself still frees immediately; cooldown gates admission of the same bytes, not slot capacity.
 
@@ -112,7 +112,7 @@ Within one DO instance, superseded work can be stopped. All events for a given D
 2. **Active abort (new):** the registry above.
 3. **Write fence (existing):** OCC-guarded completion, now protecting state consistency only.
 
-**Partial work of a superseded generation:** discarded, with one exception flagged as an open ruling. The Atom Pass could gain content-addressed section checkpoints, keyed by (content hash of section input, prompt version) rather than generation, so any later generation reuses a completed section for free. Converts the worst multiplier into at-most-once per section per prompt version.
+**Partial work of a superseded generation:** discarded, with one exception: content-addressed section checkpoints — locked ruling 3, BUILD, not defer. Reasoning: a restart must not re-pay for sections that already succeeded. The Atom Pass gains section checkpoints keyed by (content hash of section input, prompt version) rather than generation, so any later generation reuses a completed section for free. Converts the worst multiplier into at-most-once per section per prompt version. (Ladder placement: Rung 6.)
 
 **Terminal-while-live:** allowed, with a defined cleanup obligation. `markTerminal` and `notifyIfNewlyTerminal` acquire three obligations: abort all registered controllers; rely on lease renewals to fence unreachable stragglers; schedule the post-terminal sweep.
 
@@ -128,7 +128,7 @@ NCC is the right surface and needs extension, not replacement. It gains three pa
 
 **Two new tables:**
 
-- `ingest_phase_events`: one row per phase transition (claimed, completed, expired, failed, superseded), carrying job_id, phase, gen, event, duration_ms, step_count, error_class, environment, t. Not per-step, not per-poll. Roughly 10 rows/job. "Which stage of which phase is slow" comes from duration_ms per phase plus a slowest_step column stamped at completion.
+- `ingest_phase_events`: one row per phase transition (claimed, completed, expired, failed, superseded), carrying job_id, phase, gen, event, duration_ms, step_count, error_class, environment, t. Not per-step, not per-poll. Roughly 10 rows/job. "Which stage of which phase is slow" comes from duration_ms per phase plus a slowest_step column stamped at completion. Granularity is locked (ruling 5): staging carries full per-step detail permanently; production carries transitions only for successful routine work, plus full step detail on anything that fails.
 - `ingest_spend_events`: the ledger flush, per attempt, per vendor, units + unit type + vendor job id. Flushed at terminal by the DO, and by the existing sweeper for jobs whose DO died before flushing. Spend is recorded in DO storage at intent time and exported at terminal-or-sweep. `ingest_jobs` cost columns become a rollup of ledger rows.
 
 **Queue and concurrency:** the coordinator emits transitions to the same phase-events table (enqueued, dispatched, blocked(reason), terminal), with waited_ms stamped at dispatch. Queue depth over time falls out of event timestamps in SQL. Current-state is a small live admin route.
