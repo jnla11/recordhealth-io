@@ -9,15 +9,145 @@ Last verified: 2026-07-29
 
 ## 0. Verification of the ruling's claims (two corrections, one incompleteness)
 
-The four historical claims all check out: F-NEW-KO's design doc rules server-owned recovery (INGEST_FAILURE_POLICY_DESIGN.md, with §D's one-automatic-resubmit as an interim); F-NEW-KU Phase 3 (865166c/001449f) deleted that client resubmit machinery — ROADMAP:2249 records it as "retired in favor of the fully server-owned recovery it was always meant to hand off to," and ARCHITECTURE.md:681 records the owner ruling "no client ever resubmits" as applied without exception; the 2026-07-23 UX ruling is at ARCHITECTURE.md:675 (reverses F-NEW-KP ruling D); .freshSubmission is at :671 with exactly the claimed safety argument, resting on DEDUPE_TERMINAL_STATES at ingest-queue-state.mjs:94-97. Note §3.8 currently holds both ":681 no client ever resubmits, without exception" and ":671 the client re-uploads on manual retry" — this ruling resolves that internal contradiction; the doc amendment should say so.
+The four historical claims all check out: F-NEW-KO's design doc rules server-owned recovery (INGEST_FAILURE_POLICY_DESIGN.md, with §D's one-automatic-resubmit as an interim); F-NEW-KU Phase 3 (865166c/001449f) deleted that client resubmit machinery — ROADMAP:2249 records it as "retired in favor of the fully server-owned recovery it was always meant to hand off to," and ARCHITECTURE.md:681 records the owner ruling "no client ever resubmits" as applied without exception; the 2026-07-23 UX ruling is at ARCHITECTURE.md:675 (reverses F-NEW-KP ruling D); `.freshSubmission` is at :671 with exactly the claimed safety argument, resting on `DEDUPE_TERMINAL_STATES` at ingest-queue-state.mjs:94-97. Note §3.8 currently holds both ":681 no client ever resubmits, without exception" and ":671 the client re-uploads on manual retry" — this ruling resolves that internal contradiction; the doc amendment should say so.
 
-**Correction 1 — "matches with no age bound" is true of the in-flight arm only, and it explains F-NEW-MU only indirectly.** findDuplicate (ingest-queue-state.mjs:201-213) has two arms. The in-flight arm (queued + active entries) has no age bound. The completed arm is bounded at RECENT_TTL_MS = 15 minutes (:24, :217-221) — a completed job of arbitrary age cannot be adopted through the recent ring as written. The mechanism that fits the MU incident is an entry stuck in active whose job DO had in fact completed (the coordinator's reconcile never retired it), matched by the ageless in-flight arm, with the result blob still present because F-NEW-MJ's GC doesn't exist. So the in-flight arm resolves MU's mystery only jointly with a reconcile stall — which is itself an instance of the liveness failure this parent design fixes. MU's audit half should confirm the entry was in active; the design below moots the current mechanism either way.
+**Correction 1 — "matches with no age bound" is true of the in-flight arm only, and it explains F-NEW-MU only indirectly.** `findDuplicate` (ingest-queue-state.mjs:201-213) has two arms. The in-flight arm (queued + active entries) has no age bound. The completed arm is bounded at `RECENT_TTL_MS` = 15 minutes (:24, :217-221) — a completed job of arbitrary age cannot be adopted through the recent ring as written. The mechanism that fits the MU incident is an entry stuck in active whose job DO had in fact completed (the coordinator's reconcile never retired it), matched by the ageless in-flight arm, with the result blob still present because F-NEW-MJ's GC doesn't exist. So the in-flight arm resolves MU's mystery only jointly with a reconcile stall — which is itself an instance of the liveness failure this parent design fixes. MU's audit half should confirm the entry was in active; the design below moots the current mechanism either way.
 
-**Correction 2 — there is not one R2 deletion site, there are four, and two of them delete on exactly the failures we must now retry.** The ruling names the post-createMeta delete (ingest-do.js:1795-1801, confirmed). Additionally the coordinator deletes parked bytes at: the /enqueue rollback (ingest-queue-do.mjs:251 — this one stays; custody was never confirmed to the phone), retireToRecent-to-failed paths including coordinator-failed and dispatch failure (:481, :524 — these must go; those are retryable failures under B), and blocked-entry expiry. There is also a live R2 lifecycle rule expire-park-2d (prefix park/, 172800s — wrangler.toml:17-24) that hard-deletes everything at 2 days. Any retention design that doesn't reconfigure that rule silently reintroduces re-upload on day 2. It is dashboard config, not code — it needs an explicit deploy step.
+**Correction 2 — there is not one R2 deletion site, there are four, and two of them delete on exactly the failures we must now retry.** The ruling names the post-createMeta delete (ingest-do.js:1795-1801, confirmed). Additionally the coordinator deletes parked bytes at: the /enqueue rollback (ingest-queue-do.mjs:251 — this one stays; custody was never confirmed to the phone), retireToRecent-to-failed paths including coordinator-failed and dispatch failure (:481, :524 — these must go; those are retryable failures under B), and blocked-entry expiry. There is also a live R2 lifecycle rule `expire-park-2d` (prefix `park/`, 172800s — wrangler.toml:17-24) that hard-deletes everything at 2 days. Any retention design that doesn't reconfigure that rule silently reintroduces re-upload on day 2. It is dashboard config, not code — it needs an explicit deploy step.
 
 **Incompleteness — no deletion surface exists to hang the edge-case rulings on.** The Worker has no record-deletion, app-data-deletion, or account-deletion endpoint (verified by route grep). E's rulings below therefore specify new surface, flagged as a dependency.
 
 One boundary confirmation the ruling asked for: the custody point is the R2 put inside /enqueue (ingest-queue-do.mjs:212-233, sha256-sealed, server-recomputed). The 202/409 response is the checksum confirmation. If the phone never received that response, the server may or may not hold the bytes, and the phone must retain and resend — confirmed outside this ruling's scope, and the design keeps that path.
+
+---
+
+## 1. Liveness contract: the step lease
+
+Every phase — parse, extract, assembly, repair, and any future phase — runs its expensive work as a sequence of steps, where a step is one vendor round trip or one bounded local operation. The contract:
+
+1. **Claim before work.** A phase attempt begins with a persisted, OCC-guarded claim that bumps that phase's generation.
+2. **Renew before every paid step, declaring the step's budget.** Before each step, the invocation calls `renewLease(phase, gen, stepName, stepBudgetMs)` through `applyMeta`. The renewal sets the phase's watchdog to now + stepBudgetMs + slack. A Bedrock section call declares ~120s; a poll declares ~15s; a shard-write batch declares ~10s.
+3. **The step enforces its own declared budget.** Every vendor fetch runs under an `AbortController` with timeout = the declared budget.
+4. **Renewal failure = claim lost = stop before spending.** `renewLease` returning not-ok means the invocation aborts immediately. This is the pre-spend fence.
+5. **Watchdog fires only on lease expiry.** An expired lease means either the invocation died mid-step, or a step overran its self-enforced timeout, which is a bug not an operating mode.
+
+Stuck = a lease that expired without renewal. The wall clock only enters through per-step budgets.
+
+Why per-step declaration rather than a bigger flat watchdog: a flat 10-minute watchdog would stop false reverts but make genuine death detection take 10 minutes for a job that died during a 3s poll. Declared budgets give fast detection for cheap steps and correct tolerance for expensive ones, from one mechanism.
+
+The Bedrock no-interior-checkpoint constraint is accepted. A single section call has no interior progress signal; the lease budget covers the whole call and the AbortController bounds it. Detection latency for death-mid-Bedrock-call is the declared budget. Deliberate tradeoff: slower detection of one dead job, in exchange for making false reverts structurally impossible.
+
+**Death detection and reclaim:** DO eviction / deploy / crash mid-call → no renewal → the alarm fires `expireLease` → revert to WAITING/re-claimable, gen bumps on the next claim, attempt counter draws from the job budget. Reclaim speed = declared step budget + slack. Depends on DO alarms surviving eviction and restarts.
+
+**Generations stay per-phase.** Parse and extract are genuinely concurrent arms; a unified job-level generation would force serialization. What unifies is the mechanism: one claimLease/renewLease/completeLease/expireLease applier family replaces the four hand-built variants. Per-phase watchdog keys collapse into one `leases[phase] = {gen, step, deadline}` shape. Attempt counting unifies into the job attempt budget, so layers can no longer multiply.
+
+**Correlation ID:** root is `jobId`, minted at `/v1/ingest/start`. Attempt id is `{jobId}:{phase}:{gen}`, derivable, labeling every lease renewal, ledger row, log line, and phase event row. Propagation via an `X-RH-Job-Id` header on every internal DO hop, already embedded in LlamaCloud webhook URLs, recorded against the vendor job id in the spend ledger at submit time. Neither vendor accepts a client correlation tag on the call itself.
+
+Conformance checklist for any new phase:
+
+1. Claims via `claimLease` before any work; the claim bumps gen and draws an attempt from the job budget.
+2. Every network call is preceded by a `renewLease` naming the step and its budget, and runs under an `AbortController` set to that budget.
+3. No await on a non-storage operation between reading meta and acting on it without re-validating through `applyMeta`.
+4. Every vendor call writes a ledger intent row before the call and a result row after.
+5. Completion and failure both go through OCC-guarded appliers keyed on (phase, gen).
+6. Every terminal path classifies into the failure taxonomy and cancels live controllers via the abort registry.
+7. All shards it writes are gen-tagged with its lease gen; it registers its shard bases in the sweep floor table.
+8. No PHI in any log line, ledger row, or event row it emits.
+
+---
+
+## 2. Retry and spend policy
+
+**The spend ledger:** a per-job, append-only ledger in DO storage. Before any vendor call, write an intent row `{attemptId, vendor, op, estUnits, unitType, t}`. After it returns, write a result row `{attemptId, vendor, op, actualUnits, vendorJobId?, errorClass?, t}`. Rules:
+
+- Intent writes are fenced: they happen inside/immediately after a successful `renewLease`, so a superseded invocation cannot record new intent and therefore cannot make the call.
+- Once written, ledger rows are never dropped or gen-guarded. They record what happened, including a loser generation's spend. This fixes "the most expensive runs record zero": usage no longer rides the completion write.
+- Ledger rows are storage writes, so they are cheap and OCC-safe by construction.
+
+The ledger is simultaneously the attempt counter, the spend meter, the idempotency record, the cost-attribution source, and the `llama_parse_calls` fix.
+
+**Single attempt budget, all layers draw from it:**
+
+- Vendor submits: hard cap approximately 2 each per job, ever, across all layers and generations, counted as ledger intents, so a submit that died ambiguously still counts as spent. LlamaCloud has no idempotency keys, so the rule is "an intent row of unknown outcome is presumed billed." On reclaim after an ambiguous submit, poll the vendor job id if captured, else burn the attempt, never blind resubmit.
+- Bedrock calls: `callBedrockWithRetry`'s internal 3-attempt loop stays but takes a budget hook; each physical invocation records a ledger intent and checks the job's Bedrock-call and token ceilings first.
+- Watchdog reclaims: an expired lease's re-claim draws an attempt.
+- Phone resubmits: governed by admission control, not the job budget.
+
+**Hard spend ceiling**, vendor-native units, two per-job ceilings checked at intent-write time, terminal on breach:
+
+- LlamaCloud credits: ceiling = pages_estimate × per-page rate × submit cap × safety factor.
+- Bedrock tokens: running sum of ledger actualUnits plus projected cost of the call about to be made.
+
+Because the check happens at intent time and intents are fenced, unbounded spend requires either a ledger bypass or a vendor billing us for calls we never made. Exact numbers are an open ruling.
+
+**Circuit breaker per vendor boundary.** Breaker state must be cross-job and cross-user, so one VendorHealthDO per vendor, consulted before submits:
+
+- Trip: 3 consecutive deterministic-vendor failures (402, 401/403) trips immediately; 5 transient failures within 5 minutes trips for transients.
+- Open behavior: submits are not attempted. The queue entry parks as blocked with reason `vendor_unavailable`, reusing the F-NEW-KO blocked-entry machinery. The user sees "processing delayed," not a failure.
+- Probe: half-open admits one real job on a backoff schedule (60s doubling to 15 min). Probe success closes the breaker and pokes coordinators to re-evaluate blocked entries.
+- One extra DO hop per submit. Submits are rare; acceptable.
+
+**Admission control:** instant slot refill stays for successes. For failures, the terminal path gains a failure-class-keyed cooldown in the recent ring:
+
+- vendor_fault / our_timeout / spend_cap: resubmit of the same content_hash is held for a cooldown.
+- document_fault: resubmit blocked for a long window.
+- superseded / canceled: no cooldown.
+- The slot itself still frees immediately; cooldown gates admission of the same bytes, not slot capacity.
+
+**F-NEW-MS fold-in, the failure-signature memo:** each failed step records a failure signature = hash of (section_id, error_class, stable error discriminator). Retry/repair eligibility excludes any unit whose signature has already failed 2 times across all generations and tiers. Two, not one, because Bedrock output is nondeterministic. A second identical failure parks the section terminal.
+
+**Tension with the 2-revolution cap:** no conflict, orthogonal axes. The revolution cap bounds across-pass re-ingests; the signature memo bounds within-repair identical retries; the job budget bounds within-job total attempts. Worst-case total spend per record = revolution cap (2) × per-job ceiling. Signature memos do not carry across revolutions.
+
+---
+
+## 3. Supersession and fencing
+
+Within one DO instance, superseded work can be stopped. All events for a given DO id are delivered to the same in-memory object instance, and `AbortController` works on in-flight `fetch` in Workers. The DO keeps an in-memory abort registry: `this.liveRuns: Map<"{phase}:{gen}", AbortController>`. When a re-claim bumps a gen, or `markTerminal` runs, the caller aborts every registered controller for older gens.
+
+**Limits:** the registry is memory-only, so it does nothing across eviction/deploy, but in that case the old invocation is dead. It cannot claw back vendor-side spend: Bedrock bills tokens already generated, and LlamaCloud has no cancel endpoint for the per-job parse/extract API (cancel exists only on the beta batch API).
+
+**Fence placement, three layers:**
+
+1. **Pre-spend fence (new, primary):** `renewLease` + budget check + ledger intent before every paid call.
+2. **Active abort (new):** the registry above.
+3. **Write fence (existing):** OCC-guarded completion, now protecting state consistency only.
+
+**Partial work of a superseded generation:** discarded, with one exception flagged as an open ruling. The Atom Pass could gain content-addressed section checkpoints, keyed by (content hash of section input, prompt version) rather than generation, so any later generation reuses a completed section for free. Converts the worst multiplier into at-most-once per section per prompt version.
+
+**Terminal-while-live:** allowed, with a defined cleanup obligation. `markTerminal` and `notifyIfNewlyTerminal` acquire three obligations: abort all registered controllers; rely on lease renewals to fence unreachable stragglers; schedule the post-terminal sweep.
+
+**Orphan shard reclamation:** sweep moves from "inside `assemble()` only" to the terminal transition itself. On any terminal, the DO schedules one final alarm at t + grace that deletes every shard except, for successful jobs, the winning-gen result shard.
+
+---
+
+## 4. Observability
+
+Two surfaces. Logs reconstruct one job's path. Metrics/events answer "is ingest slow today" and live in Postgres via the NCC pattern: strict column allowlist, no free-form JSONB, scrubbed, waitUntil, observe-never-gate.
+
+NCC is the right surface and needs extension, not replacement. It gains three panels: ingest health, queue/concurrency, and spend. It does not do alerting/paging.
+
+**Two new tables:**
+
+- `ingest_phase_events`: one row per phase transition (claimed, completed, expired, failed, superseded), carrying job_id, phase, gen, event, duration_ms, step_count, error_class, environment, t. Not per-step, not per-poll. Roughly 10 rows/job. "Which stage of which phase is slow" comes from duration_ms per phase plus a slowest_step column stamped at completion.
+- `ingest_spend_events`: the ledger flush, per attempt, per vendor, units + unit type + vendor job id. Flushed at terminal by the DO, and by the existing sweeper for jobs whose DO died before flushing. Spend is recorded in DO storage at intent time and exported at terminal-or-sweep. `ingest_jobs` cost columns become a rollup of ledger rows.
+
+**Queue and concurrency:** the coordinator emits transitions to the same phase-events table (enqueued, dispatched, blocked(reason), terminal), with waited_ms stamped at dispatch. Queue depth over time falls out of event timestamps in SQL. Current-state is a small live admin route.
+
+**Failure classification**, one taxonomy stamped at every terminal: vendor_fault, vendor_billing, vendor_auth, our_timeout, document_fault, spend_cap, superseded, canceled, unknown_crash. The classifier runs where the information exists, not at the terminal write.
+
+**Log volume:** state transitions and errors always logged, structured, one line each. Per-poll and per-heartbeat logging removed. Payload-bearing diagnostics removed. Workers Logs bills per event and sheds under load with short retention, therefore nothing operational may depend on logs.
+
+**PHI:** event tables have strict column allowlists, ids/enums/counts/durations only. No document text, section titles, atom values, filenames, or vendor payloads in any event, metric, or log line.
+
+---
+
+## 5. Verification
+
+F-NEW-MP (replay harness) must record/replay at the HTTP boundary, not at adapter-output level, because the things this design most needs tested live between our logic and the wire. MP must provide: an injectable fetch seam in the vendor helpers; scripted fault sequences (N consecutive 402s, ambiguous submit, slow response exceeding a declared budget, a poll sequence that never completes); virtual time driving the alarm loop; recorded real fixtures from staging for happy paths.
+
+**Per-rung verifiability:** pure appliers under `node --test`, call-site invariants enforced by grep-able rules, end-to-end behavior under the MP harness with scripted faults.
+
+**F-NEW-MW sequencing confirmed:** MW's fix adds a new paid-submit call site and must not land before the fence exists. Refinement: MW needs only rungs 1-3, so it can ship mid-ladder.
 
 ---
 
@@ -34,7 +164,7 @@ The clock and the triggers:
 - **Unacked success (abandonment):** no `fetched` ever arrives (app deleted — iOS provides no uninstall signal). Retention cap: 30 days from terminal, then delete both artifact classes and mark the job `failed_final(retention_expired)` if unacked-failed, or leave complete with artifacts gone if unacked-success. 30 days is the abandonment definition (owner number, flagged).
 - **Terminal-retryable failure:** bytes retained for the same 30-day window from last state change. The window restarts on any server retry (state changed). This window is also the outer stopping rule for fix-gated failures (B).
 - **Genuinely final failure (B's list):** artifacts deleted at final-transition + a short grace (72h, same knob) — kept briefly only so a just-failed job's forensics (staging replay via F-NEW-MP fixtures) can capture what's needed; production forensic value lives in the ledger and phase events, which are PHI-free and retained.
-- **User deletion (record / account):** immediate deletion, no grace — E.1/E.5.
+- **User deletion (record / account):** immediate deletion, no grace — E.1/E.6.
 
 The lifecycle rule becomes a backstop, not a policy. `expire-park-2d` is raised to 45 days (retention max 30d + margin) and kept — it is the guarantee that a crashed coordinator can never leak an object forever. Enforcement of the real policy is a coordinator sweep (the existing alarm loop already visits entries; the recent-ring prune extends to artifact deletion at `delete_after`). **Deploy-order constraint:** the lifecycle change must land before any code stops eagerly deleting, or nothing; but code must not start relying on retention until the rule is raised — this is Rung 0 in the ladder.
 
@@ -276,18 +406,29 @@ Reasoning from the code above (`runAtomPass` = 1 Bedrock call per processable se
 - **Rung 3:** budgets + ceilings + signature memo, then 3b (new): failed-retryable state split, epoch-aware re-claim, the `/retry` and `/cancel` endpoints, removal of the eager R2 deletes (bytes now retained; the 45-day rule is the only deleter until rung 5). F-NEW-MW still lands at the end of 3; the known-unbilled-rejection refinement to the submit cap lands with it.
 - **Rung 4:** breaker + admission cooldown + dedupe inversion + force-fresh flag — adoption, tombstones, and cooldowns are one admission-control mechanism and ship together. iOS's §D changes track against the rung-3b contract and must be live before rung 4's inversion reaches production (rollout-order note in §C).
 - **Rung 5:** observability export + NCC panels + the retention sweeper (principled GC begins; F-NEW-MJ closes here). Granularity per locked ruling 5: staging full-step always; production transitions-only on success, full step detail on failure.
-- **Rung 6:** section checkpoints — BUILD (locked ruling 3). Direct answer to the ruling's question: yes, the current design re-runs already-successful sections on a re-claim — a re-claimed assembly re-executes the whole Atom Pass, so a 30-section document that failed on one section re-pays the Bedrock cost of the 29 that succeeded, on every retry. B makes re-claims a designed-for event rather than an anomaly, which converts checkpoints from optimization to spend control; if rung-1 ledger data shows retry-driven re-runs dominating Bedrock spend, pull rung 6 forward ahead of rung 4 (flagged as an owner call at that checkpoint).
+- **Rung 6:** section checkpoints — BUILD (locked ruling 3). Direct answer to the ruling's question: yes, the current design re-runs already-successful sections on a re-claim — a re-claimed assembly re-executes the whole Atom Pass, so a 30-section document that failed on one section re-pays the Bedrock cost of the 29 that succeeded, on every retry. §B makes re-claims a designed-for event rather than an anomaly, which converts checkpoints from optimization to spend control; if rung-1 ledger data shows retry-driven re-runs dominating Bedrock spend, pull rung 6 forward ahead of rung 4 (flagged as an owner call at that checkpoint).
 
-"Does not solve" list — one deletion: "iOS-side changes beyond consuming new blocked reasons" is no longer true; §D carries a six-item iOS requirement list.
+---
+
+## Does not solve
+
+Sunk vendor spend; Bedrock 429 quota policy; alerting/paging; cross-user fairness; already-leaked shards.
+
+---
+
+## Contradictions requiring owner ruling
+
+- **R2 deletion site count (§0, Correction 2):** the text asserts "there are four" R2 deletion sites, then enumerates five — the post-createMeta delete (ingest-do.js:1795-1801), the `/enqueue` rollback (ingest-queue-do.mjs:251), retireToRecent-to-failed on coordinator-failed (:481), retireToRecent-to-failed on dispatch failure (:524), and blocked-entry expiry. The list above is preserved verbatim; the count is not reconciled here — needs an owner ruling on which figure, or which list item, is wrong.
 
 ---
 
 ## Open rulings
 
-1. Success-ack grace window — proposed 72h (also the final-failure forensic grace).
-2. Retention / abandonment window — proposed 30 days (this is also document_fault's outer stopping bound; the R2 backstop rule is retention + margin).
-3. Job attempt budget — proposed 4 dispatch epochs per job lifetime.
-4. BAA coverage of R2 — verification required before ship; grouped with the existing release-checklist BAA item.
-5. Account-deletion surface — required by E.6, doesn't exist, out of this design's scope; needs filing as its own item.
-6. Rung-6 pull-forward — decide at end of rung 1, on ledger data.
-7. spend_cap unpark authority — designed as owner-only (rate-card change); confirm that's the intent, since the 15-minute-cooldown ruling could be read as implying auto-retry.
+1. Ceiling numbers — exact LlamaCloud-credit and Bedrock-token spend ceilings (§2).
+2. Success-ack grace window — proposed 72h (also the final-failure forensic grace).
+3. Retention / abandonment window — proposed 30 days (this is also document_fault's outer stopping bound; the R2 backstop rule is retention + margin).
+4. Job attempt budget — proposed 4 dispatch epochs per job lifetime.
+5. BAA coverage of R2 — verification required before ship; grouped with the existing release-checklist BAA item.
+6. Account-deletion surface — required by E.6, doesn't exist, out of this design's scope; needs filing as its own item.
+7. Rung-6 pull-forward — decide at end of rung 1, on ledger data.
+8. spend_cap unpark authority — designed as owner-only (rate-card change); confirm that's the intent, since the 15-minute-cooldown ruling could be read as implying auto-retry.
