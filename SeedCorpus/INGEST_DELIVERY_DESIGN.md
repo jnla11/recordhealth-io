@@ -1,6 +1,6 @@
-# INGEST_DELIVERY_DESIGN.md — Server-to-Device Delivery Layer (v1)
+# INGEST_DELIVERY_DESIGN.md — Server-to-Device Delivery Layer (v1.1)
 
-Status: DRAFT v1
+Status: DRAFT v1.1
 Last verified: 2026-08-07
 
 **Provenance:** produced in one Fable design session on 2026-08-07, against INGEST_LIVENESS_DESIGN.md v5, WORKER_ARCHITECTURE.md (L6/L7 state as of 2026-08-06), the app repo through `d3db472`/`308d0a9`, and ROADMAP items F-NEW-LI, F-NEW-OI, F-NEW-LJ. Shape-not-spec: this doc fixes the architecture, the invariants, and the phase boundaries; exact copy, exact numbers marked as rulings, and code-level naming are decided at implementation or by the owner rulings in §9.
@@ -178,6 +178,26 @@ Dependencies: P1 ∥ P0; P2 → P3 → P4; P5 gates only the L7 retention arm; P
 10. **Only if P0 fails:** whether HTTP/2 unavailability is met by a minimal self-hosted relay (new infrastructure), deferral of the whole layer, or something else. Not decided in advance; listed so failure has a named owner path instead of an improvised one.
 11. **Mirror columns on `ingest_jobs`** (`nudge_count`, `last_nudge_at`, `push_evidence`): confirm the recording-only Neon mirror (needed by NCC and the cron), per the committed-migration + owner-run rule.
 12. **Copy:** confirm push alert wording joins F-NEW-MV's copy scope (meanings locked here: "document ready" / "needs your attention"; no document names, no vendor names — invariant §3.1).
+
+---
+
+## 9A. Amendment — 2026-08-11 (owner rulings)
+
+**Terminology ruling:** going forward, anything visible to the user (what §3's table and §9 call a "visible" push) is a **UI banner**; the silent, no-UI path (`content-available`, silent push) is a **background update**. Both terms supersede "visible/silent push" wherever they appear above.
+
+1. **No UI banners in v1.** Every UI-banner-producing mechanism designed above is DEAD for v1: the nudge ladder (§4 leg 1's alarm ladder, and ruling §9.1's T₁/spacing/N numbers), the `failed_final` push (§9.3), the permission-prompt placement question (§9.4 — moot, nothing prompts for a UI banner in v1), and the push copy (§9.12 — moot, no copy ships). §3's event table's "Visible" rows are dead for v1; §7's "not in this design" list should be read as if UI-banner rows never fire.
+
+2. **Background update APPROVED — this is v1's actual scope.** This reverses §3's "silent pushes: none in v1" recommendation and closes ruling §9.6 the other way. v1 sends exactly one silent (`content-available`) background update, at the stranded-terminal point — no send schedule and no suppression ladder to design or build: a redundant wake is a no-op (the floor's `sweep(trigger: .push)` idempotency already covers it), so there is nothing to suppress. §4's multi-rung ladder machinery (T₁..Tₙ, the N cap, the `/fetched` cancel-poke) is accordingly not v1 scope — one wake at terminal supersedes it.
+
+3. **Retention: 5 days flat, all evidence classes. §5 CLOSED — do not re-raise.** §5's `reachable`-class extend-to-outer-cap recommendation and ruling §9.2 are REJECTED. All four evidence classes (`uninstalled`, `no_channel`, `reachable`, `undelivered`) delete at the flat 5-day mark per §A's original timer — the four-way classification stands as recorded evidence (still useful for NCC/observability) but drives no retention branching. This question is closed; a future amendment should not reopen it.
+
+**Status updates (informational, not rulings):**
+
+- APNs auth key created in the Apple Developer portal — Sandbox and Production, Team Scoped (§2.3/§9.9's single-key-both-envs posture).
+- Staging Worker secrets (`APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`) are set.
+- P0 (§8, the throwaway HTTP/2 spike) has not yet run — still pending.
+- The §0/§6 client floor (check-on-open reconcile, `d3db472` adoption path) is now device-verified.
+- The client false-failure fix (F-NEW-OH) shipped in the app repo — out of scope for this design, noted here for cross-reference only.
 
 ---
 
