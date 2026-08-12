@@ -1,6 +1,6 @@
-# INGEST_DELIVERY_DESIGN.md — Server-to-Device Delivery Layer (v1.1)
+# INGEST_DELIVERY_DESIGN.md — Server-to-Device Delivery Layer (v1.2)
 
-Status: DRAFT v1.1
+Status: DRAFT v1.2
 Last verified: 2026-08-07
 
 **Provenance:** produced in one Fable design session on 2026-08-07, against INGEST_LIVENESS_DESIGN.md v5, WORKER_ARCHITECTURE.md (L6/L7 state as of 2026-08-06), the app repo through `d3db472`/`308d0a9`, and ROADMAP items F-NEW-LI, F-NEW-OI, F-NEW-LJ. Shape-not-spec: this doc fixes the architecture, the invariants, and the phase boundaries; exact copy, exact numbers marked as rulings, and code-level naming are decided at implementation or by the owner rulings in §9.
@@ -198,6 +198,23 @@ Dependencies: P1 ∥ P0; P2 → P3 → P4; P5 gates only the L7 retention arm; P
 - P0 (§8, the throwaway HTTP/2 spike) has not yet run — still pending.
 - The §0/§6 client floor (check-on-open reconcile, `d3db472` adoption path) is now device-verified.
 - The client false-failure fix (F-NEW-OH) shipped in the app repo — out of scope for this design, noted here for cross-reference only.
+
+---
+
+## 9B. Amendment — 2026-08-12 (owner rulings)
+
+1. **Background update fires at every success terminal — no gating.** The v1 background update sends at *every* success terminal, unconditionally: no `fetched`-gating, no T₁ delay. This closes the residual ambiguity §9A ruling 2 left open (whether the single wake still waited on a fetch-check or an arm delay) and retires §3's T₁-arm/`fetched`-check structure for the background update specifically. Implemented server-side (api repo commit `708fb34`).
+
+2. **Retention: §9A ruling 3 REVERSED — §5's evidence-driven design ADOPTED.** §9A ruling 3 ("5 days flat, all evidence classes, §5 CLOSED — do not re-raise") is overturned by owner ruling 2026-08-12. Driver: a reachable-but-undelivered phone (hospital / low-bandwidth scenario) must not lose results at day 5 when the server can prove non-delivery. §5's previously-rejected extend-to-outer-cap design for the `reachable` class is ADOPTED, with an outer cap of **15 days**. §5's evidence classes drive retention branching again: `uninstalled` and `no_channel` continue to delete at the flat 5-day mark, unchanged; `reachable` and `undelivered` defer deletion to the 15-day outer cap instead. §5's parameters beyond the cap number are adopted as recommended: at the cap, delete honestly (`retention_expired`, tombstone-free — re-add is sanctioned recovery); `undelivered` surfaces as an owner alert rather than deleting silently, deferred to the same cap; and the NCC stranded panel + ntfy alert surfacing as a job approaches the cap (§4 consumer 2) stands as adopted-as-recommended, pending P4. **Server implementation of this ruling is PENDING** — current code still deletes flat at 5 days for all classes.
+
+3. **P1 wake mechanism ruled.** The wake handler is `sweep(trigger: .push)`, bounded by iOS's ~25s background-execution window; a wake cut off mid-sweep by that window defers to the floor (next app open) rather than resuming. Background `URLSession` transfers are REJECTED for v1: (a) the fetch retrieves the JSON result package, not the document itself, so a transfer is the wrong primitive for what's being moved; (b) transfers started from a sleeping app are discretionary and may be deferred by iOS at will; (c) ruling 2 above removes the loss risk a cut-off wake would otherwise create, which was the strongest argument for a transfer. Revisit only on evidence, per ruling 4 below.
+
+4. **NCC evidence breadcrumbs approved for v1.** Two breadcrumbs are approved ahead of the full P4 stranded panel: (a) the server records the result-body size per job at assembly time; (b) the fetch ack records which sweep trigger collected the result (`.push` wake vs. app open). Purpose: measure wake success rate and payload-size correlation so the background-transfer question (ruling 3) is decided on evidence rather than argued in the abstract.
+
+**Status updates (informational, not rulings):**
+
+- P0 (§8, the throwaway HTTP/2 spike): **COMPLETE, device-verified 2026-08-11.** A sandbox send from the Worker spike returned `200` and the app logged receipt on hardware — silent, no banner. This is a deliberate deviation from §8's stated exit criterion ("documented 200 + banner on the device"): verification used the silent background-update path instead, consistent with §9A ruling 1 (no UI banners in v1).
+- P2 and P3 (§8) are code-complete and tested server-side (api repo commits `067ac08`, `708fb34`; suite: 1326 passed / 0 failed / 1 todo). Not deployed to any Worker environment at time of writing.
 
 ---
 
