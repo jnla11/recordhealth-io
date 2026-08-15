@@ -2,6 +2,7 @@
 *.psd
 *.scriv/
 ProjectBible_Roadmap/
+Medical Reports/
 SeedCorpus/data/
 SeedCorpus/mimic-iv/
 SeedCorpus/admin/config.js
