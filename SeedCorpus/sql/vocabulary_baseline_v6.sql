@@ -361,6 +361,14 @@ CREATE TABLE IF NOT EXISTS vocabulary_misfire_events (
 -- NULLS NOT DISTINCT is load-bearing: extractor identity is NULL on lifecycle
 -- surfaces, and two NULL extractors are the same observation class. Requires
 -- PostgreSQL 15+.
+--
+-- [AMENDED 2026-08-22 — `source` was ADDED to this key by
+-- migrations/vocabulary_misfire_dedup_source.sql (ROADMAP F-NEW-PK), because
+-- omitting it merged two detectors' sightings into one row whose attribution
+-- went to whoever filed first. The column list below is left exactly as
+-- originally authored/executed; the live key has `source` immediately after
+-- `environment`. Read the amending migration, not this block, for what is
+-- live — and note the writer's ON CONFLICT target must match the LIVE list.]
 CREATE UNIQUE INDEX IF NOT EXISTS uq_vocabulary_misfire_events_class
   ON vocabulary_misfire_events (
     environment,
