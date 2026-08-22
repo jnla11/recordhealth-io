@@ -52,9 +52,11 @@
 -- DATABASE_LAYOUT.md § Migration workflow rules, rule 1 requires a committed
 -- migration file under `recordhealth-api/migrations/` before any DDL runs. This
 -- file lives at `SeedCorpus/sql/` in the parent repo, at the owner's explicit
--- instruction, and `recordhealth-api` is a submodule. Before this is applied,
--- either commit an identical file under `recordhealth-api/migrations/` or
--- record the divergence deliberately — do not let it pass unnoticed.
+-- instruction, and `recordhealth-api` is a submodule. RESOLVED 2026-08-21: this
+-- copy is the mirror committed under `recordhealth-api/migrations/`, satisfying
+-- rule 1. It diverges from the SeedCorpus original only by the owner-confirmed
+-- edits of 2026-08-21 (full Section B wipe enabled; A6 retirement enabled),
+-- each marked inline.
 --
 -- ── AUTHORING DECISIONS (design delegates these; flagged for owner review) ───
 -- The design explicitly hands the baseline DDL itself — table shapes, seed
@@ -75,12 +77,13 @@
 --       corpus `GROUP BY entity_kind` queries now group on the raw column,
 --       which is exactly §8 rung 6's reader instruction ("group on the raw
 --       column as ground truth, with the reference as enrichment").
---   A3. `classification_certainty` loses NOT NULL as well as its DEFAULT.
+--   A3. [OWNER-CONFIRMED 2026-08-21 — stands as authored.]
+--       `classification_certainty` loses NOT NULL as well as its DEFAULT.
 --       OR-16 requires absence to be "persisted *as absent*" so §5.2 property
 --       2's three-way distinguishability survives in the encoding. Dropping
 --       only the DEFAULT while keeping NOT NULL would make an omitted certainty
 --       an INSERT error, which is a refusal — the exact posture OR-12/OR-13
---       delete. CONFIRM THIS IS INTENDED before applying.
+--       delete. Confirmed intended.
 --   A4. Extractor identity columns are `extractor_vendor` / `extractor_model` /
 --       `extractor_version`. `extractor_vendor` carries the SAME value domain
 --       as `ingest_spend_events.vendor` ('llamacloud' | 'bedrock' | successors)
@@ -89,11 +92,12 @@
 --   A5. `vocabulary_terms.display_name` and `.notes` are curation metadata the
 --       design does not name. A hand-authored dictionary needs a human label.
 --       Both nullable; delete them if unwanted.
---   A6. `visitDate` and `reportDate` are seeded live (retired_at NULL) because
---       the design says "the 33 values", full stop. They are dead in practice
---       (DATABASE_LAYOUT § Drift: rejected by the Worker validator, rows
---       backfilled to `dateAtom`). A commented-out retirement UPDATE sits below
---       the seed — running it is the owner's curation call, not this file's.
+--   A6. [OWNER-CONFIRMED 2026-08-21 — retirement ENABLED.] `visitDate` and
+--       `reportDate` are seeded because the design says "the 33 values", full
+--       stop, then retired by the UPDATE immediately below the seed. They are
+--       dead in practice (DATABASE_LAYOUT § Drift: rejected by the Worker
+--       validator, rows backfilled to `dateAtom`), so the dictionary carries
+--       all 33 rows with those two carrying a non-null `retired_at`.
 -- ============================================================================
 
 
@@ -190,6 +194,19 @@ CREATE TABLE IF NOT EXISTS vocabulary_misfire_events (
                                           -- two feeders wrote the row. The
                                           -- beacon is the ONLY production-facing
                                           -- detector (§9 item 7).
+                                          -- [2026-08-21, OR-18, v7-era
+                                          -- annotation: a third source,
+                                          -- 'ingest', was added by
+                                          -- migrations/vocabulary_misfire_
+                                          -- source_ingest.sql and is now the
+                                          -- PRIMARY detector (IngestDO.
+                                          -- assemble() sees 100% of extraction
+                                          -- traffic); the beacon named above
+                                          -- is deferred, not built. The CHECK
+                                          -- below is left exactly as
+                                          -- originally authored/executed —
+                                          -- see the widening migration for
+                                          -- the structural change.]
   namespace           TEXT NOT NULL,      -- §5.3 invariant 1: a term's identity
                                           -- is namespace plus code, never a bare
                                           -- string. Field position assigns the
@@ -394,7 +411,15 @@ COMMENT ON TABLE vocabulary_misfire_events IS
   'deliberate act). Two feeders (the /v1/client-drift beacon; the ADI submit '
   'route), two event classes (drift, anomaly), one table. Deliberately NOT an '
   'L7 table: no foreign keys to ingest_phase_events / ingest_spend_events / '
-  'ingest_jobs in either direction, correlation by id only.';
+  'ingest_jobs in either direction, correlation by id only. '
+  '[2026-08-21, OR-18, v7-era annotation: the "two feeders" line above is as '
+  'originally authored and executed, and is left unedited for history''s '
+  'sake. A third source now exists — ingest, added by migrations/'
+  'vocabulary_misfire_source_ingest.sql — and per owner ruling it is the '
+  'PRIMARY detector, not the beacon: IngestDO.assemble() sees 100% of '
+  'extraction traffic and carries real per-arm extractor identity, where the '
+  'beacon named above remains deferred, not built. Current state: '
+  'docs/WORKER_ARCHITECTURE.md § Vocabulary misfire log.]';
 
 COMMENT ON COLUMN vocabulary_misfire_events.value_verbatim IS
   'THE VERBATIM VALUE EXCEPTION (v6 §6, the L7 seam). This is the ONLY '
@@ -544,14 +569,14 @@ $guard$;
 --     review_documents  <- grading_submissions, review_phi_detections
 --     knowledge_gaps    <- (no inbound FK)
 --
--- WHAT SURVIVES, DELIBERATELY: the human-review artifact trees — `audit_*`,
--- `grading_sessions`, `document_grades`, `grading_exports`, `annotations` — and
--- `prompt_versions`. None of them is reproduced by reingest, so wiping them
--- destroys work that cannot be recovered. NONE of them holds a foreign key into
--- the tables below, so they survive the TRUNCATE cleanly. The cost of keeping
--- them, stated: they will carry document / atom ids that no longer resolve.
--- An optional block to wipe them too sits immediately after, COMMENTED OUT —
--- running it is the owner's call, and it is separately irreversible.
+-- WHAT SURVIVES: `prompt_versions` only. The human-review artifact trees —
+-- `audit_*`, `grading_sessions`, `document_grades`, `grading_exports`,
+-- `annotations` — are ALSO wiped, by owner ruling 2026-08-21 (the second
+-- TRUNCATE below, originally authored as commented-out and optional). None of
+-- them is reproduced by reingest; the owner ruled there is no hand-authored
+-- grading data worth preserving, and recovery for the whole wipe is reingest.
+-- NONE of them holds a foreign key into the first TRUNCATE's tables, so the two
+-- statements are independent.
 
 TRUNCATE TABLE
   atom_region_links,
@@ -563,20 +588,21 @@ TRUNCATE TABLE
   grading_submissions,
   review_documents;
 
--- OPTIONAL, OWNER'S CALL, SEPARATELY IRREVERSIBLE — the human-review artifacts.
--- Uncomment ONLY if you also want the grading and audit history gone. This is
--- hand-authored review work; reingest does not bring it back.
--- TRUNCATE TABLE
---   annotations,
---   document_grades,
---   grading_exports,
---   grading_sessions,
---   audit_fields,
---   audit_negative_space,
---   audit_phi_detections,
---   audit_session_summary,
---   audit_documents,
---   audit_sessions;
+-- OWNER-RULED ON, 2026-08-21: RUN IT. The wipe includes the grading and audit
+-- trees. There is no hand-authored grading data worth preserving in the dev
+-- corpus, so the "reingest does not bring it back" cost is accepted as zero.
+-- Separately irreversible, same as B.1 above.
+TRUNCATE TABLE
+  annotations,
+  document_grades,
+  grading_exports,
+  grading_sessions,
+  audit_fields,
+  audit_negative_space,
+  audit_phi_detections,
+  audit_session_summary,
+  audit_documents,
+  audit_sessions;
 
 -- ===========================================================================
 -- ==  END OF THE WIPE. Everything below is schema.                         ==
@@ -745,18 +771,19 @@ INSERT INTO vocabulary_terms (namespace, code, created_by) VALUES
   ('rh.atom.kind', 'recordSummary',      'vocabulary-v6-baseline')
 ON CONFLICT (namespace, code) DO NOTHING;
 
--- OPTIONAL CURATION, OWNER'S CALL (authoring decision A6). `visitDate` and
--- `reportDate` are dead in practice: DATABASE_LAYOUT § Drift records them as
--- "dead-but-unremovable" enum values, rejected by the Worker validator, with
--- their rows already backfilled to `dateAtom` by fneweh_entity_kind_backfill.sql.
--- They are seeded live above because the design says "the 33 values", full stop.
--- Retiring them is a curation act this file will not make for you:
---
--- UPDATE vocabulary_terms
---    SET retired_at = NOW(),
---        notes = 'Dead since the dateAtom consolidation; rejected by the Worker validator.'
---  WHERE namespace = 'rh.atom.kind'
---    AND code IN ('visitDate', 'reportDate');
+-- CURATION, OWNER-CONFIRMED 2026-08-21 (authoring decision A6 CONFIRMED).
+-- `visitDate` and `reportDate` are dead in practice: DATABASE_LAYOUT § Drift
+-- records them as "dead-but-unremovable" enum values, rejected by the Worker
+-- validator, with their rows already backfilled to `dateAtom` by
+-- fneweh_entity_kind_backfill.sql. They are seeded live above because the design
+-- says "the 33 values", full stop — and retired immediately after, so the
+-- dictionary carries all 33 while telling the truth about which two are dead.
+
+UPDATE vocabulary_terms
+   SET retired_at = NOW(),
+       notes = 'Dead since the dateAtom consolidation; rejected by the Worker validator.'
+ WHERE namespace = 'rh.atom.kind'
+   AND code IN ('visitDate', 'reportDate');
 
 
 -- ===========================================================================
