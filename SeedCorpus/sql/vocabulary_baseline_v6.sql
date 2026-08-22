@@ -369,6 +369,18 @@ CREATE TABLE IF NOT EXISTS vocabulary_misfire_events (
 -- originally authored/executed; the live key has `source` immediately after
 -- `environment`. Read the amending migration, not this block, for what is
 -- live — and note the writer's ON CONFLICT target must match the LIVE list.]
+--
+-- [AMENDED 2026-08-22 — a new column `snapshot_version` was ADDED to the table
+-- AND to this key by migrations/vocabulary_misfire_snapshot_version.sql
+-- (ROADMAP F-NEW-PQ, owner ruling the same day): the dictionary version the
+-- observer HELD is part of the observation class, because the same drift under
+-- an old snapshot (app lag) and under the current one (genuinely new
+-- vocabulary) is different evidence. The column list below is left exactly as
+-- originally authored/executed; the live key is that list with `source` after
+-- `environment` and `snapshot_version` last, after `app_version`. The table
+-- definition above is likewise left as executed — the live table carries
+-- `snapshot_version BIGINT` (nullable) and a tenth constraint,
+-- vocabulary_misfire_events_snapshot_version_check.]
 CREATE UNIQUE INDEX IF NOT EXISTS uq_vocabulary_misfire_events_class
   ON vocabulary_misfire_events (
     environment,
