@@ -1,7 +1,7 @@
 # Document Package Design
 
 Status: design v1.1 (shape, not spec), owner rulings applied, four audits folded, sprint series in §9
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place)
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); sprint 1 shipped 2026-08-28
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -220,7 +220,7 @@ Dependency chain: the Worker states what it emits before the phone can keep it h
 | # | Repo | Ships | Close condition (live proof) | Model |
 |---|---|---|---|---|
 | 0 | both | Audits; repair sprint (shipped 2026-08-27) | Done | |
-| 1 | api | Schema generator from the assembler's definitions; entity schema snapshot; `GET /v1/schema`; emit-coverage test that fails the suite when the Worker emits a field the schema does not name | Schema served from staging; a fake field in a fixture fails the suite | Opus 5 |
+| 1 | api | **SHIPPED 2026-08-28.** Schema generator from the assembler's definitions; entity schema snapshot; `GET /v1/schema`; emit-coverage test that fails the suite when the Worker emits a field the schema does not name | Done — staging serves the snapshot (`schema_version` 1, 31 entities) and `?version=1` returns 304; the bogus-field negative control is a permanent test. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Entity schema layer` | Opus 5 |
 | 2 | api | Package identity on the result: configuration tuple (forces the Extract prompt/schema version constant, VENDOR_ABSTRACTION §1.1), schema_version, vocabulary_version, server-side core hash in a response header. Additive only | A staging job's result carries the tuple and the hash | Opus 5 |
 | 3 | app | Result bytes written to the package file before decode; hash verified; all views rebuilt from the stored core; package in the CloudKit set | Ingest on staging, delete the sidecars, rebuild from the package, hash matches, screens identical | Opus 5; Fable reviews the decode contract first |
 | 4 | app | Schema fetched and cached; fields with no slot surfaced generically; fields the app compiles that the schema dropped raise a drift beacon | A field added to the staging schema appears on the phone with no app update | Opus 5 |
