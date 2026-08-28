@@ -1,0 +1,6 @@
+[submodule "recordhealth-api"]
+	path = recordhealth-api
+	url = https://github.com/jnla11/recordhealth-api.git
+[submodule "RecordHealth_App"]
+	path = RecordHealth_App
+	url = https://github.com/jnla11/recordhealth_app.git
