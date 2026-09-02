@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.1 (shape, not spec), owner rulings applied, four audits folded, sprint series in §9
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); sprint 1 shipped 2026-08-28
+Status: design v1.2 (shape, not spec), owner rulings applied, four audits folded, sprint series in §9
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; sprints 1-4 shipped (§9)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -54,7 +54,7 @@ manifest
   core_hash              : SHA-256 of the core bytes as stored on the phone
   source_hash            : SHA-256 of the source document bytes (today's file_hash)
   configuration          : { parse_vendor, parse_config_bundle_version, inference_provider,
-                             prompt_variant_set, pipeline_version_stamp }   (VENDOR_ABSTRACTION §2.1)
+                             prompt_variant_set, pipeline_version_stamp }   (VENDOR_ABSTRACTION §1.1)
   schema_version         : server schema snapshot the core was emitted against
   vocabulary_version     : dictionary snapshot in hand at mint (F-NEW-PQ already tracks it)
   job_id, environment    : Worker job identity for NCC correlation
@@ -172,7 +172,7 @@ The dictionary grows a second snapshot: the entity schema.
 
 **Schema change mechanics (owner question 1).** The core never changes. Adding a field: the Worker emits it, the snapshot names it, the phone refreshes and rebuilds views; old packages lack it and their manifest's `schema_version` says why. Splitting a category: if the split is a mapping (A always becomes B), the vocabulary snapshot carries it and views rebuild; the core still says A with the snapshot version it was emitted under. If the split needs judgment (A is B or C depending on the record), nothing guesses into the core: the document is re-ingested under the new configuration (new package, old retained), or a system-authored amendment proposes the new category for confirmation. The trigger for all of it is one comparison: manifest `schema_version` versus the phone's cached snapshot.
 
-**Phone behavior.** Presence is schema-driven, rich handling is compiled: a field the schema names but the app has no slot for is preserved in the core and surfaced generically; a field the app compiles that the schema no longer names is a drift beacon event. Rich handling ships in app releases; receiving does not.
+**Phone behavior.** Presence is schema-driven, rich handling is compiled: a field the schema names but the app has no slot for is preserved in the core and surfaced generically; a field the app compiles that the schema no longer names is a drift beacon event. Rich handling ships in app releases; receiving does not. See OR-7 (§11) for the sprint 4 scope this shipped under.
 
 **Drift detection, both directions.** A Worker result carrying a field outside the schema it claims: anomaly, misfire log. A reader against a newer schema than its cache: refresh, re-decode from the core. Every case lands on the fifth NCC panel; no new surface.
 
@@ -221,9 +221,9 @@ Dependency chain: the Worker states what it emits before the phone can keep it h
 |---|---|---|---|---|
 | 0 | both | Audits; repair sprint (shipped 2026-08-27) | Done | |
 | 1 | api | **SHIPPED 2026-08-28.** Schema generator from the assembler's definitions; entity schema snapshot; `GET /v1/schema`; emit-coverage test that fails the suite when the Worker emits a field the schema does not name | Done — staging serves the snapshot (`schema_version` 1, 31 entities) and `?version=1` returns 304; the bogus-field negative control is a permanent test. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Entity schema layer` | Opus 5 |
-| 2 | api | Package identity on the result: configuration tuple (forces the Extract prompt/schema version constant, VENDOR_ABSTRACTION §1.1), schema_version, vocabulary_version, server-side core hash in a response header. Additive only | A staging job's result carries the tuple and the hash | Opus 5 |
-| 3 | app | Result bytes written to the package file before decode; hash verified; all views rebuilt from the stored core; package in the CloudKit set | Ingest on staging, delete the sidecars, rebuild from the package, hash matches, screens identical | Opus 5; Fable reviews the decode contract first |
-| 4 | app | Schema fetched and cached; fields with no slot surfaced generically; fields the app compiles that the schema dropped raise a drift beacon | A field added to the staging schema appears on the phone with no app update | Opus 5 |
+| 2 | api | **DONE 2026-08-30.** Package identity on the result: configuration tuple (forces the Extract prompt/schema version constant, VENDOR_ABSTRACTION §1.1), schema_version, vocabulary_version, server-side core hash in a response header. Additive only | A staging job's result carries the tuple and the hash. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Result identity — the configuration tuple + the served-bytes hash` | Opus 5 |
+| 3 | app | **DONE 2026-08-30.** Result bytes written to the package file before decode; hash verified; all views rebuilt from the stored core; package in the CloudKit set | Ingest on staging, delete the sidecars, rebuild from the package, hash matches, screens identical. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.10 Document packages and view rebuild` | Opus 5; Fable reviews the decode contract first |
+| 4 | app | **DONE 2026-09-02.** Schema fetched and cached; fields with no slot surfaced generically; fields the app compiles that the schema dropped raise a drift beacon | A field added to the staging schema appears on the phone with no app update. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.11 Result schema layer` (scope amended by OR-7, §11) | Opus 5 |
 | 5 | app | .rhpkg as a bundle of document packages; single-document export; importer rebuilds views; tokens layer and amendment log shapes with readers (no writer yet: the correction UI is undesigned) | Export, wipe, import; packages identical by hash | Opus 5 |
 | 6 | api ADI | New baseline migration (`document_packages` under `review_documents`, `package_id` on projection tables); upload accepts a package; core to R2 sealed by hash; projections by the schema's derivation rules; boundary hygiene (body cap, null-strip exemption, provenance from manifest, term ids by vocabulary version, section shape unified) | Submit from the phone; drop the projected rows; regenerate from the package; identical | Opus 5 |
 | 7 | api ADI | Grading as amendments; verdict allowlist; metrics repaired; section discovery submit fixed; AI sections rendered from line ranges; relationships gradeable; stats count documents | One real document graded end to end with a non-zero F1 (the first real number the ADI has produced) | Opus 5 |
@@ -234,6 +234,8 @@ Dependency chain: the Worker states what it emits before the phone can keep it h
 Then VENDOR_ABSTRACTION V1 onward, with a corpus format that exists.
 
 Ten sprints, roughly five to seven weeks at the recent pace. Sprints 1 and 2 may run while sprint 3 is being audited (different repos); nothing else overlaps safely.
+
+Also: an unscheduled data-integrity fix shipped 2026-08-30 between sprints 1 and 2 — DO shard multi-byte corruption (`writeSharded` cut shards on raw byte length, splitting multi-byte UTF-8 characters and silently corrupting clinical text on read). See `recordhealth-api/docs/WORKER_ARCHITECTURE.md`.
 
 ---
 
@@ -251,7 +253,8 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-4 (ADI storage): ruled, extend existing structure; shape (b) per audit (R12).
 - OR-5 (sequencing): ruled, package first (R13).
 - OR-6 (size): ruled, watch via size field (R14).
-- Open: none at v1.1.
+- OR-7 (sprint 4 scope): ruled 2026-09-02, sprint 4 scope split by owner ruling: schema-named atom/envelope fields with no compiled slot are preserved in the core but not displayed in v1 (Layer 1 pass-through slot deferred to F-NEW-QR); the achievable generic surface is the atom-kind lane ("Other information", shipped); §9 sprint 4's close condition is met in this amended form.
+- Open: none at v1.2.
 
 ---
 
