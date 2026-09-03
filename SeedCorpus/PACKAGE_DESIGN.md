@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.2 (shape, not spec), owner rulings applied, four audits folded, sprint series in §9
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; sprints 1-4 shipped (§9)
+Status: design v1.3 (shape, not spec), owner rulings applied, four audits folded, sprints 1-5 shipped (§9)
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; sprints 1-5 shipped (§9)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -91,7 +91,17 @@ CloudKit: the package file joins the essential patterns. That closes the current
 
 ### 2.2 Archive (.rhpkg)
 
-PatientPackageExporter and Importer stay as the mechanism. The unit changes: a patient archive is a bundle of document packages plus the patient index slice; each entry is the same `{manifest, core, source ref, tokens, amendments}` the phone stores. A single-document archive is the same format with one entry. Import copies packages in and rebuilds views.
+The archive is device agnostic (OR-8): entries are decrypted from device storage at export and sealed under an archive key, not the device's own key, so a receiving device need never be the one that wrote them. PatientPackageExporter and Importer stay the mechanism; the unit is a bundle of document packages plus the patient index slice, one entry per record: `{manifest, core, source ref, tokens, amendments}`, the same shape the phone stores. A single-document archive is the same format with one entry.
+
+**Import verifies before it writes.** Every entry is decrypted and authenticated against its own path (AAD-bound — an entry moved between slots fails), and a package's core is hashed and checked against both seals it carries (its own encrypted header and the plaintext manifest's copy), all into staging; nothing touches the target's storage until every intended member has passed. Only then is each entry re-sealed under the importing device's own key and committed.
+
+**Two modes.** Scope is `all` / `patient` / `records`. Mode is `restore` (wipe the archive's patients first, then write — refused for a `.records` archive, which names documents rather than a patient state) or `merge` (add only; a record the device already has is skipped WHOLE and reported, never merged field by field, since amendments on one side and a re-ingest on the other can't be adjudicated by this format).
+
+**Packaged records rebuild; everything else carries its sidecars.** A record with an active package ships every one of its packages (active and superseded) and no decoded sidecars — the importer rebuilds views from the core, per §0.1. A record with no package (pre-package ingests, FHIR, HealthKit) has no core to rebuild from, so it carries every sidecar instead, except the package and metrics files.
+
+**The archive format takes a key; the door supplies it**, through `ArchiveKeyProvider` — see §2.5.
+
+Detail: `RecordHealth_App/docs/ARCHITECTURE.md` §3.12.
 
 ### 2.3 ADI submission
 
@@ -102,6 +112,19 @@ The upload boundary must stop transforming the body before storing it: today `st
 ### 2.4 ADI return
 
 The ADI exports a graded package: the same manifest and core it received (core_hash unchanged) plus the reviewer's amendments appended to the log. The phone imports it through the archive importer and, per R5, replaces the record's active package and rebuilds views. Because the user's amendments travelled with the submission (R10) and the reviewer graded with them in view, the returned log is a superset of what left the phone.
+
+### 2.5 Archive doors and keys
+
+Encryption on every door out; no single scheme (OR-8).
+
+- **iCloud.** The existing backup scheme, unchanged.
+- **ADI.** HTTPS plus sealed R2; sprint 6 (§9).
+- **.rhpkg.** The archive format takes a key; the door supplies it, through `ArchiveKeyProvider` (§2.2).
+  - **Shipped door, DEBUG-only:** a four-word code, shown once, run through PBKDF2-HMAC-SHA256 (3,500,000 rounds, ~0.55 s on an iPhone 13 Pro) to derive the archive key. Never persisted or logged.
+  - **User-facing door (queued, its own sprint after the package series, F-NEW-QT):** nearby phone-to-phone in-app transfer. An encrypted session negotiates the key automatically — no file at rest on either device, no code for a person to carry — and the receiving side accepts by name.
+  - **Remote link share (F-NEW-QU)** is parked on an R2 BAA covering the storage bucket: the uploaded bytes are PHI and a user-facing share cannot ride the ADI's development-only posture.
+
+An opened `.rhpkg` is moved out of the iOS Documents/Inbox before any decision, in every build configuration — prior state left a plaintext copy behind.
 
 ---
 
@@ -120,6 +143,8 @@ value         : the new value (for correct/add), the verdict (for verdict)
 reason        : free text (user) or reject_reason taxonomy (adi)
 provenance    : e.g. { provider_facility_atom_id } for a misspelling correction
 ```
+
+PackageAmendment ships with this full shape (OR-9), wire shape at `RecordHealth_App/docs/DATA_MODEL.md` §7.13. Readers exist (`PackageStore.readAmendments`); no writer until the correction UI (§10).
 
 The original value is never copied into the amendment; `target` points at it by path in the core, so the original is only ever the core.
 
@@ -210,6 +235,7 @@ The graded corpus is a set of packages with reviewer amendments. The resolver (V
 3. **Same-target conflicts after a graded return.** R5 replaces; the returned log contains both the user's and the reviewer's amendments. The view shows the newest; both stay; the user can flip. This is the residual of the old OR-1.
 4. **PHI at rest on the ADI (R11).** PHI values and tokens are inside the package on the ADI. This is the current BAA posture for the ADI (staging project, development-only submission, R4). It is restated here so nobody reads "sealed package" as "tokenized package."
 5. **Token identity across devices.** Token ids are phone-minted and device-global. A package imported to a second phone carries the first phone's tokens; the importer reconciles them against its own vault (find-or-create by derivation, sacred rule) and records the mapping as a system amendment. Not designed further here; flagged for sprint 9.
+6. **Cross-device token map (OR-10).** The tokens layer (document-scoped reverse map) travels inside the package in the archive, per R3 and R11; it ships as-is. Reconciliation against a second phone's own vault remains the sprint 9 question (item 5 above).
 
 ---
 
@@ -224,7 +250,7 @@ Dependency chain: the Worker states what it emits before the phone can keep it h
 | 2 | api | **DONE 2026-08-30.** Package identity on the result: configuration tuple (forces the Extract prompt/schema version constant, VENDOR_ABSTRACTION §1.1), schema_version, vocabulary_version, server-side core hash in a response header. Additive only | A staging job's result carries the tuple and the hash. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Result identity — the configuration tuple + the served-bytes hash` | Opus 5 |
 | 3 | app | **DONE 2026-08-30.** Result bytes written to the package file before decode; hash verified; all views rebuilt from the stored core; package in the CloudKit set | Ingest on staging, delete the sidecars, rebuild from the package, hash matches, screens identical. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.10 Document packages and view rebuild` | Opus 5; Fable reviews the decode contract first |
 | 4 | app | **DONE 2026-09-02.** Schema fetched and cached; fields with no slot surfaced generically; fields the app compiles that the schema dropped raise a drift beacon | A field added to the staging schema appears on the phone with no app update. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.11 Result schema layer` (scope amended by OR-7, §11) | Opus 5 |
-| 5 | app | .rhpkg as a bundle of document packages; single-document export; importer rebuilds views; tokens layer and amendment log shapes with readers (no writer yet: the correction UI is undesigned) | Export, wipe, import; packages identical by hash | Opus 5 |
+| 5 | app | **DONE 2026-09-03.** .rhpkg as a bundle of document packages; single-document export; importer rebuilds views; tokens layer and amendment log shapes with readers (no writer yet: the correction UI is undesigned) | Export, wipe, import; packages identical by hash — patient-scope export, restore import, merge recovery, self-check on device 2 packages PASS by core_hash. Detail: `RecordHealth_App/docs/ARCHITECTURE.md` §3.12. (The first restore attempt exposed a staging-seal defect, fixed `77ad0e0` before close.) | Opus 5 |
 | 6 | api ADI | New baseline migration (`document_packages` under `review_documents`, `package_id` on projection tables); upload accepts a package; core to R2 sealed by hash; projections by the schema's derivation rules; boundary hygiene (body cap, null-strip exemption, provenance from manifest, term ids by vocabulary version, section shape unified) | Submit from the phone; drop the projected rows; regenerate from the package; identical | Opus 5 |
 | 7 | api ADI | Grading as amendments; verdict allowlist; metrics repaired; section discovery submit fixed; AI sections rendered from line ranges; relationships gradeable; stats count documents | One real document graded end to end with a non-zero F1 (the first real number the ADI has produced) | Opus 5 |
 | 8 | api ADI | Graded package export: amendments appended, core hash unchanged | Export, verify hash, diff the log | Sonnet 5 |
@@ -254,10 +280,16 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-5 (sequencing): ruled, package first (R13).
 - OR-6 (size): ruled, watch via size field (R14).
 - OR-7 (sprint 4 scope): ruled 2026-09-02, sprint 4 scope split by owner ruling: schema-named atom/envelope fields with no compiled slot are preserved in the core but not displayed in v1 (Layer 1 pass-through slot deferred to F-NEW-QR); the achievable generic surface is the atom-kind lane ("Other information", shipped); §9 sprint 4's close condition is met in this amended form.
-- Open: none at v1.2.
+- OR-8 (archive doors): ruled 2026-09-02, the archive is device agnostic; encryption per door, no shared scheme; user-facing sharing must need no code phrase, nearby transfer is the user door (§2.5).
+- OR-9 (amendment shape): ruled 2026-09-02, PackageAmendment's full shape ships in sprint 5, ahead of any writer (§3).
+- OR-10 (token map): ruled 2026-09-02, the tokens layer travels as-is inside the package in the archive; cross-device reconciliation is sprint 9 (§8.6).
+- OR-11 (v1 archive import): ruled 2026-09-02, removed — a v1 `.rhpkg` was sealed under a device key that never leaves the writing phone, so no other device could ever open one; the importer refuses format 1 and names re-export as the way forward (§2.2).
+- Open: none at v1.3.
 
 ---
 
 ## 12. Side findings filed out of this design
 
 Filed at ROADMAP 2026-08-27: F-NEW-QF, F-NEW-QG, F-NEW-QD. To file at the next ROADMAP pass: `.parsed.enc` write-only on the phone; atom_class inferred from kind instead of read; `buildAtom`'s dead `fallbackProducedAt`; DATA_MODEL §7.6 credits CellWalker as producer; ADI upload route has no request-body cap; `grading/stats` counts submissions as documents; F-NEW-AF premise stale and two grading columns exist only on Neon with no migration file; `review_phi_detections` unwritten but read in three places; token identity reconciliation across devices (§8.5).
+
+Filed sprint 5: F-NEW-QT (nearby phone-to-phone archive transfer as a key-providing door); F-NEW-QU (remote link share as a key-providing door, blocked on an R2 BAA); F-NEW-QV (an archive import cannot file a record under a patient the archive does not name); F-NEW-QW (DEBUG import screen usability: mode labels, restore confirmation, report legibility).
