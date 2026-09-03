@@ -1,6 +1,8 @@
 # Record Health — Lightweight Grading Tool
 ## Design Specification v1.0
 
+Status: historical (restamped 2026-09-03). Superseded for the grading surface by `ADI_GRADING_DESIGN.md` v1.0; the F1, IoU and NDC definitions now live there (§6). The `annotations` / `document_grades` / `grading_exports` tables below never shipped in this shape; the GT-2 sprint records are a point-in-time log. Kept in place until the next archive pass; pointers in recordhealth-api CLAUDE.md, app ARCHITECTURE.md §8.4, DATABASE_LAYOUT.md, PHASE_ROADMAP.md still name this file.
+
 ---
 
 ## Governing Principles

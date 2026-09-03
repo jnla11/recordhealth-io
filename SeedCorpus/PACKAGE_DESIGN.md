@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.3 (shape, not spec), owner rulings applied, four audits folded, sprints 1-5 shipped (§9)
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; sprints 1-5 shipped (§9)
+Status: design v1.4 (shape, not spec), owner rulings applied, four audits folded, sprints 1-5 shipped (§9), grading surface ruled (ADI_GRADING_DESIGN v1.0)
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -164,7 +164,7 @@ From the ADI package-storage audit (2026-08-27). The existing structure is kept;
 
 - `review_documents` stays the per-file parent: one row per source (file_hash unique), the PDF in R2 under `documents/{patient}/{record}.pdf`, uploaded_by, status.
 - `document_packages` (new child): one row per package, keyed by `package_id`, carrying the manifest columns (core_hash, source_hash, configuration JSONB, schema_version, vocabulary_version, job_id, environment, package_size_bytes, amendment_version), the core in R2 under the same key scheme (`documents/{patient}/{record}/{package_id}/core.json`, sealed with the R2 sha256 option the ingest park path already uses), the tokens layer (`phi_reverse_map` moves here from the document row: it is a per-package output), and the amendments log (JSONB, append-only by handler discipline plus a trigger).
-- `data_atoms`, `source_regions`, `atom_region_links`, `knowledge_gaps` gain `package_id` and project from the package. None of their `document_id` columns is a foreign key today, so this is a repoint, not a constraint migration. `grading_submissions.document_id` is a real FK and repoints to the package.
+- `data_atoms`, `source_regions`, `atom_region_links`, `knowledge_gaps` gain `package_id` and project from the package. None of their `document_id` columns is a foreign key today, so this is a repoint, not a constraint migration. `grading_submissions` is dropped (OR-12): verdicts have one home, the package's amendment log; `ADI_GRADING_DESIGN.md` §4.
 - `review_phi_detections` is retired (no longer written, still read in three places; the reads move to the tokens layer).
 
 **Projection rules the schema must state, because the audit found them living on the phone or in hardcode:**
@@ -177,7 +177,7 @@ From the ADI package-storage audit (2026-08-27). The existing structure is kept;
 
 **Idempotency and the second package.** Three one-per-file assumptions change together: the check-hash pre-flight answers per package (the phone's `alreadySubmitted` refusal keys on package_id), the upload idempotency gate keys on core_hash, and the R2 key carries the package_id. The console lists documents and, under each, its packages.
 
-**Boundary hygiene folded in (audit findings 10, 11, 7, 8):** a request-body cap on the upload route (today none; only the decoded PDF is capped); the null-byte strip exempts the core; `GET /v1/admin/grading/stats` counts documents with at least one locked submission, not submissions; the two grading columns that exist only on Neon (`verdicts` / `discoveries` beside `section_verdicts` / `section_discoveries`) get their migration file, and F-NEW-AF is restated against the live shape.
+**Boundary hygiene folded in (audit findings 10, 11, 7, 8):** a request-body cap on the upload route (today none; only the decoded PDF is capped); the null-byte strip exempts the core; `GET /v1/admin/grading/stats` counts documents with at least one locked submission, not submissions; the two Neon-only grading columns need no migration file because the table is dropped (OR-12), and F-NEW-AF closes with it.
 
 **Migration posture.** Both ADI databases hold zero rows (truncated 2026-08-21). This lands as a new baseline migration, not a data migration. Wipe-and-rebuild is the sacred rule and here it costs nothing.
 
@@ -251,8 +251,8 @@ Dependency chain: the Worker states what it emits before the phone can keep it h
 | 3 | app | **DONE 2026-08-30.** Result bytes written to the package file before decode; hash verified; all views rebuilt from the stored core; package in the CloudKit set | Ingest on staging, delete the sidecars, rebuild from the package, hash matches, screens identical. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.10 Document packages and view rebuild` | Opus 5; Fable reviews the decode contract first |
 | 4 | app | **DONE 2026-09-02.** Schema fetched and cached; fields with no slot surfaced generically; fields the app compiles that the schema dropped raise a drift beacon | A field added to the staging schema appears on the phone with no app update. Detail: `RecordHealth_App/docs/ARCHITECTURE.md §3.11 Result schema layer` (scope amended by OR-7, §11) | Opus 5 |
 | 5 | app | **DONE 2026-09-03.** .rhpkg as a bundle of document packages; single-document export; importer rebuilds views; tokens layer and amendment log shapes with readers (no writer yet: the correction UI is undesigned) | Export, wipe, import; packages identical by hash — patient-scope export, restore import, merge recovery, self-check on device 2 packages PASS by core_hash. Detail: `RecordHealth_App/docs/ARCHITECTURE.md` §3.12. (The first restore attempt exposed a staging-seal defect, fixed `77ad0e0` before close.) | Opus 5 |
-| 6 | api ADI | New baseline migration (`document_packages` under `review_documents`, `package_id` on projection tables); upload accepts a package; core to R2 sealed by hash; projections by the schema's derivation rules; boundary hygiene (body cap, null-strip exemption, provenance from manifest, term ids by vocabulary version, section shape unified) | Submit from the phone; drop the projected rows; regenerate from the package; identical | Opus 5 |
-| 7 | api ADI | Grading as amendments; verdict allowlist; metrics repaired; section discovery submit fixed; AI sections rendered from line ranges; relationships gradeable; stats count documents | One real document graded end to end with a non-zero F1 (the first real number the ADI has produced) | Opus 5 |
+| 6 | api ADI | New baseline migration (`document_packages` under `review_documents`, `package_id` on projection tables, `grading_submissions` and `review_phi_detections` dropped, append trigger on `amendments`); upload accepts a package; core to R2 sealed by hash; projections by the schema's derivation rules; amendments write route with batch validation and package read route (ADI_GRADING_DESIGN §4); boundary hygiene (body cap, null-strip exemption, provenance from manifest, term ids by vocabulary version, section shape unified) | Submit from the phone; drop the projected rows; regenerate from the package; identical | Opus 5 |
+| 7 | api ADI | Console per ADI_GRADING_DESIGN §2/§5/§6: schema-driven gradeable classes, real-time entries (no lock-in), "Accept N shown", "Mark reviewed", scores computed from the log; AI sections rendered from line ranges; relationships gradeable | One real document graded end to end with a non-zero F1 (the first real number the ADI has produced) | Opus 5 |
 | 8 | api ADI | Graded package export: amendments appended, core hash unchanged | Export, verify hash, diff the log | Sonnet 5 |
 | 9 | app | Graded import: amendments accepted, replace per R5, tokens reconciled against the local vault, newest-wins view with history | Round trip lands on the phone with original and graded both visible | Opus 5 |
 | 10 | api ADI | Ground-truth-only units: checkbox first as a typed discovery, then §6's list | A reviewer authors a checkbox on a real document and it survives export | Opus 5 |
@@ -284,7 +284,8 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-9 (amendment shape): ruled 2026-09-02, PackageAmendment's full shape ships in sprint 5, ahead of any writer (§3).
 - OR-10 (token map): ruled 2026-09-02, the tokens layer travels as-is inside the package in the archive; cross-device reconciliation is sprint 9 (§8.6).
 - OR-11 (v1 archive import): ruled 2026-09-02, removed — a v1 `.rhpkg` was sealed under a device key that never leaves the writing phone, so no other device could ever open one; the importer refuses format 1 and names re-export as the way forward (§2.2).
-- Open: none at v1.3.
+- OR-12 (grading surface): ruled 2026-09-03, seven rulings GR-1..GR-7 in `ADI_GRADING_DESIGN.md` v1.0: verdicts live only in the amendment log, real-time appends with no lock-in, `grading_submissions` dropped in the sprint 6 baseline, gradeable classes read from the schema, "Accept N shown" scoped to the view, scores computed on demand, `reviewed` flag marks done.
+- Open: none at v1.4.
 
 ---
 
