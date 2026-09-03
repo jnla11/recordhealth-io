@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.4 (shape, not spec), owner rulings applied, four audits folded, sprints 1-5 shipped (§9), grading surface ruled (ADI_GRADING_DESIGN v1.0)
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12)
+Status: design v1.5 (shape, not spec), owner rulings applied, four audits folded, sprints 1-5 shipped (§9), grading surface ruled (ADI_GRADING_DESIGN v1.0)
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -22,6 +22,7 @@ Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document pac
 - R12. ADI storage extends the existing structure (shape (b) below); nothing parallel.
 - R13. The package's server sprint precedes the vendor abstraction refactors.
 - R14. Size is watched, not ruled: the ADI records package size per package.
+- R15. Every package version carries a whole-package checksum (`package_hash` over manifest, core, tokens, and amendments as serialized for transit). Every door (phone export, ADI receive, ADI export, phone import) verifies it on receipt and records it. Every version is kept; nothing is overwritten. `core_hash` stays fixed for the life of the core; `package_hash` changes with every amendment.
 
 ---
 
@@ -60,6 +61,7 @@ manifest
   job_id, environment    : Worker job identity for NCC correlation
   minted_at, app_version, package_size_bytes
   amendment_version      : 1.0 at mint; 1.n after n amendments (§3)
+  package_hash           : SHA-256 over the whole package at this amendment_version (R15)
 core
   the Worker's GET /v1/ingest/result body, byte-exact as received, for a COMPLETE job only (R7)
 source
@@ -285,7 +287,8 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-10 (token map): ruled 2026-09-02, the tokens layer travels as-is inside the package in the archive; cross-device reconciliation is sprint 9 (§8.6).
 - OR-11 (v1 archive import): ruled 2026-09-02, removed — a v1 `.rhpkg` was sealed under a device key that never leaves the writing phone, so no other device could ever open one; the importer refuses format 1 and names re-export as the way forward (§2.2).
 - OR-12 (grading surface): ruled 2026-09-03, seven rulings GR-1..GR-7 in `ADI_GRADING_DESIGN.md` v1.0: verdicts live only in the amendment log, real-time appends with no lock-in, `grading_submissions` dropped in the sprint 6 baseline, gradeable classes read from the schema, "Accept N shown" scoped to the view, scores computed on demand, `reviewed` flag marks done.
-- Open: none at v1.4.
+- OR-13 (whole-package checksum): ruled 2026-09-03, R15: `package_hash` on every version, verified and recorded at every door, every version kept. Sprint 6 lands the ADI side (verify on receive, record per version); sprint 8 the ADI export; sprint 9 the phone import; the phone's archive export gains it in sprint 9's app work.
+- Open: none at v1.5.
 
 ---
 

@@ -58,7 +58,7 @@ All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape;
 
 `batch_id` is a new optional field in `provenance`: all entries from one "Accept N shown" click share it, so history reads "accepted together with 36 others on page 3". It does not change how any reader interprets the entry; each entry stands alone (GR-5).
 
-**Versioning.** Each entry bumps `amendment_version` (1.n). Under real time this counts clicks, which is correct: the manifest's `amendment_version` is the length of the log.
+**Versioning.** Each entry bumps `amendment_version` (1.n). Under real time this counts clicks, which is correct: the manifest's `amendment_version` is the length of the log. Each append also produces a new `package_hash` (PACKAGE_DESIGN R15); the ADI records `(amendment_version, package_hash, recorded_at)` per version so any transit can be checked against the version it claims.
 
 ---
 
