@@ -1,6 +1,6 @@
 # ADI Grading Design
 
-Status: design v1.0 (shape, not spec), owner rulings applied, nothing shipped
+Status: design v1.0 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7
 Date: 2026-09-03
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN.md`
 
@@ -118,7 +118,7 @@ Sprint 8 exports a graded package: manifest and core unchanged, log as is. Only 
 
 ## 8. Effect on the sprint series (PACKAGE_DESIGN §9)
 
-- Sprint 6 (api): baseline drops `grading_submissions` and `review_phi_detections`; `document_packages.amendments` with the append trigger; the amendments write route with batch and validation; package read route. The planned verdict-columns migration file is not written.
+- Sprint 6 (api): **DONE 2026-09-03.** Baseline dropped `grading_submissions` and `review_phi_detections`; `document_packages.amendments` with the append-only trigger (four rules, all exercised live and refused); the amendments write route with batch validation, per-index refusal and optimistic concurrency on `amendment_version`; the package read route; and §6's two scores routes, computed on demand and stored nowhere. The planned verdict-columns migration file was not written, and `F-NEW-AF` closed with the table. One version per REQUEST rather than per entry (owner ruling) — `batch_id` is what groups a click. NOT implemented: §6's IoU tolerance and NDC value-distance classes, both per-item scoring the sprint-7 console computes. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Package receive and store`.
 - Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Close condition unchanged: one real document graded end to end with a non-zero F1.
 - Sprint 8 (api): unchanged; export gated on the marker.
 - Sprint 10 (api ADI): unchanged.
