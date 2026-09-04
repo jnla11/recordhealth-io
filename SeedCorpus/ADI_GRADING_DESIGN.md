@@ -54,6 +54,8 @@ All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape;
 | Discovery (missed thing) | `add` | the new entity, typed by the schema, with geometry | id minted in the discovery namespace |
 | Withdraw a discovery | `remove` | | targets the discovery id |
 | Judge a user amendment | `verdict` | accepted / rejected | targets the amendment id |
+| Mark atom as PHI (or un-mark) | `verdict` | `corrected` plus `{ field_path: is_phi/phi_type, new_value }` | the ADI mints a token in its namespace and adds it to the package's tokens layer (PACKAGE_DESIGN R16) |
+| Missing token on receive | `flag` | `phi_token_missing` | author `system`; appended by the receive route, resolved by the reviewer |
 | Mark reviewed | `flag` | `reviewed` | `reviewer_authority`, scores snapshot as `provenance` (informational, not authoritative) |
 
 `batch_id` is a new optional field in `provenance`: all entries from one "Accept N shown" click share it, so history reads "accepted together with 36 others on page 3". It does not change how any reader interprets the entry; each entry stands alone (GR-5).

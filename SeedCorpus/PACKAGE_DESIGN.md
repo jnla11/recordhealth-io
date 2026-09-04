@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.5 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9), grading surface ruled (ADI_GRADING_DESIGN v1.0)
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13)
+Status: design v1.6 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9), grading surface ruled (ADI_GRADING_DESIGN v1.0)
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -22,6 +22,7 @@ Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document pac
 - R12. ADI storage extends the existing structure (shape (b) below); nothing parallel.
 - R13. The package's server sprint precedes the vendor abstraction refactors.
 - R14. Size is watched, not ruled: the ADI records package size per package.
+- R16. Token minting (OR-16, 2026-09-04): the ingest Worker never mints a PHI token. The phone mints for its own records, walking the core's PHI flags (one tokenizer, one source). The ADI, a permanent admin-only surface that already holds PHI values (R11), mints tokens in its own namespace when a reviewer marks an atom PHI or authors a PHI discovery. The ADI never refuses a package for a missing token; it records the gap as a finding in the amendment log for the reviewer. A graded package returning to the phone carries ADI-minted tokens; the phone reconciles them like tokens from another device (find-or-create its own, mapping recorded as a system amendment, sprint 9), so the user's workflow uses phone tokens throughout.
 - R15. Every package version carries a whole-package checksum (`package_hash` over manifest, core, tokens, and amendments as serialized for transit). Every door (phone export, ADI receive, ADI export, phone import) verifies it on receipt and records it. Every version is kept; nothing is overwritten. `core_hash` stays fixed for the life of the core; `package_hash` changes with every amendment.
 
 ---
@@ -107,7 +108,7 @@ Detail: `RecordHealth_App/docs/ARCHITECTURE.md` §3.12.
 
 ### 2.3 ADI submission
 
-The transit sends the package, not a projection. The tokens layer is not optional: the Worker never mints PHI token ids (find-or-create is app-side by sacred rule), and the upload refuses any PHI atom without one. R11 puts the PHI values and the token assignments inside the package; the ADI stores both.
+The transit sends the package, not a projection. The tokens layer is not optional, but a gap in it is a finding, not a refusal (R16): the upload records every PHI atom without a token as a system-authored `flag` amendment and accepts the package; the reviewer resolves it. R11 puts the PHI values and the token assignments inside the package; the ADI stores both.
 
 The upload boundary must stop transforming the body before storing it: today `stripNullBytes` rewrites every string first, so a hash computed on the phone cannot match the stored bytes. Either the core is exempted from the strip and validated separately, or the hash is defined over the post-strip bytes and the manifest says so. The design takes the first: the core is stored as sent and sealed by the phone's hash.
 
@@ -290,7 +291,8 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-13 (whole-package checksum): ruled 2026-09-03, R15: `package_hash` on every version, verified and recorded at every door, every version kept. Sprint 6 lands the ADI side (verify on receive, record per version); sprint 8 the ADI export; sprint 9 the phone import; the phone's archive export gains it in sprint 9's app work.
 - OR-14 (sprint 6 audit rulings, 2026-09-03): term ids added to the published dictionary snapshot so §4's by-version resolution is real (dictionary version bump); a second published declaration group for package entities (manifest, tokens, amendment, discovery, table_row) with its own coverage test; atoms declared authorable; ADI rows stay a narrow catalog, the console reads the package for detail; tokens layer served to the console from the package at receive; DB row committed before R2 writes with row removal on write failure; the atom-wire version header retires with the package upload; check-hash answers per package with the matching phone change in the same sprint; no lock flag anywhere; `package_id` NOT NULL on every projection row (reviewer-create routes take one); one shared hash helper.
 - OR-15 (patient optional, 2026-09-03): a package is submittable to the ADI with no patient. Part of the seed grading corpus is patient-agnostic so F1 deltas across bakeoffs are not confounded by patient identity. `patient_id` is an optional field on the manifest and a nullable relationship on the ADI, never a requirement; storage keys must not depend on it. Shipped 2026-09-03 (api `9f4ea3d`, migration baseline_003, keys `documents/{record_id}/...`). Residual: `knowledge_gaps.patient_id` stays required until the sprint 7 console rewrite touches that route.
-- Open: none at v1.5.
+- OR-16 (token minting, 2026-09-04): ruled, R16. Supersedes the §2.3 refusal and the app-side "one-tokenizer-on-the-phone-only" reading of the sacred rule. The ADI is never user-facing (owner statement), which is why it may hold the value-to-token link. Sprint 6 receive becomes record-not-refuse; sprint 7 adds reviewer PHI marking with ADI minting; sprint 9 reconciliation covers ADI-minted tokens.
+- Open: none at v1.6.
 
 ---
 
