@@ -83,7 +83,7 @@ Under PACKAGE_DESIGN §4 shape (b): the log is the `amendments` JSONB on `docume
 - Atom (clinical, PHI): is this a real thing in the document, is the value right, is the kind right. Synthesized atoms are judged as synthesis and never enter extraction scores.
 - Section: right kind, right extent, right parent.
 - Table row: is this one row. Cell: right value, right column role. Judged separately from each other and from the atoms in them.
-- Link (atom to section, cell to panel, atom to address): is the relationship right. Rejecting a link rejects nothing else.
+- Link (atom to section, cell to panel, atom to address): is the relationship right. Rejecting a link rejects nothing else. A reviewer can also AUTHOR a missing link between two existing things (op `add`, entity `edge`), sprint 7; authoring the things themselves (new section, new table, new rows) is sprint 10.
 - Code (kt_coding) on an atom: right code.
 - Geometry: the box is on the right spot (tolerance by IoU, §6).
 - Section inventory: the section holds what the census says.
@@ -121,7 +121,7 @@ Sprint 8 exports a graded package: manifest and core unchanged, log as is. Only 
 ## 8. Effect on the sprint series (PACKAGE_DESIGN §9)
 
 - Sprint 6 (api): **DONE 2026-09-03.** Baseline dropped `grading_submissions` and `review_phi_detections`; `document_packages.amendments` with the append-only trigger (four rules, all exercised live and refused); the amendments write route with batch validation, per-index refusal and optimistic concurrency on `amendment_version`; the package read route; and §6's two scores routes, computed on demand and stored nowhere. The planned verdict-columns migration file was not written, and `F-NEW-AF` closed with the table. One version per REQUEST rather than per entry (owner ruling) — `batch_id` is what groups a click. NOT implemented: §6's IoU tolerance and NDC value-distance classes, both per-item scoring the sprint-7 console computes. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Package receive and store`.
-- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Close condition unchanged: one real document graded end to end with a non-zero F1.
+- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Link authoring (draw a missing relationship between existing entities) ships here, ruled 2026-09-04; the edge entities carry `authoring` in the schema. Close condition unchanged: one real document graded end to end with a non-zero F1.
 - Sprint 8 (api): unchanged; export gated on the marker.
 - Sprint 10 (api ADI): unchanged.
 
