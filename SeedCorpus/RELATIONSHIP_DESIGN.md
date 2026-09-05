@@ -1,10 +1,10 @@
 # Relationship Design
 
-Status: design v1.0 (shape, not spec), owner rulings applied, nothing shipped
-Date: 2026-09-05
+Status: design v1.1 (shape, not spec), owner rulings applied, phone-side inventory folded, nothing shipped
+Date: 2026-09-05 (v1.0 same day; v1.1 supersedes it in place after the phone-side inventory R1a)
 Repo home: `RecordHealth.IO/SeedCorpus/RELATIONSHIP_DESIGN.md`
 
-Owns the relationship model for Record Health: how a relationship between two things is recorded, declared, authored, inferred, graded, indexed, and exported. One home for the definition; every other doc points here and restates nothing. Supersedes the edge mechanics in `RecordHealth_App/docs/DATA_MODEL.md` §3.3.1 (AtomEdge becomes a display projection, §8), the relationships list in `PACKAGE_DESIGN.md` §6, the edge addressing sentence in `ADI_GRADING_DESIGN.md` §3, and the link-authoring proposal audited 2026-09-05 (F-NEW-RM). `EVENTS_INTERACTIONS_DESIGN.md` keeps the semantics of events and keystone confirmation; its membership edges register here (§3). Grounded in the Worker-side edge inventory of 2026-09-05 (43 sites, 13 test pins, 7 doc statements, no two of which agreed on shape; recordhealth-api SESSION_LOG 2026-09-05).
+Owns the relationship model for Record Health: how a relationship between two things is recorded, declared, authored, inferred, graded, indexed, and exported. One home for the definition; every other doc points here and restates nothing. Supersedes the edge mechanics in `RecordHealth_App/docs/DATA_MODEL.md` §3.3.1 (AtomEdge becomes a display projection, §8), the relationships list in `PACKAGE_DESIGN.md` §6, the edge addressing sentence in `ADI_GRADING_DESIGN.md` §3, and the link-authoring proposal audited 2026-09-05 (F-NEW-RM). `EVENTS_INTERACTIONS_DESIGN.md` keeps the semantics of events and keystone confirmation; its membership edges register here (§3). Grounded in two inventories of 2026-09-05: Worker side (43 sites, 13 test pins, 7 doc statements, no two of which agreed on shape; recordhealth-api SESSION_LOG 2026-09-05) and phone side (R1a: 92 production lines across 11 files, 19 pinning tests, 24 doc statements of which 6 are stale, and eleven relationship shapes beside AtomEdge; RecordHealth_App SESSION_LOG 2026-09-05; the disposition of each shape is §8.1).
 
 **Owner rulings, fixed points (2026-09-05):**
 
@@ -17,6 +17,9 @@ Owns the relationship model for Record Health: how a relationship between two th
 - RL-7. Endpoints need ids that mean the same thing in every package and at every rebuild. Sections do not have that today (minted per rebuild, addressed by ordinal). Stable section identity is a precondition for any cross-package relationship touching a section and for any export (§10, open ruling on mechanism).
 - RL-8. FHIR is the door, not the model. Export reproduces FHIR's container lists by a filter over the list by kind and a direction flip declared per kind in the registry. Import walks FHIR's lists and writes relationship entries. Asserted relationships export; inferred ones do not unless a kind's registry entry says otherwise.
 - RL-9. Timing. This lands before ADI console step 3 (the first console code that reads edges) and while both ADI databases hold no relationship rows. Zero migration, zero scaffolding; that window closes when the console learns the old shape.
+- RL-10. One relationship model on the phone. The care graph is absorbed: its edge kinds register, its edges become entries in the patient store, its own store retires, and its traversal reads the relationship index. Every other relationship shape the phone carries today (§8.1) is either registered as a kind or retired; none survives as a parallel definition. Ruled 2026-09-05 (absorb over derive).
+- RL-11. An entry's id is minted once, by its author, at the moment it is first stored, and persisted. Decode never mints. Today AtomEdge.id is a fresh uuid at every decode and every rebuild, so no edge on the device has an identity; that ends at R3.
+- RL-12. FHIR ingest writes relationship entries. A lab panel that arrives as a FHIR bundle and a lab panel extracted from a PDF are one object inside the app: same kinds, same store, same index. Today FHIR ingest reads no relationship at all (hasMember, DiagnosticReport.result, Composition sections unread; encounter kept as a raw id string); that is R4.
 
 ---
 
@@ -98,7 +101,10 @@ Initial registry (v1). Kinds the pipeline emits today, registered as they are; k
 | part_of_interaction | document → interaction | one | patient | null | user (keystone) | yes | Encounter, same | new: the fragmented-report case (§4) |
 | continues | document → document | one | patient | null | user | yes | DocumentReference.relatesTo, same | new: a report that extends another |
 | has_role | person → document, interaction | many | patient | null | user (keystone) | yes | PractitionerRole / Observation.performer / ServiceRequest.requester by role | new, §6; role value on the entry |
-| row_in_table | table_row → table | one | package | null until sprint 10 | reviewer | no | null | sprint 10 |
+| affiliated_with | person → organization | many | patient | null (today: id lists on ProviderEntity / OrgEntity) | user | yes | PractitionerRole.organization, same | absorbs the entity id lists, §8.1 |
+| section_references | section → section | many | package | pipeline (today: SectionRef on the parent, open string kinds) | reviewer | no | per sub-kind | absorbs SectionRef; its sub-kinds (requester, basedOn, performer, subject, encounter) become registered kinds at R2, one row each |
+| (care graph kinds) | per CareGraphEdgeKind | per kind | patient | walker (CareGraphBuilder) | none | yes (carries confidence today) | per kind | the 16 CareGraphEdgeKind cases register under their existing names at R5 (RL-10); rows generated then, not hand-listed here |
+| row_in_table | table_row → table | one | package | null until sprint 10 (today: TableCellRef composite key, which is what actually groups lab rows) | reviewer | no | null | sprint 10 |
 | table_in_section | table → section | one | package | null until sprint 10 | reviewer | no | null | sprint 10 |
 | section_in_section | section → section | one | package | pipeline (as `parentId` today) | reviewer | no | Composition.section.section, inverse | sprint 10 makes it an entry |
 
@@ -170,6 +176,26 @@ Three, all rebuildable, none a source of truth:
 - **The patient relationship index** unions every package's `relationships` array, each package's folded amendment log, and the patient store, and is what queries walk. It is rebuilt from those three sources, the same rule ContextStore lives under. It lives on the phone, which is what lets the anonymized AI query walk the graph locally and send tokens out.
 - **The inference engine** (§4) reads the index and writes inferred entries to the patient store. Its own design is a later doc; this doc fixes its inputs, outputs, and standing.
 
+### 8.1 Phone-side shapes and their disposition (R1a, 2026-09-05)
+
+The inventory found eleven relationship shapes on the phone beside AtomEdge. Each is dispositioned here so none survives as an undeclared parallel definition (RL-10).
+
+| Shape today | What it encodes | Disposition | Sprint |
+|---|---|---|---|
+| `SegmentedFact.sectionId` | atom → section, scalar on the child | registered as `member_of_section`; field stays as the pipeline carrier until hard question 1 is ruled | R2, R3 |
+| `DocumentSection.parentId` | section → section, scalar on the child | registered as `section_in_section`; field stays as carrier | R2 |
+| `SectionRef` (`references[]` on the parent, open string kinds, zero consumers) | section → section typed references | absorbed: each sub-kind registers; entries move to the core's `relationships` list; `SectionRef` retires | R2 |
+| `TableCellRef` (composite key; what actually groups lab rows) | cell → row → table | stays as the containment carrier until sprint 10 registers `row_in_table` and `table_in_section`; the panel edge that duplicates it is judged for retirement at R2 (hard question 6) | sprint 10 |
+| `FHIRSourcedFact.encounterId` (raw id string) | fact → encounter | becomes a `part_of_interaction` entry written by FHIR ingest; the string stays as provenance | R4 |
+| `FHIRSourcedFact.pairedRecordId` + `bundleKey` | fact → record | record membership stays an index fact (below); the bundle key is a record identity, not a relationship | none |
+| `PatientRecordIndex` | record ↔ patient | stays: an index, not a relationship; the patient is the root of the store | none |
+| `CareGraphEdge` (16 kinds, confidence, inference provenance, own store) | condition-rooted care graph | absorbed (RL-10): kinds register, edges become inferred or asserted entries in the patient store, `.graph.enc` retires, traversal reads the index | R5 |
+| `ProviderEntity.organizationIds / visitIds`, `OrgEntity.providerIds` | person ↔ org ↔ visit, id lists on the container | absorbed: `has_role`, `affiliated_with`, `part_of_interaction` entries; the lists retire | R5 |
+| `RecordV2.providerName / facilityName / serviceDate / reportDate` | document → person, document → time, denormalized display strings | stay as display cache; a `has_role` or date entry is the truth once R5 lands, and the cache is rebuilt from it | R5 |
+| `TreatmentTree` | condition-rooted subgraph with node annotations | rebuilt as a traversal over the index once the care graph is absorbed; its own persistence retires | R5 |
+
+Two more findings the phone half must carry: the Worker's two edge kinds have zero consumers on the phone (lab grouping uses `TableCellRef`), and the phone's four consumed kinds are the four the Worker cannot produce; and `bestDate` answers the same question by two unrelated mechanisms depending on lineage (edge walk for documents, scalar for FHIR). R4 collapses that to one walk.
+
 Longitudinal queries are walks over the index filtered on any entry field: kind, time (the date kinds), author, status, confidence. What the index does not give: meaning. "Hemoglobin over three years" is a match on the code carried by each atom (`kt_coding`, LOINC) across packages, then a walk to each atom's date. Relationships get from a value to its context; codes get from one document to the same thing in another. Both are needed; the registry does not replace coding.
 
 ---
@@ -205,11 +231,14 @@ Inserted before ADI console step 3 (PACKAGE_DESIGN §9 sprint 7 is paused at ste
 
 | # | Repo | Ships | Close condition | Model |
 |---|---|---|---|---|
-| R1 | api | Opening audit: the edge inventory extended to the app repo, FHIR ingest included; stable-id ruling (§10) prepared | Findings reviewed, §10 ruled | Opus 5 |
-| R2 | api | Registry declaration, generator emits `relationships`, `SCHEMA_VERSION` bump, emitters write the top-level `relationships` array and `atom_edges` retires from the wire, census and misfire read from the registry, coverage tests, baseline drops `data_atoms.atom_edges`, the three reviewer-create routes deleted, amendment validator and scores handle `relationship` (§7) | A staging ingest serves `relationships` with both today's kinds and no `atom_edges`; suite green; the console step 3 audit can begin | Opus 5, Fable reviews the registry declaration first |
-| R3 | app | Decode the `relationships` array; AtomEdge becomes a projection (§8); `EdgeKind` decodes against the registry; patient relationship store created with the walker's date kinds moved into it; archive carries it | Ingest on staging renders panels and addresses grouped from the list; wipe, rebuild, identical | Opus 5 |
+| R1a | app | **DONE 2026-09-05.** Phone-side edge inventory, FHIR ingest included; findings folded into v1.1 (§8.1) | Done | Opus 5 |
+| R1b | api | Stable identity options (§10) prepared for ruling; the section-id mechanism chosen | §10 ruled | Fable |
+| R2 | api | Registry declaration (today's kinds plus `SectionRef`'s sub-kinds), generator emits `relationships`, `SCHEMA_VERSION` bump, emitters write the top-level `relationships` array and `atom_edges` retires from the wire, `SectionRef` retires into the list, census and misfire read from the registry, coverage tests, baseline drops `data_atoms.atom_edges`, the three reviewer-create routes deleted, amendment validator and scores handle `relationship` (§7) | A staging ingest serves `relationships` with every registered pipeline kind and no `atom_edges`; suite green; the console step 3 audit can begin | Opus 5, Fable reviews the registry declaration first |
+| R3 | app | Decode the `relationships` array; entry ids persisted, never minted at decode (RL-11); AtomEdge becomes a projection (§8); `EdgeKind` decodes against the registry; patient relationship store created with the walker's date kinds and `same_clinical_event` moved into it; archive and CloudKit carry it; `bestDate` walks the index only | Ingest on staging renders panels and addresses grouped from the list; wipe, rebuild, identical by entry id | Opus 5 |
+| R4 | app | FHIR ingest writes relationship entries: `Observation.hasMember` → `belongs_to_panel`, `DiagnosticReport.result` → membership, `encounter` → `part_of_interaction`, `Composition.section.entry` → `member_of_section`; the scalar FHIR date branch in `bestDate` retires (RL-12) | A FHIR lab panel and a PDF lab panel of the same structure produce identical relationship entries by kind; one `bestDate` path | Opus 5 |
+| R5 | app | Care graph absorbed (RL-10): 16 kinds registered, edges become entries, `.graph.enc` retires, traversal reads the index; provider and org id lists become `has_role`, `affiliated_with`, `part_of_interaction` entries; `TreatmentTree` rebuilt as a traversal; display caches on `RecordV2` rebuilt from entries | Care graph screens identical before and after on a real patient; no second edge type in code (grep-pinned) | Opus 5, Fable reviews the kind registration first |
 
-Then PACKAGE_DESIGN §9 sprint 7 resumes at step 3 with the console reading relationships from the core. Sprint 9 (graded import) folds reviewer relationship entries like any amendment. Sprint 10's containment units are registry rows. The inference engine, person entities, and keystone wiring are their own designs and sprints after the package series; this doc fixes what they read and write.
+Ordering: R1b then R2 in the api repo; R3, R4, R5 in the app repo in that order. PACKAGE_DESIGN §9 sprint 7 resumes at step 3 as soon as R2 ships (the console needs only the Worker side); R3 through R5 run beside the console steps and must land before sprint 9 (graded import folds reviewer relationship entries). Sprint 10's containment units are registry rows. The inference engine, person entities, and keystone wiring are their own designs and sprints after the package series; this doc fixes what they read and write.
 
 ---
 
@@ -220,6 +249,8 @@ Then PACKAGE_DESIGN §9 sprint 7 resumes at step 3 with the console reading rela
 3. **Two reviewers, two authored entries for one triple.** The uniqueness rule refuses the second; the second reviewer sees the first's entry and judges it. Arbitration stays out of scope (GT.2 parked).
 4. **Kinds the phone knows and the Worker does not.** Walker date kinds live in the registry with `emitted_by: walker`, so the Worker's census recognizes them without ever emitting them. The registry is the union, not the Worker's subset.
 5. **Cardinality flips.** `belongs_to_panel` is `one` today. If a real document puts one result under two panels, the row flips to `many` with a version bump; consumers that assumed one target get a labeled second edge, not a broken decode.
+6. **Two carriers for one fact.** Lab-row grouping on the phone uses `TableCellRef`; the Worker's `belongs_to_panel` edge says the same thing and nothing reads it. Under one shape both cannot stay as truth. R2 rules whether `belongs_to_panel` is the entry and the cell ref is presentation, or the reverse until sprint 10 registers `row_in_table`. The ADI grades panels either way; the console must read whichever is ruled.
+7. **Absorbing the care graph is the largest phone change in this design.** Fourteen date lookups, three stores, a traversal API, and the treatment tree all move. It is ruled (RL-10) because a second edge model with its own confidence field is the exact inference shape §4 defines, living where nothing else can read it. R5 gets its own audit prompt before implementation and Fable reviews the kind registration.
 
 ---
 
@@ -232,4 +263,6 @@ The inference engine's algorithms, thresholds, and model use. Person entity reso
 ## 15. Rulings log
 
 - RL-1 through RL-9: ruled 2026-09-05 in chat, text above. RL-1 supersedes the 2026-09-05 link-authoring proposal's derived triple id (the triple is the fact's identity; the entry id is minted) and its "extend the two edge entities" fallback.
-- Open: §10 stable identity mechanism (rule at R1). §2 per-kind `inferable`, `confirm_at`, `consumer_policy`, `adi_visible` values (rule with the inference engine design). Whether pipeline `member_of_section` is an explicit entry or a field-carried kind (hard question 1; v1 says explicit).
+- RL-10 through RL-12: ruled 2026-09-05 in chat after the phone-side inventory (R1a). RL-10 chose absorb over derive for the care graph.
+- v1.1 (2026-09-05): §8.1 added; §2 gains `affiliated_with`, `section_references`, and the care-graph placeholder row; §12 resequenced to R1a, R1b, R2 through R5; hard questions 6 and 7 added.
+- Open: §10 stable identity mechanism (rule at R1b). §2 per-kind `inferable`, `confirm_at`, `consumer_policy`, `adi_visible` values (rule with the inference engine design). Hard question 1 (`member_of_section` explicit or field-carried) and hard question 6 (panel edge versus cell ref), both ruled at R2's audit.
