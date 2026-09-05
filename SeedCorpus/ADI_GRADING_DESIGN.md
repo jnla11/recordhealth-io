@@ -1,7 +1,7 @@
 # ADI Grading Design
 
-Status: design v1.0 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7
-Date: 2026-09-03
+Status: design v1.1 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, paused pending R2 (RELATIONSHIP_DESIGN.md §12)
+Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer)
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN.md`
 
 Owns the reviewer grading surface for document packages: what a reviewer can judge, how each judgment is recorded, how a document is marked done, and how scores are computed. Supersedes `GRADING_TOOL_DESIGN.md` (v1.0, now historical) for the grading surface; the F1, IoU and NDC formulas move here (§6). Package structure, amendment wire shape, and gradeable-unit list stay in `PACKAGE_DESIGN.md` §1, §3, §6; this doc points, never restates. Gates package sprints 6 and 7 (PACKAGE_DESIGN §9).
@@ -42,7 +42,7 @@ Two reviewers on one package append to the same log; last entry per target wins 
 
 All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape; it fixes how the fields are used.
 
-**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by `(package_id, ordinal)` with the core's section id as attribute (§4 projection rule); edge by its own id where it carries one (`belongs_to_address`) or by `(source atom, kind, target atom)` where it does not (`belongs_to_panel`); table row by `(table_id, row_index)`; cell by `table_cell_ref`; span by `(atom_id, span index)`; inventory by section; code by `(atom_id, kt_coding path)`; a user amendment by its `amendment_id`. Projection rows carry these ids so the console can always write a core-addressed target.
+**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by `(package_id, ordinal)` with the core's section id as attribute (§4 projection rule); relationship by entry id (RELATIONSHIP_DESIGN.md §7); table row by `(table_id, row_index)`; cell by `table_cell_ref`; span by `(atom_id, span index)`; inventory by section; code by `(atom_id, kt_coding path)`; a user amendment by its `amendment_id`. Projection rows carry these ids so the console can always write a core-addressed target.
 
 **Ops used by grading.**
 
@@ -84,7 +84,7 @@ Under PACKAGE_DESIGN §4 shape (b): the log is the `amendments` JSONB on `docume
 - Atom (clinical, PHI): is this a real thing in the document, is the value right, is the kind right. Synthesized atoms are judged as synthesis and never enter extraction scores.
 - Section: right kind, right extent, right parent.
 - Table row: is this one row. Cell: right value, right column role. Judged separately from each other and from the atoms in them.
-- Link (atom to section, cell to panel, atom to address): is the relationship right. Rejecting a link rejects nothing else. A reviewer can also AUTHOR a missing link between two existing things (op `add`, entity `edge`), sprint 7; authoring the things themselves (new section, new table, new rows) is sprint 10.
+- Relationships: grading and authoring, RELATIONSHIP_DESIGN.md §7.
 - Code (kt_coding) on an atom: right code.
 - Geometry: the box is on the right spot (tolerance by IoU, §6).
 - Section inventory: the section holds what the census says.
@@ -122,7 +122,7 @@ Sprint 8 exports a graded package: manifest and core unchanged, log as is. Only 
 ## 8. Effect on the sprint series (PACKAGE_DESIGN §9)
 
 - Sprint 6 (api): **DONE 2026-09-03.** Baseline dropped `grading_submissions` and `review_phi_detections`; `document_packages.amendments` with the append-only trigger (four rules, all exercised live and refused); the amendments write route with batch validation, per-index refusal and optimistic concurrency on `amendment_version`; the package read route; and §6's two scores routes, computed on demand and stored nowhere. The planned verdict-columns migration file was not written, and `F-NEW-AF` closed with the table. One version per REQUEST rather than per entry (owner ruling) — `batch_id` is what groups a click. NOT implemented: §6's IoU tolerance and NDC value-distance classes, both per-item scoring the sprint-7 console computes. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Package receive and store`.
-- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Link authoring (draw a missing relationship between existing entities) ships here, ruled 2026-09-04; the edge entities carry `authoring` in the schema. Reviewer PHI marking ships here too (R16 / OR-16, ruled 2026-09-04): marking an atom PHI or un-marking it, with the ADI minting a token in its own namespace into the tokens layer, and resolving the receive route's `phi_token_missing` / `phi_token_unexpected` findings, which land and wait today. Close condition unchanged: one real document graded end to end with a non-zero F1.
+- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Link authoring now ships per RELATIONSHIP_DESIGN.md §7 after R2, superseding the 2026-09-04 ruling that it shipped directly in sprint 7. Reviewer PHI marking ships here too (R16 / OR-16, ruled 2026-09-04): marking an atom PHI or un-marking it, with the ADI minting a token in its own namespace into the tokens layer, and resolving the receive route's `phi_token_missing` / `phi_token_unexpected` findings, which land and wait today. Close condition unchanged: one real document graded end to end with a non-zero F1.
 - Sprint 8 (api): unchanged; export gated on the marker.
 - Sprint 10 (api ADI): unchanged.
 
@@ -149,4 +149,5 @@ No arbitration between reviewers. No reviewer accounts beyond the JWT role (AUTH
 ## 11. Rulings log
 
 - GR-1 through GR-7: ruled 2026-09-03 in chat; text above.
-- Open: none at v1.0.
+- 2026-09-05: relationship model ruled — `RELATIONSHIP_DESIGN.md`. §3 and §5 point there; sprint 7 link authoring re-scoped to ship after R2 (§8).
+- Open: none at v1.1.

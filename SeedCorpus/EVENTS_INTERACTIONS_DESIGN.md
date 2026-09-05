@@ -109,6 +109,8 @@ linked_interaction_id : UUID?     encounterList entries only; set at Tier 1 mint
 
 Device-only, never held server-side, keystone-confirmed — lifecycle unchanged from v1. **One shape change, ruled 2026-07-26 (the Q4 addendum):** membership edges now carry a granularity (below, and §C.6). See §C.2b (new in v2) for a second candidate-generation path that feeds proposals into this same store; the store, confirmation flow, and tombstone semantics below are exactly as v1 designed them.
 
+EventMembership is a relationship entry of kind `member_of_event`; shape and registry in RELATIONSHIP_DESIGN.md §1-§3; this section owns what an event is and how membership is confirmed.
+
 ```
 Event (device, illustrative)
 id               : UUID       device-minted at confirmation
