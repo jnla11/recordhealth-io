@@ -1,7 +1,7 @@
 # Record Health — Lightweight Grading Tool
 ## Design Specification v1.0
 
-Status: historical (restamped 2026-09-03). Superseded for the grading surface by `ADI_GRADING_DESIGN.md` v1.0; the F1, IoU and NDC definitions now live there (§6). The `annotations` / `document_grades` / `grading_exports` tables below never shipped in this shape; the GT-2 sprint records are a point-in-time log. Kept in place until the next archive pass; pointers in recordhealth-api CLAUDE.md, app ARCHITECTURE.md §8.4, DATABASE_LAYOUT.md, PHASE_ROADMAP.md still name this file.
+Status: historical (restamped 2026-09-03). Superseded for the grading surface by `ADI_GRADING_DESIGN.md` v1.0; the F1, IoU and NDC definitions now live there (§6). The `annotations` / `document_grades` / `grading_exports` tables below never shipped in this shape; the GT-2 sprint records are a point-in-time log. Kept in place until the next archive pass. Pointers that still name this file, for that pass to fix (inventory 2026-09-05): `recordhealth-api/CLAUDE.md` (marked historical, correct); `recordhealth-api/handoff/to-code.md` item 4 (cites §8.4's three-layer model as live: stale); `recordhealth-api/docs/WORKER_ARCHITECTURE.md` § Package receive and store (credits the F1 formulas to v1.0: correct); `RecordHealth_App/docs/ARCHITECTURE.md` §8.4 (now RETIRED, names this file for the retired model: correct); `RecordHealth_App/docs/DATABASE_LAYOUT.md` ("ADI console architecture": stale); `SeedCorpus/PHASE_ROADMAP.md` ("historical": correct); `SeedCorpus/PROMPT_ID_REGISTRY.md` (storage schema "defined in" sprint GT-1.5: stale, the prompt tables shipped but the doc is no longer authority); `SeedCorpus/ADI_GRADING_DESIGN.md` (supersession note: intended).
 
 ---
 

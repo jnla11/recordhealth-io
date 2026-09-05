@@ -55,7 +55,8 @@ All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape;
 | Withdraw a discovery | `remove` | | targets the discovery id |
 | Judge a user amendment | `verdict` | accepted / rejected | targets the amendment id |
 | Mark atom as PHI (or un-mark) | `verdict` | `corrected` plus `{ field_path: is_phi/phi_type, new_value }` | the ADI mints a token in its namespace and adds it to the package's tokens layer (PACKAGE_DESIGN R16) |
-| Missing token on receive | `flag` | `phi_token_missing` | author `system`; appended by the receive route, resolved by the reviewer |
+| Missing token on receive | `flag` | `phi_token_missing` | author `system`; a PHI atom with no token or no `phi_type`; appended by the receive route (the phone writes the same flag at seal), `reason` is the validator's own word, resolved by the reviewer |
+| Unexpected token on receive | `flag` | `phi_token_unexpected` | author `system`; a token or `phi_type` on an atom the core does not mark PHI; same route, same resolution |
 | Mark reviewed | `flag` | `reviewed` | `reviewer_authority`, scores snapshot as `provenance` (informational, not authoritative) |
 
 `batch_id` is a new optional field in `provenance`: all entries from one "Accept N shown" click share it, so history reads "accepted together with 36 others on page 3". It does not change how any reader interprets the entry; each entry stands alone (GR-5).
@@ -121,7 +122,7 @@ Sprint 8 exports a graded package: manifest and core unchanged, log as is. Only 
 ## 8. Effect on the sprint series (PACKAGE_DESIGN §9)
 
 - Sprint 6 (api): **DONE 2026-09-03.** Baseline dropped `grading_submissions` and `review_phi_detections`; `document_packages.amendments` with the append-only trigger (four rules, all exercised live and refused); the amendments write route with batch validation, per-index refusal and optimistic concurrency on `amendment_version`; the package read route; and §6's two scores routes, computed on demand and stored nowhere. The planned verdict-columns migration file was not written, and `F-NEW-AF` closed with the table. One version per REQUEST rather than per entry (owner ruling) — `batch_id` is what groups a click. NOT implemented: §6's IoU tolerance and NDC value-distance classes, both per-item scoring the sprint-7 console computes. Detail: `recordhealth-api/docs/WORKER_ARCHITECTURE.md § Package receive and store`.
-- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Link authoring (draw a missing relationship between existing entities) ships here, ruled 2026-09-04; the edge entities carry `authoring` in the schema. Close condition unchanged: one real document graded end to end with a non-zero F1.
+- Sprint 7 (api ADI): console rewired: schema-driven classes, real-time entries, "Accept N shown", "Mark reviewed", scores routes. Link authoring (draw a missing relationship between existing entities) ships here, ruled 2026-09-04; the edge entities carry `authoring` in the schema. Reviewer PHI marking ships here too (R16 / OR-16, ruled 2026-09-04): marking an atom PHI or un-marking it, with the ADI minting a token in its own namespace into the tokens layer, and resolving the receive route's `phi_token_missing` / `phi_token_unexpected` findings, which land and wait today. Close condition unchanged: one real document graded end to end with a non-zero F1.
 - Sprint 8 (api): unchanged; export gated on the marker.
 - Sprint 10 (api ADI): unchanged.
 
