@@ -1,7 +1,7 @@
 # ADI Grading Design
 
-Status: design v1.1 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, paused pending R2 (RELATIONSHIP_DESIGN.md §12)
-Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer)
+Status: design v1.1 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, resumes at step 3 now that R2 has shipped (RELATIONSHIP_DESIGN.md §12)
+Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer); §3's section-addressing line corrected in place, 2026-09-06 (R2 shipped)
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN.md`
 
 Owns the reviewer grading surface for document packages: what a reviewer can judge, how each judgment is recorded, how a document is marked done, and how scores are computed. Supersedes `GRADING_TOOL_DESIGN.md` (v1.0, now historical) for the grading surface; the F1, IoU and NDC formulas move here (§6). Package structure, amendment wire shape, and gradeable-unit list stay in `PACKAGE_DESIGN.md` §1, §3, §6; this doc points, never restates. Gates package sprints 6 and 7 (PACKAGE_DESIGN §9).
@@ -42,7 +42,7 @@ Two reviewers on one package append to the same log; last entry per target wins 
 
 All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape; it fixes how the fields are used.
 
-**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by `(package_id, ordinal)` with the core's section id as attribute (§4 projection rule); relationship by entry id (RELATIONSHIP_DESIGN.md §7); table row by `(table_id, row_index)`; cell by `table_cell_ref`; span by `(atom_id, span index)`; inventory by section; code by `(atom_id, kt_coding path)`; a user amendment by its `amendment_id`. Projection rows carry these ids so the console can always write a core-addressed target.
+**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by its id (RELATIONSHIP_DESIGN.md §10); the projection keeps `(package_id, ordinal)` as its row key; relationship by entry id (RELATIONSHIP_DESIGN.md §7); table row by `(table_id, row_index)`; cell by `table_cell_ref`; span by `(atom_id, span index)`; inventory by section; code by `(atom_id, kt_coding path)`; a user amendment by its `amendment_id`. Projection rows carry these ids so the console can always write a core-addressed target.
 
 **Ops used by grading.**
 
