@@ -1,7 +1,8 @@
 # Document Package Design
 
-Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.4), R2 shipped, sprint 7 resumes at step 3
-Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped)
+Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3
+Last verified: 2026-09-07
+Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped); §3's derived-layers sentence narrowed to inferences in place, 2026-09-07 (R3 audit ruling 6)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
 Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document package fidelity), and is the precondition for F-NEW-QF (ADI grading sprint) and for the bakeoff in VENDOR_ABSTRACTION_DESIGN §4. Grounded in four audits run 2026-08-26/27: the Worker-side ADI gap matrix, the phone-side field trace, the repair failsafe audit (repair sprint shipped), and the ADI package-storage audit.
@@ -157,7 +158,7 @@ The original value is never copied into the amendment; `target` points at it by 
 
 **Reviewer discoveries** (ground-truth entities with no core counterpart) are amendments with `op: add` targeting a new id in the discovery namespace, typed by the schema like any other entity (§5).
 
-**Derived layers** (ContextStore, care graph, prompts, summaries) are never in the package and are rebuilt from core plus amendments.
+**Derived layers** (ContextStore, care graph, prompts, summaries) are never in the package and are rebuilt from core plus amendments. **NARROWED to inferences (R3 audit ruling 6, 2026-09-07):** what a package must never contain is an INFERENCE — a thing a model or a heuristic guessed, which a rebuild may legitimately guess differently. A DETERMINISTIC assertion the phone makes about this document's own atoms is a log entry like a reviewer's, and belongs in the log by RL-3: the Layer 2 walker's `collected_at` / `reported_at` / `observed_at` rows are written there, authored `walker`, diff-only, and the package is re-sealed (`RELATIONSHIP_DESIGN.md` §3). As written before, this sentence forbade them.
 
 ---
 
