@@ -1,7 +1,7 @@
 # ADI Grading Design
 
-Status: design v1.1 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, resumes at step 3 now that R2 has shipped (RELATIONSHIP_DESIGN.md §12)
-Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer); §3's section-addressing line corrected in place, 2026-09-06 (R2 shipped)
+Status: design v1.2 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, resumes at step 3 now that R2 has shipped (RELATIONSHIP_DESIGN.md §12)
+Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer); §3's section-addressing line corrected in place, 2026-09-06 (R2 shipped); v1.2 supersedes v1.1 in place, 2026-09-14 (grading runs against the current dictionary, not the package's; §3's unaddressed target classes named)
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN.md`
 
 Owns the reviewer grading surface for document packages: what a reviewer can judge, how each judgment is recorded, how a document is marked done, and how scores are computed. Supersedes `GRADING_TOOL_DESIGN.md` (v1.0, now historical) for the grading surface; the F1, IoU and NDC formulas move here (§6). Package structure, amendment wire shape, and gradeable-unit list stay in `PACKAGE_DESIGN.md` §1, §3, §6; this doc points, never restates. Gates package sprints 6 and 7 (PACKAGE_DESIGN §9).
@@ -42,7 +42,7 @@ Two reviewers on one package append to the same log; last entry per target wins 
 
 All entries use the PACKAGE_DESIGN §3 shape. Grading adds nothing to the shape; it fixes how the fields are used.
 
-**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by its id (RELATIONSHIP_DESIGN.md §10); the projection keeps `(package_id, ordinal)` as its row key; relationship by entry id (RELATIONSHIP_DESIGN.md §7); table row by `(table_id, row_index)`; cell by `table_cell_ref`; span by `(atom_id, span index)`; inventory by section; code by `(atom_id, kt_coding path)`; a user amendment by its `amendment_id`. Projection rows carry these ids so the console can always write a core-addressed target.
+**Target addressing.** `target` names the thing by its identity inside the core, never by an ADI row id: atom by `atom_id`; section by its id (RELATIONSHIP_DESIGN.md §10); the projection keeps `(package_id, ordinal)` as its row key; relationship by entry id (RELATIONSHIP_DESIGN.md §7); table row by `(table_id, row_index)`; ~~cell by `table_cell_ref`~~; ~~span by `(atom_id, span index)`~~; ~~inventory by section~~; ~~code by `(atom_id, kt_coding path)`~~; a user amendment by its `amendment_id`. **Owner-ruled 2026-09-14:** span, cell and code have no id form on the write side today; the served schema publishes no id rule for them — nor for inventory or package — until one exists. Each struck clause above is replaced alike: no id rule yet; the server publishes null until one is defined. Table cells get their rule with the table grading step. Projection rows carry these ids so the console can always write a core-addressed target.
 
 **Ops used by grading.**
 
@@ -117,6 +117,8 @@ The bakeoff resolver (VENDOR_ABSTRACTION §4.1) reads the same folded log; PACKA
 
 Sprint 8 exports a graded package: manifest and core unchanged, log as is. Only packages with a `reviewed` marker are offered. Sprint 9 on the phone folds reviewer entries like user entries, newest wins, history visible (PACKAGE_DESIGN §2.4, R5).
 
+**Owner-ruled 2026-09-14 (return-path dictionary requirement, §9.4):** before a graded package is delivered to a phone, the receiving phone must be on the latest dictionary; the return path checks this and refuses otherwise. The check itself is future work, filed in ROADMAP at sprint close, not specified here.
+
 ---
 
 ## 8. Effect on the sprint series (PACKAGE_DESIGN §9)
@@ -135,7 +137,7 @@ F-NEW-QK (panelHeaders newline) still must not rot past sprint 6.
 1. **Click volume.** A 400-atom lab report accepted in one click appends 400 entries. The log grows by a few hundred KB per graded package. R14: watched via `package_size_bytes`, not ruled.
 2. **Mis-click.** No undo; a wrong accept is corrected by a newer reject. History shows both. This is the price of GR-2 and it is the same rule the phone lives with.
 3. **Two reviewers.** Newest wins per target. No arbitration surface (GT.2 parked).
-4. **Schema bump mid-grading.** The core's `schema_version` fixes what is gradeable for that package; the console reads the schema at that version (`?version=`), not the latest.
+4. **Schema bump mid-grading.** The core's `schema_version` fixes what is gradeable for that package; the console reads the schema at that version (`?version=`), not the latest. **Owner-ruled 2026-09-14 (dictionary versus schema):** that fix is for the schema only, not the dictionary. Grading uses the current live dictionary, never the dictionary version the package's manifest names — a corrected kind, subtype, date role or PHI type is valid when it is a live term today, whatever dictionary snapshot the package shipped under. Consequence on the return path (§7): before a graded package is delivered to a phone, the receiving phone must be on the latest dictionary; the return path checks this and refuses otherwise. The check itself is future work, filed in ROADMAP at sprint close, not specified here.
 5. **A user amendment and a reviewer correction on the same field.** Both in the log; folded view shows the reviewer's (newer). Sprint 9's phone view lets the user flip (PACKAGE_DESIGN §8.3).
 
 ---
