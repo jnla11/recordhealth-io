@@ -25,6 +25,11 @@ Owns the reviewer grading surface. v1.2 §1 and §10 stand unrestated; v1.2 §4 
 
 - GR-17. The corrected package is the package after lock. Once locked, the served package is the corrected list only, under its own checksum with its own integrity checks; the original is not included in the download. Before lock, the served package is the original, as today. The original stays stored on the server behind the corrected package, for history and comparison.
 
+**Owner rulings, fixed points (2026-09-15, fourth session), superseding earlier sessions where they differ:**
+
+- GR-18. Delete carries no reasons for now. The "Are you sure you want to delete?" dialog is Cancel and Delete only. The delete reasons list, `no_fitting_kind` included, is removed from the design entirely (§3); §5's derived error classes that read a reviewer-supplied reason are not derivable until a reason mechanism returns (§9).
+- GR-19. The vetted control is a green checkmark icon on the atom: green when vetted, grey when not, click toggles. Not a checkbox, no "vetted" label.
+
 ## 1. The reviewer's flow (replaces v1.2 §2)
 
 1. Open a document, pick a package: the original core with the whole log folded in (§6.3).
@@ -39,7 +44,7 @@ PACKAGE_DESIGN §3 shape, v1.2 §3 addressing, no new op; declaration additions 
 
 | Action | entry | note |
 |---|---|---|
-| Vet | `verdict accepted` on the atom, relationship, row or user amendment | one entry per checkbox |
+| Vet | `verdict accepted` on the atom, relationship, row or user amendment | one entry per checkmark toggle (GR-19) |
 | Un-vet | `remove`, `target { entity: amendment, id: <the accepted entry> }` | §4.1 |
 | Fix a field | `verdict corrected` + `field_path` + `new_value`, one per field (GR-4) | `F-NEW-TD`'s four fields become writable |
 | Fix a position | four `corrected` entries (`page`, `line`, `word_start`, `word_end`), one `batch_id` | |
@@ -49,26 +54,16 @@ PACKAGE_DESIGN §3 shape, v1.2 §3 addressing, no new op; declaration additions 
 | Move a row to another section | `verdict corrected` on the row's add, `target { entity: amendment, id, field_path: section_id }` | |
 | Remove a row, withdraw own add | `remove` on the discovery or relationship id, no reasons | refused while atoms remain; a pipeline row is `rejected` |
 | Fix or create a relationship | `corrected` on `source` / `target` / `kind`, `rejected` then `add` where cardinality forbids; `add` with value `relationship_authored` | |
-| Delete an atom or relationship (GR-13) | `verdict rejected`, `reasons: [..]` from §3 | required array; `reason` and `rationale` retire |
+| Delete an atom or relationship (GR-13) | `verdict rejected`, no reasons | `reasons`, `reason` and `rationale` all retire for now (GR-18, §3) |
 | Lock, unlock | `flag reviewed` (provenance §6.1); `flag unlocked` | the lock triggers the rebuild |
 
 `row_in_table` and `table_in_section` are never written by the reviewer: the rebuild derives them from row entries and cell refs (§6.2), absorbing the Sprint 10 intent for both. Sprint 10 keeps the Worker's own emitters at ingest, the cell id rule and cell grading (`F-NEW-SX` narrows to cells), and PACKAGE_DESIGN §6's ground-truth-only units.
 
-## 3. The delete reason list
+## 3. Delete: no reasons for now (GR-18)
 
-Published as `grading_vocabularies.delete_reasons`, closed for the writer, open for the reader; confirm refuses with none selected. Codes are a proposal; the shape is the ruling.
+The GR-13 "Are you sure you want to delete?" dialog is Cancel and Delete only. No reason list is shown or collected; `grading_vocabularies.delete_reasons`, every code in it (`not_in_document`, `not_a_fact`, `duplicate`, `fragment`, `no_fitting_kind`, `not_related`, `other`), and the `fp_*` taxonomy (`F-NEW-TC`) are removed from the design entirely, not just deferred. Older `fp_*` entries fold as `rejected`.
 
-| code | means |
-|---|---|
-| `not_in_document` | the value is not on the page |
-| `not_a_fact` | chrome, label, boilerplate, heading |
-| `duplicate` | already an atom |
-| `fragment` | part of another atom |
-| `no_fitting_kind` | a real thing, no live dictionary kind fits it (GR-8) |
-| `not_related` | relationships only |
-| `other` | the only code requiring free text |
-
-`no_fitting_kind` is the one delete that is not an ingest error: a dictionary signal, kept apart from `invented` (§5), routed to INGEST_VOCABULARY_DESIGN's off-list census. The `fp_*` taxonomy (`F-NEW-TC`) retires; older entries fold as `rejected`.
+A reviewer-supplied delete reason, including a `no_fitting_kind` signal for INGEST_VOCABULARY_DESIGN's off-list census, is a parked idea with no trigger to bring it back (§9). Until it returns, §5's error classes that would read it are not derivable.
 
 ## 4. Vetting, un-vetting and the fold (replaces v1.2 §6's buckets)
 
@@ -78,7 +73,7 @@ Per class C, folded to a position P (one fold rule, v1.2 §4): instances_C, ever
 
 ## 5. Derived error classes (computed at the lock, never reviewer-stored)
 
-GT_C is the corrected package's instances of C; I_C the original's. Per instance at the lock, several allowed: `missed` (in GT, not in I); `invented` (rejected, `reasons` without `no_fitting_kind`); `unkindable` (rejected with it); `wrong_kind` (`corrected` on `kind`); `wrong_boundary` (on a pointer field); `wrong_home` (on `source`, `target` or `table_cell_ref`); `wrong_phi` (on `is_phi` or `phi_type`); `wrong_<field_path>` for any other field. Served as `by_error_class` per class and per relationship kind; the bakeoff resolver reads the corrected package.
+GT_C is the corrected package's instances of C; I_C the original's. Per instance at the lock, several allowed: `missed` (in GT, not in I); `invented` and `unkindable` not derivable for now — both read a reviewer-supplied delete reason, dropped by GR-18 (§3), pending a reason mechanism (§9); `wrong_kind` (`corrected` on `kind`); `wrong_boundary` (on a pointer field); `wrong_home` (on `source`, `target` or `table_cell_ref`); `wrong_phi` (on `is_phi` or `phi_type`); `wrong_<field_path>` for any other field. Served as `by_error_class` per class and per relationship kind; the bakeoff resolver reads the corrected package.
 
 ## 6. The lock and the stored corrected package (GR-16; amends v1.2 §4 and §7)
 
@@ -92,7 +87,7 @@ GT_C is the corrected package's instances of C; I_C the original's. Per instance
 
 **The tree.** GR-15. Sections from the core and the live relationship fold; rows from cell refs and live row entries, a pipeline table under the section of its row-0 atom; atoms under their row or section. Selecting a node filters list and overlay to its subtree. Drag or "Move to" writes §2's entries; "New row" writes the row add; relationship rows sit under their source.
 
-**The atom.** A checkbox (vetted), an X (delete, behind the GR-13 dialog), the field editor, marks on corrected fields, a saved-state mark painted only from the re-read.
+**The atom.** A green checkmark icon (vetted: green when vetted, grey when not, click toggles — GR-19, not a checkbox, no "vetted" label), an X (delete, behind the Cancel/Delete-only GR-13/GR-18 dialog), the field editor, marks on corrected fields, a saved-state mark painted only from the re-read.
 
 **Filters.** GR-11: the Kind dropdown lists the kinds the tree selection shows; Status and PHI-only stay. Class bar, grouped kind picker, per-class groups, thumbs and "Accept N shown" go; counts move into tree labels.
 
@@ -119,7 +114,7 @@ Defects in the shipped console:
 
 Open:
 
-4. **Current dictionary (v1.2 §9.4) versus `no_fitting_kind`.** An off-list kind is refused, so a real thing with no kind can only be deleted; `unkindable` is a workaround. Whether the reason feeds the misfire census or `F-NEW-SV`'s heal-by-class path is unruled.
+4. **Current dictionary (v1.2 §9.4) versus `no_fitting_kind`.** Moot for now under GR-18 (§3): an off-list kind is refused, so a real thing with no kind can only be deleted, with no reason captured and `unkindable` not derivable (§5). Whether a returning reason feeds the misfire census or `F-NEW-SV`'s heal-by-class path stays unruled until item 12 resolves.
 5. **The list-only hold** (`LIST_ONLY_CLASSES`, pins at `test/adi-console-grading.test.mjs` 333–351, 471). Step 1 keeps it, checkbox and X on atoms and user amendments; the tree step lifts it.
 6. **`F-NEW-SW`.** A PHI mark is an ordinary field fix and the ADI mints no token for it; the discovery declaration has no `is_phi` / `phi_type`; the lock's refusal on unresolved flags is unruled.
 7. **Schema bumps needed** (`SCHEMA_VERSION` 19 today): `reasons[]` and `delete_reasons`; `unlocked`; pointer and row fields on the discovery declaration; `origin: reviewer` and `tables[]` on the corrected core, or the phone's drift beacon fires.
@@ -127,6 +122,7 @@ Open:
 9. **Unlisted classes under GR-11** (span, cell, code, inventory): where they show is unruled.
 10. **Owner's calls in §6.** Rewriting `section_id` and `parentId` from the entries at rebuild (two carriers); the sort key. (Refusing the lock on unvetted atoms is ruled: GR-17.)
 11. **Parked: "accept all remaining."** A bulk action to vet every unvetted atom at once, raised so GR-17's lock-refuses-while-unvetted rule doesn't force clicking through a large document one atom at a time. Parked, not designed or built.
+12. **Parked: a delete-reason mechanism.** GR-18 drops reasons from delete entirely, including `no_fitting_kind` and the `fp_*` taxonomy (§3); `invented` and `unkindable` are not derivable until one returns (§5), and item 4 waits on it too. Parked, no trigger to bring it back.
 
 ## 10. Build order
 
