@@ -1,6 +1,8 @@
 # ADI Grading Design
 
-Status: design v1.2 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, resumes at step 3 now that R2 has shipped (RELATIONSHIP_DESIGN.md §12)
+Status: historical, superseded by v1.3 (`ADI_GRADING_DESIGN_v1.3.md`), 2026-09-15. Sections not restated or amended there (see v1.3's intro and §11) still stand; kept in place, not moved, since v1.3 refers to it by name.
+
+Status (as of supersession): design v1.2 (shape, not spec), owner rulings applied, the storage + write + scores half shipped 2026-09-03 (sprint 6, §8); the console half is sprint 7, resumes at step 3 now that R2 has shipped (RELATIONSHIP_DESIGN.md §12)
 Date: 2026-09-03; v1.1 supersedes v1.0 in place, 2026-09-05 (relationship model pointer); §3's section-addressing line corrected in place, 2026-09-06 (R2 shipped); v1.2 supersedes v1.1 in place, 2026-09-14 (grading runs against the current dictionary, not the package's; §3's unaddressed target classes named)
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN.md`
 

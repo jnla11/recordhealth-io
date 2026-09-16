@@ -183,7 +183,7 @@ A relationship is one gradeable class, `relationship`, with a per-kind breakdown
 
 A verdict targets the entry id (`target: { entity: relationship, id }`). A reviewer-authored entry is `op: add` and counts as a discovery for recall. Withdrawal is `op: remove` on the id. Re-homing a pipeline entry is either a `corrected` verdict on `target` or reject-then-add; both stay legal, and the uniqueness rule (§1) refuses an add while a live asserted entry of that kind exists on the source with `cardinality: one`. A verdict on a reviewer-authored entry targets the amendment id, never the entry id, so it cannot supersede the add in the fold (this hazard exists for discoveries today and is fixed in the same step). Authoring an entry the pipeline already emitted is refused (`relationship_already_in_core`); the console offers accept. The write route reads the core when a batch carries a relationship entry so endpoints can be verified; a bad endpoint in an append-only log is permanent.
 
-Everything else (ops table, fold rule, F1 definitions, "Accept N shown") is `ADI_GRADING_DESIGN.md` §3, §4, §6, unchanged.
+Everything else (fold rule, F1 definitions) is `ADI_GRADING_DESIGN.md` §4, §6, unchanged; the ops table is now `ADI_GRADING_DESIGN_v1.3.md` §2, and "Accept N shown" is retired unbuilt (v1.3 §1).
 
 ---
 

@@ -1,6 +1,7 @@
 # ADI Grading Design
 
-Status: design v1.3 DRAFT (shape, not spec), owner rulings of 2026-09-15 applied; supersedes v1.2 (`ADI_GRADING_DESIGN.md`, unedited until then) once accepted.
+Status: current, design v1.3 (shape, not spec), owner rulings of 2026-09-15 applied; supersedes v1.2 (`ADI_GRADING_DESIGN.md`, now historical).
+Last verified: 2026-09-16
 Date: 2026-09-15
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN_v1.3.md`
 
@@ -137,4 +138,5 @@ Each step ships alone, suite green, staging then production.
 ## 11. Rulings log
 
 - GR-8 through GR-11: ruled 2026-09-15, first live session. GR-12 through GR-16: ruled 2026-09-15, second session. GR-17: ruled 2026-09-15, third session.
+- Build step 1 (§10 item 1) shipped 2026-09-15/16 in `recordhealth-api`, commits `3d4a6cd` through `f85a17d`; see that repo's `docs/archive/SESSION_LOG.md`.
 - Open: §9; the codes in §3; §4.1 and §6.2's sort key as proposals; "accept all remaining" parked (§9 item 11).
