@@ -31,6 +31,11 @@ Owns the reviewer grading surface. v1.2 §1 and §10 stand unrestated; v1.2 §4 
 - GR-18. Delete carries no reasons for now. The "Are you sure you want to delete?" dialog is Cancel and Delete only. The delete reasons list, `no_fitting_kind` included, is removed from the design entirely (§3); §5's derived error classes that read a reviewer-supplied reason are not derivable until a reason mechanism returns (§9).
 - GR-19. The vetted control is a green checkmark icon on the atom: green when vetted, grey when not, click toggles. Not a checkbox, no "vetted" label.
 
+**Owner rulings, fixed points (2026-09-16), superseding earlier sessions where they differ:**
+
+- GR-20. A reviewer's action is final and is never re-questioned. A move through the tree decides an atom's section; the rebuild rewrites the atom's section field and parent to match the newest move. "Two carriers" is an internal detail, not a design question.
+- GR-21. Atom position is set only by highlighting words on the page image. Numbered position-entry boxes are removed (already F-NEW-TH). No position validator at save or at lock: what the reviewer highlights is what is saved.
+
 ## 1. The reviewer's flow (replaces v1.2 §2)
 
 1. Open a document, pick a package: the original core with the whole log folded in (§6.3).
@@ -119,9 +124,9 @@ Open:
 5. **The list-only hold** (`LIST_ONLY_CLASSES`, pins at `test/adi-console-grading.test.mjs` 333–351, 471). Step 1 keeps it, checkbox and X on atoms and user amendments; the tree step lifts it.
 6. **`F-NEW-SW`.** A PHI mark is an ordinary field fix and the ADI mints no token for it; the discovery declaration has no `is_phi` / `phi_type`; the lock's refusal on unresolved flags is unruled.
 7. **Schema bumps needed** (`SCHEMA_VERSION` 19 today): `reasons[]` and `delete_reasons`; `unlocked`; pointer and row fields on the discovery declaration; `origin: reviewer` and `tables[]` on the corrected core, or the phone's drift beacon fires.
-8. **Unchecked corrections.** `needsCoreIndex` reads no core for pointer fields, so a `word_end` outside its line enters the log unchecked; a `table_cell_ref` naming a reviewer-minted table needs the same check.
+8. **Unchecked corrections.** A `table_cell_ref` naming a reviewer-minted table needs the same check.
 9. **Unlisted classes under GR-11** (span, cell, code, inventory): where they show is unruled.
-10. **Owner's calls in §6.** Rewriting `section_id` and `parentId` from the entries at rebuild (two carriers); the sort key. (Refusing the lock on unvetted atoms is ruled: GR-17.)
+10. **Owner's calls in §6.** The sort key. (Refusing the lock on unvetted atoms is ruled: GR-17.)
 11. **Parked: "accept all remaining."** A bulk action to vet every unvetted atom at once, raised so GR-17's lock-refuses-while-unvetted rule doesn't force clicking through a large document one atom at a time. Parked, not designed or built.
 12. **Parked: a delete-reason mechanism.** GR-18 drops reasons from delete entirely, including `no_fitting_kind` and the `fp_*` taxonomy (§3); `invented` and `unkindable` are not derivable until one returns (§5), and item 4 waits on it too. Parked, no trigger to bring it back.
 
@@ -131,12 +136,12 @@ Each step ships alone, suite green, staging then production.
 
 1. **Vet and delete (console + api, small).** Checkbox accept, one `accepted` per atom; un-vet per §4.1; X delete behind the GR-13 dialog with `reasons[]` and `delete_reasons`; saved state visible on the atom; the two silent refusals fixed; the row count on one definition; thumbs retired. Close: one atom vetted, un-vetted, corrected and deleted, each visible from the re-read.
 2. **Lock and stored package (api, then console).** §6 whole: rebuild rule and fixture, R2 object, columns, ledger, `unlocked`, write-route refusal, the lock refusing on unvetted atoms, `corrected` served alone under its own checksum and the download's checksum rewritten off `core` onto it (GR-17), lock header and Unlock. Sprint 8 exports it. Close: one package locked, hash read back, unlocked, edited, re-locked with a new hash and ledger row.
-3. **Words on the page (console, one schema bump).** Select-to-repoint writes four pointer entries under one `batch_id`; select-and-kind writes a located discovery; pointer coherence checked in `validateAgainstCore`. Close: one atom re-pointed, one missed atom created, both on the overlay.
+3. **Words on the page (console, one schema bump).** Select-to-repoint writes four pointer entries under one `batch_id`; select-and-kind writes a located discovery. Close: one atom re-pointed, one missed atom created, both on the overlay.
 4. **The tree (console).** Sections > atoms; the tree filters; GR-11's filters; moves write `member_of_section` / `section_in_section`; the list-only hold retires. Close: one atom re-homed through the tree, scored `wrong_home`.
 5. **Rows (api schema bump, then console).** Row fields on the discovery declaration; `table_cell_ref` writable and validated; the row level in the tree; the rebuild emitting both containment kinds. Close: one lab row created, three atoms assigned, locked, the corrected core carrying it.
 
 ## 11. Rulings log
 
-- GR-8 through GR-11: ruled 2026-09-15, first live session. GR-12 through GR-16: ruled 2026-09-15, second session. GR-17: ruled 2026-09-15, third session.
+- GR-8 through GR-11: ruled 2026-09-15, first live session. GR-12 through GR-16: ruled 2026-09-15, second session. GR-17: ruled 2026-09-15, third session. GR-20, GR-21: ruled 2026-09-16.
 - Build step 1 (§10 item 1) shipped 2026-09-15/16 in `recordhealth-api`, commits `3d4a6cd` through `f85a17d`; see that repo's `docs/archive/SESSION_LOG.md`.
 - Open: §9; the codes in §3; §4.1 and §6.2's sort key as proposals; "accept all remaining" parked (§9 item 11).
