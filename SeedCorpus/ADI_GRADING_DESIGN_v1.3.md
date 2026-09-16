@@ -144,4 +144,5 @@ Each step ships alone, suite green, staging then production.
 
 - GR-8 through GR-11: ruled 2026-09-15, first live session. GR-12 through GR-16: ruled 2026-09-15, second session. GR-17: ruled 2026-09-15, third session. GR-20, GR-21: ruled 2026-09-16.
 - Build step 1 (§10 item 1) shipped 2026-09-15/16 in `recordhealth-api`, commits `3d4a6cd` through `f85a17d`; see that repo's `docs/archive/SESSION_LOG.md`.
+- Build step 2 (§10 item 2) shipped 2026-09-16 in `recordhealth-api`, commits `22cdd7d` through `ed98109` plus `b9ad031`; deployed to staging and production, live close met on staging; see that repo's `docs/archive/SESSION_LOG.md`.
 - Open: §9; the codes in §3; §4.1 and §6.2's sort key as proposals; "accept all remaining" parked (§9 item 11).
