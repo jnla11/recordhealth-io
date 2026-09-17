@@ -1,6 +1,7 @@
 # Vendor Abstraction + Bakeoff Design
 
-Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied
+Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass)
+Last verified: 2026-09-17
 Date: 2026-08-21 (v1 same day; v1.1 supersedes it in place)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/VENDOR_ABSTRACTION_DESIGN.md`
 
@@ -88,20 +89,25 @@ Phase events: `vendor` id needs a `PHASE_EVENT_COLUMNS` entry, an INSERT column,
 
 Ground truth = the reviewer-graded seed corpus. **v1.1 correction (audit): there is no supersession-chain resolution — `data_atoms.supersedes` is DDL-only; nothing writes or reads it.** The v1 language is retracted. The real ground-truth rule is **latest locked grading submission wins** (append-only, amendments are full snapshots).
 
-**The ground-truth resolver is new work** (no existing export folds verdicts; the document export is raw Layer 1 only). Its folding rules, from the audit:
-- Latest `grading_submissions` row per document (`submitted_at` DESC, `is_locked`), joined to `data_atoms` (split on `is_phi`) and `review_documents.status='reviewed'`; legacy `review_phi_detections` for old docs.
-- Verdict vocabulary: treat `confirmed` AND `accepted` as accept (the console's 3-button bar emits `accepted`; `computeMetrics` predates it), honor legacy `corrected`, apply `corrected_kind ?? original` / `corrected_value ?? original` — corrections now ride implicitly on accepted verdicts.
-- Reviewer discoveries exist ONLY in submission JSONB (never materialized as atom rows) — the resolver folds them in as ground-truth atoms, tolerating the intentionally divergent `bounds`/`bbox` geometry shapes (F-NEW-HO).
-- **Stored summary metrics are never trusted** — the `accepted` drift means they undercount review coverage (defect filed, §8).
-- Known weakness: a submission's `pipeline_version` is `{extraction_method, uploaded_at, record_category}`, not the version stamp — the corpus cannot say which prompt version produced its graded Layer 1. Accepted for v1; corpus versioning (below) is the mitigation going forward.
+### §4.1 amended 2026-09-17 (owner rulings; Fable spec pass)
+
+**Ground truth is the corrected package (PACKAGE_DESIGN §7; ADI_GRADING v1.3 §6, GR-16/17).** The resolver of v1.1 is retired: it folded grading_submissions and data_atoms, which the lock's rebuild replaces. Ground truth for a source document is the newest locked corrected core for its `source_hash`, identified by `corrected_core_hash` and `rebuild_version`. Every report binds to that pair; a re-lock is a new truth version and cross-version comparison is flagged (§4.3).
+
+**A candidate is any core with the same `source_hash`,** keyed by its manifest's configuration tuple: a re-ingest package, a bakeoff run's output, or the graded package's own original core (candidate zero, the incumbent baseline, free). Nobody scores the reviewer; the reviewer makes truth.
+
+**The scorer compares one candidate core against one truth core and emits records.** One record per truth instance and one per unmatched candidate instance, for atoms, relationships and sections (rows when step 5 lands). A record carries every dimension known: class, kind on each side, page, truth section, match tier, pointer span overlap, box overlap, normalized value equality, PHI mark on each side and its type, table and row, configuration tuple, truth hash, candidate hash, scorer version. Records are computed on request and stored nowhere; reports persisted by the runner (append-only, `bakeoff_runs` / `bakeoff_scores`) carry records with values stripped (§4.3 allowlist). Same inputs, same records; no clock.
+
+**Matching (proposal, Fable 2026-09-17; thresholds are scorer configuration, versioned `rh.score/1`, pinned by a fixture beside the rebuild's).** Atoms match one-to-one, greedy by best tier, within a page: tier 1 same kind, overlapping pointer span, equal normalized value; tier 2 same kind and overlapping span; tier 3 same kind and equal value; tier 4 overlapping span only. Box overlap (IoU) substitutes for span overlap when either side has no pointer. Relationships match by matched endpoints plus kind; sections by kind plus line-range overlap; PHI is a field on the matched atom, never a separate stream. Unmatched truth is a miss; unmatched candidate is an extra.
+
+**Scoring is a count over records, grouped by any set of dimensions (owner ruling 2026-09-17: axes are open; no instance may cite a list here to refuse an axis).** Per group: precision, recall, F1, with tier 1 a clean hit and tiers 2 to 4 hits carrying derived error labels (wrong value, wrong kind, wrong box, wrong home, wrong PHI mark) read off the record's fields, never stored as categories. Per-kind, per-page, per-document, per-error, per-configuration and any combination are the same call.
+
+**Report** (unchanged in intent): one PHI-free report per run keyed by the configuration tuple: the group table requested, totals, cost and failure rows from the runner's ledger joined on the tuple, and the unmatched lists as ids (disputes must be findable; a candidate consistently missing truth artifacts is a re-grade trigger).
+
+**Build order (proposal):** S1 the scorer module, pure, with fixture and version pin (api, Opus 5; Fable reviews the matching rules first). S2 a scoring route taking two package ids and a group_by list, proven live on candidate zero of staging package 9e16cb41. S3 a re-ingest candidate on staging, same source, scored. S4 the V3 runner and response cache plug in above it. ROADMAP F-NEW-TT tracks it.
 
 **Runner.** A separate entry point on the F-NEW-MP replay harness — never production DOs, never `ingest_jobs`. Scripted fetch serves every route EXCEPT the vendor under test, which goes live through the **response cache**, content-addressed by `(vendor, config_bundle_version, document_hash)`. A vendor pays for each corpus document at most once, ever; every later run replays free. **Audit-verified prerequisite:** the scripted-fetch route table supports a passthrough route as-is (ordered, first-match-wins), but the handler ctx must be extended to thread the original `(input, init)` — today headers are dropped and FormData bodies degrade, so the Llama upload could not be forwarded. One-line seam change, done first in V3. A live Bedrock lane additionally needs real credentials in the harness env (the injected branch already hands over a fully signed request, forwardable as-is).
 
 **One variable per run.** A run varies exactly one configuration element and pins the rest; the manifest names the full configuration tuple; the report is keyed by it.
-
-**Scoring dimensions:** extraction quality (per-kind P/R/F1 + PHI-stream F1, matching by kind + normalized value + location tolerance — the resolver's fold semantics, NOT `computeMetrics`' stored numbers); geometry fidelity (tolerance-based IoU — graded boxes are LlamaParse-era; exact match would punish better boxes); latency (real timers on vendor calls + phase-event-shaped step timings); cost (ledger intents priced through the MY rate card; token/credit counts flow before MY lands); failure profile (per-vendor `FAILURE_CLASS` distribution incl. document-fault rate).
-
-**Report.** One PHI-free report per run: config manifest, per-kind score table, totals, cost, failure rows, AND the unmatched-atom lists (disputes must be findable — a candidate consistently "missing" corpus artifacts is a re-grade trigger, §5.3). Persisted append-only; v1 target is `bakeoff_runs` / `bakeoff_scores` on the ADI DB so the console can grow a leaderboard, JSON artifact acceptable as v0.
 
 ### 4.2 Live A/B routing (owner-ruled IN scope; supersedes v1's deferred shadow mode)
 
