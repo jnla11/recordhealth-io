@@ -168,14 +168,15 @@ Open:
 10. **Owner's calls in §6.** The sort key. (Refusing the lock on unvetted atoms is ruled: GR-17.)
 11. **Parked: "accept all remaining."** A bulk action to vet every unvetted atom at once, raised so GR-17's lock-refuses-while-unvetted rule doesn't force clicking through a large document one atom at a time. Parked, not designed or built.
 12. **Parked: a delete-reason mechanism.** GR-18 drops reasons from delete entirely, including `no_fitting_kind` and the `fp_*` taxonomy (§3); item 4 waits on it. Parked, no trigger to bring it back.
+13. **Staging Pages alias, drift.** A staging Pages alias for the ADI console, deployed 2026-09-16, was drift: GR-38 rules one console deployment only, on `main`. Removed as operator cleanup, not build-order work.
 
 ## 10. Build order (replaces v1.3 §10)
 
 Each step ships alone, suite green, staging then production. Close condition for every step: a live check by Claude Code on staging.
 
-1. **The fact detail panel (console only).** GR-32's layout and its removals, GR-34's save-on-change with "Record correction" and the draft gone, GR-36's word-selection controls. No server change. Close: on staging, one fact's text, kind and a kind-specific field each corrected and painted from the re-read; one position saved from the word tool and undone with the back circle; the removed rows absent from the panel.
+1. **The fact detail panel (console only).** GR-32's layout and its removals, GR-34's save-on-change with "Record correction" and the draft gone, GR-36's word-selection controls. No server change. Close: a live check by Claude Code on the one console, pointed at staging data; whether the console can be pointed at the staging Worker is confirmed in step 1's audit. One fact's text, kind and a kind-specific field each corrected and painted from the re-read; one position saved from the word tool and undone with the back circle; the removed rows absent from the panel.
 2. **Server: per-kind field declaration and the descendant refusal.** GR-33's published field list with its schema version bump, GR-29's server-side refusal of a section placed under its own descendant. Carries the phone's drift check (§9 item 7). Close: on staging, the published schema names the fields per kind and the console renders from it alone; a descendant parent is refused by the route, not only by the console; no drift beacon.
-3. **The Sections tab and the section dropdowns.** GR-30's boxes on the page image, click-to-filter, section kind dropdown and parent dropdown; GR-31's Section dropdown on the fact; the tree and "Move to…" and drag removed. Close: on staging, one fact moved between sections from its dropdown, one section re-parented, one section's kind corrected, each carried into the corrected core at lock.
+3. **The Sections tab and the section dropdowns.** GR-30's boxes on the page image, click-to-filter, section kind dropdown and parent dropdown; GR-31's Section dropdown on the fact; the tree and "Move to…" and drag removed. Close: a live check by Claude Code on the one console, pointed at staging data; whether the console can be pointed at the staging Worker is confirmed in step 1's audit. One fact moved between sections from its dropdown, one section re-parented, one section's kind corrected, each carried into the corrected core at lock.
 4. **PHI.** In order inside the step: the red-everywhere fix (GR-35), then the token audit, then the token build. Close: on staging, a fact marked PHI is red in card stripe, page box, grouping and PHI-only filter at once; a marked fact carries an ADI-minted token in the log; the lock's behavior on a PHI fact with no token is whatever the audit settled, and is not silent.
 
 **Rows: deferred** (GR-31), until the owner has stepped through the new panel.
@@ -195,11 +196,11 @@ Each step ships alone, suite green, staging then production. Close condition for
 - GR-27 (2026-09-17): the §5 retirement and open-axes ruling (§5), with the owner's own words on the model quoted there.
 - Build step 4 (v1.3 §10 item 4, the tree) shipped 2026-09-17 in `recordhealth-api`, commits `d919abb..3df7042`, `rh.rebuild/4`; see that repo's `docs/archive/SESSION_LOG.md`. The tree it shipped is removed by GR-30; the relationship route it established is what GR-31's dropdowns write.
 - GR-28 through GR-37 (2026-09-17/18): the console's shape — checkmark and X meaning (GR-28), server-side descendant refusal (GR-29), the tree replaced by the Sections tab (GR-30), dropdowns instead of "Move to…" and drag with rows deferred (GR-31), the fact detail layout and its removals (GR-32), server-declared per-kind fields (GR-33), save-on-change (GR-34), PHI red everywhere and the ADI-minted token (GR-35), the word-selection controls (GR-36), the whole layout a trial until the owner has stepped through it (GR-37). Applied to §1, §2, §6.1, §7, §9 and §10.
+- GR-38 (2026-09-18): the "no staging console" question is ruled. There is one ADI console deployment, on `main`; there is no staging console. The staging Pages alias deployed 2026-09-16 was drift, not a second deployment, and is removed as operator cleanup, not build-order work (§9 item 13). §10's close conditions for the console-only steps (1, 3) are rewritten to a live check on the one console, pointed at staging data.
 
 **UNRULED — recorded, not to be built:**
 
 - The created-fact detail panel. Today a created fact has no panel. What it should show, and whether it is the GR-32 panel or something narrower, is unruled.
 - Whether a lock refuses on unresolved PHI flags. Stays under `F-NEW-SW` (§9 item 6). GR-35 rules only that the lock must not pass silently.
-- The "no staging console" rule in `recordhealth-api/CLAUDE.md` ("The ADI console is ONE Pages deployment, on `main` — there is no staging console"), which the owner never ruled. It bears on §10: every step's close condition is a live check on staging, and the console half of a step has no staging deployment to check under that rule.
 
 - Open: §9; the codes in §3; §4.1 and §6.2's sort key as proposals; "accept all remaining" parked (§9 item 11).
