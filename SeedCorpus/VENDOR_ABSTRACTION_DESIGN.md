@@ -1,7 +1,7 @@
 # Vendor Abstraction + Bakeoff Design
 
-Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass)
-Last verified: 2026-09-17
+Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass); v1.1's retired resolver language struck from §4.1, §5, §6 and §8 on 2026-09-18
+Last verified: 2026-09-18
 Date: 2026-08-21 (v1 same day; v1.1 supersedes it in place)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/VENDOR_ABSTRACTION_DESIGN.md`
 
@@ -87,17 +87,17 @@ Phase events: `vendor` id needs a `PHASE_EVENT_COLUMNS` entry, an INSERT column,
 
 ### 4.1 Offline corpus bakeoff — the primary mode
 
-Ground truth = the reviewer-graded seed corpus. **v1.1 correction (audit): there is no supersession-chain resolution — `data_atoms.supersedes` is DDL-only; nothing writes or reads it.** The v1 language is retracted. The real ground-truth rule is **latest locked grading submission wins** (append-only, amendments are full snapshots).
+(v1.1's opening paragraph — ground truth as a resolved grading submission — is deleted as of 2026-09-18; the amendment below stands alone and is the whole of §4.1's ground-truth rule.)
 
 ### §4.1 amended 2026-09-17 (owner rulings; Fable spec pass)
 
-**Ground truth is the corrected package (PACKAGE_DESIGN §7; ADI_GRADING v1.3 §6, GR-16/17).** The resolver of v1.1 is retired: it folded grading_submissions and data_atoms, which the lock's rebuild replaces. Ground truth for a source document is the newest locked corrected core for its `source_hash`, identified by `corrected_core_hash` and `rebuild_version`. Every report binds to that pair; a re-lock is a new truth version and cross-version comparison is flagged (§4.3).
+**Ground truth is the corrected package (PACKAGE_DESIGN §7; ADI_GRADING v1.4 §6, GR-16/17).** The resolver of v1.1 is retired: it folded grading_submissions and data_atoms, which the lock's rebuild replaces. Ground truth for a source document is the newest locked corrected core for its `source_hash`, identified by `corrected_core_hash` and `rebuild_version`. Every report binds to that pair; a re-lock is a new truth version and cross-version comparison is flagged (§4.3).
 
 **A candidate is any core with the same `source_hash`,** keyed by its manifest's configuration tuple: a re-ingest package, a bakeoff run's output, or the graded package's own original core (candidate zero, the incumbent baseline, free). Nobody scores the reviewer; the reviewer makes truth.
 
 **The scorer compares one candidate core against one truth core and emits records.** One record per truth instance and one per unmatched candidate instance, for atoms, relationships and sections (rows when step 5 lands). A record carries every dimension known: class, kind on each side, page, truth section, match tier, pointer span overlap, box overlap, normalized value equality, PHI mark on each side and its type, table and row, configuration tuple, truth hash, candidate hash, scorer version. Records are computed on request and stored nowhere; reports persisted by the runner (append-only, `bakeoff_runs` / `bakeoff_scores`) carry records with values stripped (§4.3 allowlist). Same inputs, same records; no clock.
 
-**Matching (proposal, Fable 2026-09-17; thresholds are scorer configuration, versioned `rh.score/1`, pinned by a fixture beside the rebuild's).** Atoms match one-to-one, greedy by best tier, within a page: tier 1 same kind, overlapping pointer span, equal normalized value; tier 2 same kind and overlapping span; tier 3 same kind and equal value; tier 4 overlapping span only. Box overlap (IoU) substitutes for span overlap when either side has no pointer. Relationships match by matched endpoints plus kind; sections by kind plus line-range overlap; PHI is a field on the matched atom, never a separate stream. Unmatched truth is a miss; unmatched candidate is an extra.
+**Matching (proposal, Fable 2026-09-17; thresholds are scorer configuration, versioned `rh.score/1`, pinned by a fixture beside the rebuild's).** Atoms match one-to-one, greedy by best tier, within a page: tier 1 same kind, overlapping pointer span, equal normalized value; tier 2 same kind and overlapping span; tier 3 same kind and equal value; tier 4 overlapping span only. Box overlap (IoU) substitutes for span overlap when either side has no pointer. Relationships match by matched endpoints plus kind; sections by kind plus line-range overlap; PHI is a field on the matched atom, never a separate stream. Unmatched truth is a miss; unmatched candidate is an extra. Pointer-first matching is an unverified proposal: whether line and word positions are comparable across parses is an open audit question, and box overlap may turn out to be the primary measure.
 
 **Scoring is a count over records, grouped by any set of dimensions (owner ruling 2026-09-17: axes are open; no instance may cite a list here to refuse an axis).** Per group: precision, recall, F1, with tier 1 a clean hit and tiers 2 to 4 hits carrying derived error labels (wrong value, wrong kind, wrong box, wrong home, wrong PHI mark) read off the record's fields, never stored as categories. Per-kind, per-page, per-document, per-error, per-configuration and any combination are the same call.
 
@@ -129,7 +129,7 @@ Mechanics: percentage-split config consulted at the coordinator's dispatch path;
 
 1. ~~Core-tier feasibility~~ — **resolved by V0**: survives, with the §1.2 Textract obligations named.
 2. **Attribution vs. realism** — prompts tuned for the incumbent understate a new vendor's ceiling on first pass. Accepted; a per-provider refit (§1.1) is just another configuration under the one-variable rule.
-3. **Ground-truth drift** — corpus embodies LlamaParse-era sectioning/geometry, and submissions can't name the prompt version that produced their Layer 1. Tolerance matching + findable disputes (unmatched-atom lists) mitigate; consistent artifact-losses trigger re-grades.
+3. **Ground-truth drift** — corpus embodies LlamaParse-era sectioning/geometry. Tolerance matching + findable disputes (unmatched-atom lists) mitigate; consistent artifact-losses trigger re-grades.
 4. **Corpus size vs. cost** — each candidate pays the corpus once; size is both the price knob and the statistical-power knob. Owner call once MY yields real per-page rates.
 5. **Extract-arm coverage** — Textract has no structured-extract analog; a parse-only vendor bakes off with the incumbent extract arm held constant, and the report says which arm combination ran.
 6. **Stamp rework delicacy (new)** — per-job stamp resolution touches hold release, tombstones, and the memo, all liveness-critical. It gets its own pre-implementation review inside V5, same posture as the liveness rungs.
@@ -139,11 +139,11 @@ Mechanics: percentage-split config consulted at the coordinator's dispatch path;
 - **V0 — audits. DONE 2026-08-21.** Worker-side 7-question audit + iOS caller check; findings folded into this v1.1.
 - **V1 — inference provider registry.** The `callBedrock` move + the three satellites (§2) + telemetry threading (§3.3: ledger vendor literal, phase-events column + migration, error_events column + migration). Zero behavior change; suite is the proof. ~1 sprint.
 - **V2 — parse adapter formalization + config carveout.** LlamaCloud code becomes adapter #1; Extract's prompt/schema move into the bundle and gain their first explicit version constant; capabilities declared; vendor id threaded. Zero behavior change. ~1–2 sprints (delicate file, big suite).
-- **V3 — bakeoff harness, offline mode.** The harness ctx `(input, init)` extension first; then corpus runner + response cache; the ground-truth resolver (a sprint of its own — §4.1's folding rules); the scorer; report storage. Deliverable: the incumbent baseline score. ~3 sprints.
+- **V3 — bakeoff harness, offline mode.** The harness ctx `(input, init)` extension first; then corpus runner + response cache; ground-truth selection: the newest locked corrected core per `source_hash`, which does not exist as code yet; the scorer; report storage. Deliverable: the incumbent baseline score. ~3 sprints.
 - **V4 — second adapter + deploy-scoped routing.** Textract-family parse adapter per §1.2 obligations; deploy-scoped vendor selection config (staging-first, env-gated per the force-fresh precedent — needs NO stamp rework); first true bakeoff: incumbent vs. candidate, same corpus. ~1–2 sprints.
 - **V5 — live A/B routing.** In order: F-NEW-MY design + rate-card wiring of the ledger arithmetic (§3.2); the per-job stamp rework (§3.1, own pre-implementation review); coordinator percentage-split + BAA gate (§4.2). Sized after MY's design lands; the stamp rework alone is ~1 sprint plus review.
 
-Model routing per project convention: V1/V2 refactors → Opus 5; V3 → Opus 5 with Fable on the resolver's folding rules and scorer matching; V4 adapter → Opus 5; V5 stamp rework review → Fable.
+Model routing per project convention: V1/V2 refactors → Opus 5; V3 → Opus 5 with Fable on ground-truth selection and scorer matching; V4 adapter → Opus 5; V5 stamp rework review → Fable.
 
 Roughly 6–9 sprints through V4 + first bakeoff; V5 sized after MY.
 
@@ -154,5 +154,5 @@ No per-document *intelligent* routing (A/B is random split; smart routing needs 
 ## 8. Side findings filed out of this design (to land as F-items at next ROADMAP pass) ⟲
 
 1. **Dead vendor code deletion (cleanup item).** Worker: the `/document/parse` sync relay (five bare fetches) and the `/document/analyze` Textract relay + its AwsClient — both caller-less, confirmed by the iOS audit; the inert `AWS_TEXTRACT_*` / `AWS_ANALYZEDOC_*` secrets and IAM users join the item as operator cleanup. iOS: `LlamaParseResponseAdapter` (orphaned, zero callers of `makeParsedPages`) + the stale comments in `FileTextExtractor.swift:161` and the adapter's own header. Deleting `/document/parse` also closes an untracked exposure: it shipped PHI to LlamaCloud with zero ledger/error capture while it lived.
-2. **Grading metrics verdict-drift defect.** The console emits `accepted`; server-side `computeMetrics` counts only `confirmed/corrected/rejected`, so every stored grading summary undercounts review coverage today. Independent of the bakeoff; the resolver (§4.1) works around it, but the stored metrics should be fixed or re-derived.
+2. ~~**Grading metrics verdict-drift defect.**~~ **Retired 2026-09-18.** It described a stored grading summary being undercounted by `computeMetrics`; scores computed from the log are retired entirely (ADI_GRADING_DESIGN v1.4 §5, GR-27), so there is no summary left to fix or re-derive.
 3. **Doc staleness.** `WORKER_ARCHITECTURE.md`'s `/document/analyze` section describes a retired route as current — restamp at next sprint close alongside this design's adoption.
