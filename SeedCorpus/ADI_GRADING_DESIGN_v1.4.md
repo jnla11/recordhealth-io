@@ -1,7 +1,7 @@
 # ADI Grading Design
 
-Status: current, design v1.4 (shape, not spec), owner rulings of 2026-09-17/18 applied; supersedes v1.3 (`ADI_GRADING_DESIGN_v1.3.md`, now historical) and, behind it, v1.2 (`ADI_GRADING_DESIGN.md`).
-Last verified: 2026-09-18
+Status: historical, design v1.4 (shape, not spec) — superseded 2026-09-19 by v1.5 (`ADI_GRADING_DESIGN_v1.5.md`), which carries v1.4 forward and applies the owner rulings of 2026-09-18/19 (GR-39 onward). Read v1.5 for the current design; this file is kept for history.
+Last verified: 2026-09-19
 Date: 2026-09-18
 Repo home: `RecordHealth.IO/SeedCorpus/ADI_GRADING_DESIGN_v1.4.md`
 
