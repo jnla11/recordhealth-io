@@ -2,7 +2,7 @@
 
 Status: design v1.5 (shape, not spec), owner rulings applied, R2 shipped, R3 rulings folded and R3's server step shipped
 Date: 2026-09-07 (v1.0 2026-09-05; v1.1 after the phone-side inventory R1a; v1.2 after the identity audit R1b; v1.3 after the R2 spec pass; v1.4 after R2 shipped, §2's table regenerated and §12 marked done; v1.5 after R3's owner rulings R3-1..R3-11 and the R3 server step)
-Last verified: 2026-09-18
+Last verified: 2026-09-20
 Repo home: `RecordHealth.IO/SeedCorpus/RELATIONSHIP_DESIGN.md`
 
 Owns the relationship model for Record Health: how a relationship between two things is recorded, declared, authored, inferred, graded, indexed, and exported. One home for the definition; every other doc points here and restates nothing. Supersedes the edge mechanics in `RecordHealth_App/docs/DATA_MODEL.md` §3.3.1 (AtomEdge becomes a display projection, §8), the relationships list in `PACKAGE_DESIGN.md` §6, the edge addressing sentence in `ADI_GRADING_DESIGN.md` §3, and the link-authoring proposal audited 2026-09-05 (F-NEW-RM). `EVENTS_INTERACTIONS_DESIGN.md` keeps the semantics of events and keystone confirmation; its membership edges register here (§3). Grounded in two inventories of 2026-09-05: Worker side (43 sites, 13 test pins, 7 doc statements, no two of which agreed on shape; recordhealth-api SESSION_LOG 2026-09-05) and phone side (R1a: 92 production lines across 11 files, 19 pinning tests, 24 doc statements of which 6 are stale, and eleven relationship shapes beside AtomEdge; RecordHealth_App SESSION_LOG 2026-09-05; the disposition of each shape is §8.1).
@@ -179,7 +179,7 @@ Roles that a summary may show on an inference are a registry decision per role, 
 
 ## 7. Grading (points at ADI_GRADING_DESIGN)
 
-A relationship is one gradeable class, `relationship`, with a per-kind breakdown in the scores (`by_kind`), because `belongs_to_panel` measures the extractor and `member_of_section` measures the Atom Pass and one merged number hides which regressed. Kinds with `emitted_by: null` report under `authored_only` and stay out of the class aggregate until something emits them.
+A relationship is one gradeable class, `relationship`, with a per-kind breakdown of progress counts — vetted, corrected, and deleted per kind, for the reviewer's own progress, never a score — because `belongs_to_panel` measures the extractor and `member_of_section` measures the Atom Pass and one merged count hides which regressed. Kinds with `emitted_by: null` progress the same way: there is nothing to vet until the reviewer authors one, so the kind sits at zero until then.
 
 A verdict targets the entry id (`target: { entity: relationship, id }`). A reviewer-authored entry is `op: add` and counts as a discovery for recall. Withdrawal is `op: remove` on the id. Re-homing a pipeline entry is either a `corrected` verdict on `target` or reject-then-add; both stay legal, and the uniqueness rule (§1) refuses an add while a live asserted entry of that kind exists on the source with `cardinality: one`. A verdict on a reviewer-authored entry targets the amendment id, never the entry id, so it cannot supersede the add in the fold (this hazard exists for discoveries today and is fixed in the same step). Authoring an entry the pipeline already emitted is refused (`relationship_already_in_core`); the console offers accept. The write route reads the core when a batch carries a relationship entry so endpoints can be verified; a bad endpoint in an append-only log is permanent.
 

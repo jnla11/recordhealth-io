@@ -1,7 +1,7 @@
 # Vendor Abstraction + Bakeoff Design
 
 Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass); v1.1's retired resolver language struck from §4.1, §5, §6 and §8 on 2026-09-18
-Last verified: 2026-09-18
+Last verified: 2026-09-20
 Date: 2026-08-21 (v1 same day; v1.1 supersedes it in place)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/VENDOR_ABSTRACTION_DESIGN.md`
 
@@ -81,7 +81,7 @@ The ledger already carries `vendor` as a first-class field — new vendor rows s
 
 ### 3.3 Telemetry columns
 
-Phase events: `vendor` id needs a `PHASE_EVENT_COLUMNS` entry, an INSERT column, and a migration on `ingest_phase_events` — additive, sanitizer-compatible. `error_events`: a vendor column needs a migration + `insertErrorEvent` change under the table's strict-allowlist rule (today vendor detail reaches it only mangled into strings). Both migrations run via the Neon browser editor per standing rule. `vendor_errors[]` and hold records already carry vendor / `failure_version` — free. `VendorHealthDO` is already addressed by vendor id — new vendors get breaker coverage by enum membership.
+Phase events: `vendor` id needs a `PHASE_EVENT_COLUMNS` entry, an INSERT column, and a migration on `ingest_phase_events` — additive, sanitizer-compatible. `error_events`: a vendor column needs a migration + `insertErrorEvent` change under the table's strict-allowlist rule (today vendor detail reaches it only mangled into strings). Both migrations run through recordhealth-api/scripts/apply-migration.mjs, staging before production (owner ruling 2026-09-16; see recordhealth-api CLAUDE.md § Database architecture). `vendor_errors[]` and hold records already carry vendor / `failure_version` — free. `VendorHealthDO` is already addressed by vendor id — new vendors get breaker coverage by enum membership.
 
 ## 4. The bakeoff harness ⟲
 
