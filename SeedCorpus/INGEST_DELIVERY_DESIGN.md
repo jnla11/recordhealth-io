@@ -3,7 +3,7 @@
 Status: DRAFT v1.3
 Last verified: 2026-08-07
 
-**Provenance:** produced in one Fable design session on 2026-08-07, against INGEST_LIVENESS_DESIGN.md v5, WORKER_ARCHITECTURE.md (L6/L7 state as of 2026-08-06), the app repo through `d3db472`/`308d0a9`, and ROADMAP items F-NEW-LI, F-NEW-OI, F-NEW-LJ. Shape-not-spec: this doc fixes the architecture, the invariants, and the phase boundaries; exact copy, exact numbers marked as rulings, and code-level naming are decided at implementation or by the owner rulings in §9.
+**Provenance:** produced in one Fable design session on 2026-08-07, against INGEST_LIVENESS_DESIGN.md v5, INGEST_ARCHITECTURE.md (L6/L7 state as of 2026-08-06), the app repo through `d3db472`/`308d0a9`, and ROADMAP items F-NEW-LI, F-NEW-OI, F-NEW-LJ. Shape-not-spec: this doc fixes the architecture, the invariants, and the phase boundaries; exact copy, exact numbers marked as rulings, and code-level naming are decided at implementation or by the owner rulings in §9.
 
 ---
 
@@ -222,7 +222,7 @@ Dependencies: P1 ∥ P0; P2 → P3 → P4; P5 gates only the L7 retention arm; P
 
 1. **Correction to §9B ruling 3's premise.** Ruling 3's "current code still deletes flat at 5 days" was false as stated: at the time of that ruling, nothing deleted unfetched results at all — the 5-day timer was still-unbuilt design text (INGEST_LIVENESS_DESIGN.md §A), and a repo audit confirmed no retention mechanism existed to have "still" been doing anything. The ruling's substance — evidence-gated retention, 15-day outer cap for `reachable`/`undelivered` — stands unchanged; the implementation that followed was greenfield, not a modification of a pre-existing flat-5-day deleter.
 
-2. **Status: the full layer is BUILT, DEPLOYED (staging and production), and device-verified.** P1 (app wake handler: slim delegate, `sweep(trigger: .push)`, 20s watchdog), P2/P3 (push registration route + send at every success terminal), evidence breadcrumbs (per-job push evidence including `no_channel`, sweep-trigger recording, result-byte size), and the rung-5 retention sweeper (5-day mark, 15-day outer cap, every ambiguity retains, `retention_expired` class, tombstones) are all shipped. Structure lives in recordhealth-api/docs/WORKER_ARCHITECTURE.md and recordhealth_app/docs/ARCHITECTURE.md §3.8 — not restated here.
+2. **Status: the full layer is BUILT, DEPLOYED (staging and production), and device-verified.** P1 (app wake handler: slim delegate, `sweep(trigger: .push)`, 20s watchdog), P2/P3 (push registration route + send at every success terminal), evidence breadcrumbs (per-job push evidence including `no_channel`, sweep-trigger recording, result-byte size), and the rung-5 retention sweeper (5-day mark, 15-day outer cap, every ambiguity retains, `retention_expired` class, tombstones) are all shipped. Structure lives in recordhealth-api/docs/INGEST_ARCHITECTURE.md and recordhealth_app/docs/ARCHITECTURE.md §3.8 — not restated here.
 
 3. **Verification posture.** Registration and collection observed live; the delivery chain is proven end to end by an observed `trigger=push` wake sweep from a real device. Prompt background-wake latency remains iOS-discretionary, as §1's layering always assumed — not a defect, and measured on an ongoing basis via the recorded evidence (§9B ruling 4's breadcrumbs); surfacing that measurement is filed as F-NEW-PB in the app repo ROADMAP.
 

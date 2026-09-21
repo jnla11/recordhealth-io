@@ -15,7 +15,7 @@ Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document pac
 - R4. The Worker never submits to the ADI. Users control their data; ADI submission is voluntary for users, if offered at all. Development submits from the device.
 - R5. A graded package returning from the ADI replaces the original. The ADI is a ground-truth process, not a routine user path; most packages will never be graded; grading takes the user's amendments into account.
 - R6. Field-level schema drift between Worker, phone, and ADI is unacceptable. The server sets the schema; the phone and the ADI consume it; a new field reaches a deployed phone without a release.
-- R7. A partial document never reaches a user's tree. Repair completes on the Worker or the document fails visibly (shipped 2026-08-27, WORKER_ARCHITECTURE § Repair executor).
+- R7. A partial document never reaches a user's tree. Repair completes on the Worker or the document fails visibly (shipped 2026-08-27, INGEST_ARCHITECTURE § Repair executor).
 - R8. Grading granularity is set by what the record contains, never by reviewer effort. Ground truth must be able to assert structures the incumbent pipeline does not emit (checkbox state first).
 - R9. User changes ride as versioned amendments. The original and every amended version are both visible and both searchable. An amendment is data: training signal and a longitudinal edge (a provider's recurring misspelling becomes an alias case).
 - R10. User amendments always travel with an ADI submission.
