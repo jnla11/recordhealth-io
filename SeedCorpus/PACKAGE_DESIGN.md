@@ -317,11 +317,11 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   n. A fact marked PHI whose type was dropped (off-list) is minted as otherIdentifier (per-user). The dropped type is logged as a finding; false PHI positives are data, never discarded.
   o. Dictionary unavailable at ingest (snapshot missing, or missing the prefix or shared flag for a type): the job holds and retries through the existing vendor/service outage hold-and-release path. It never ships untokenized PHI.
   p. Token digest length: 16 hex characters.
-  q. Key version (item e): placement not yet ruled.
+  q. Key version (item e) sits inside the token text itself, so a token copied anywhere says which key made it (owner ruling 2026-09-22). Exact format is set in the F-NEW-UL build.
   r. Build and ship order: each piece ships to staging and is tested as built. Tokens disagree across Worker, phone and ADI until the last piece lands; accepted in dev.
   s. Shared value store: user-flow database, one table per environment. One row per shared token: token, phi_type, key version, the value as first spelled, first-seen and last-seen times. Written at mint, by the ingest job and by the mint endpoint.
   t. Anonymous document rows: one row per ingested document, keyed by the document's content fingerprint (a re-ingest adds no second row). Holds the shared tokens that appeared in it, each date with its date role, each token with the section it sat in. No user id, no job id. Written by the ingest job at mint. Encounter rows and provider identity (NPI) build on this later: ROADMAP F-NEW-VA and F-NEW-UZ.
-- Open: OR-18 q (key version placement).
+- Open: none.
 
 ---
 
