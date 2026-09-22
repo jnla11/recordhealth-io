@@ -1,6 +1,6 @@
 # Document Package Design
 
-Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3; OR-18 ruled 2026-09-22, unbuilt
+Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3; OR-18 ruled 2026-09-22, unbuilt; OR-18 j–t ruled 2026-09-22, unbuilt
 Last verified: 2026-09-22
 Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped); §3's derived-layers sentence narrowed to inferences in place, 2026-09-07 (R3 audit ruling 6)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
@@ -301,16 +301,27 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-16 (token minting, 2026-09-04): ruled, R16. Supersedes the §2.3 refusal and the app-side "one-tokenizer-on-the-phone-only" reading of the sacred rule. The ADI is never user-facing (owner statement), which is why it may hold the value-to-token link. Sprint 6 receive becomes record-not-refuse; sprint 7 adds reviewer PHI marking with ADI minting; sprint 9 reconciliation covers ADI-minted tokens. Shipped 2026-09-04 on both sides of the wire: the ADI receive (api `5c3d0d6`, staging and production) and the phone's own gap recording at seal (app `819481d`, its first amendment writer); sprint 7 reviewer marking and sprint 9 reconciliation pending.
 - OR-17 (relationship model, 2026-09-05): relationship model ruled, RL-1..RL-9. `RELATIONSHIP_DESIGN.md`.
 - OR-18 (2026-09-22). Token minting (supersedes R16 / OR-16 and the "INGEST WORKER MINTS NOTHING" sacred rule):
-  a. The ingest Worker is the primary minter. It derives a PHI token inside the ingest job, stateless, retains no value, and returns the token in the result. The phone stops minting. A phone-side mint for user-added facts is parked with the trigger "offline use demands it".
+  a. The ingest Worker is the primary minter. It derives a PHI token inside the ingest job, stateless, retains no value, and returns the token in the result. The phone stops minting. A phone-side mint for user-added facts is parked with the trigger "offline use demands it". Exception (owner ruling 2026-09-22): the server keeps the values of the shared types in item d (see items s and t). Per-user values are never kept.
   b. Derivation: keyed HMAC over (phi_type, normalized value) with one Worker secret, ADI_TOKEN_SECRET, shared by the ingest mint, the mint endpoint and the ADI. For per-user types the user's Apple sign-in id is mixed in; for shared types it is not.
-  c. One token prefix per phi_type, no folding into token types. The prefix map and the shared/per-user flag are per-term attributes in the dictionary (OR-12 curation plus publish), not code.
+  c. One token prefix per phi_type, no folding into token types. The prefix map and the shared/per-user flag are per-term attributes in the dictionary (OR-12 curation plus publish), not code. Owner ruling 2026-09-22: this overrides INGEST_VOCABULARY_DESIGN's derivation freeze ('vocabulary may grow, derivation never changes'). A dictionary attribute may change a token; changing a type's prefix or shared flag is a re-mint of that type.
   d. Shared across users: providerName, providerPhone, providerFax, providerAddress, facilityName, facilityAddress, staffName, and the five date types. Every other phi_type is per-user.
   e. The token carries a key version so the secret can be rotated; rotation is a global re-mint.
   f. The phone obtains tokens for facts that never cross the Worker (FHIR/HealthKit imports) by sending (phi_type, value) pairs to a Worker mint endpoint and receiving tokens; the bundle never leaves the phone. The endpoint ships with rate limiting.
   g. The user's sign-in id travels with the package to the ADI from this sprint, so the ADI computes the identical token for every type. No ADI-namespace tokens, no reconciliation of ADI tokens at graded return.
   h. Existing tokens are not migrated: wipe and re-ingest (staging packages purged, dev devices re-ingested; saved dev chat history is lost).
   i. The tokens layer is Worker-authored, not phone-authored. The ADI's edit rule stands as shipped 2026-09-22: a value edit moves the fact to the token for the new value; an unmark retires the token's use; a re-mark revives the same uid.
-- Open: none at v1.7.
+  j. Token placement: the Worker's token rides on each fact in the result, beside its PHI mark. The package's tokens layer stays the live copy the ADI edits.
+  k. Value hashed: the fact's own text (source_text) only. No codex-line fallback. A PHI fact with no text gets no token and is recorded as a gap.
+  l. Normalization before hashing: trim, collapse every run of whitespace to one space, lowercase.
+  m. Date of birth is per-user. "The five date types" in item d are dateOfService, dateOfReport, dateOfAdmission, dateOfDischarge, dateSigned.
+  n. A fact marked PHI whose type was dropped (off-list) is minted as otherIdentifier (per-user). The dropped type is logged as a finding; false PHI positives are data, never discarded.
+  o. Dictionary unavailable at ingest (snapshot missing, or missing the prefix or shared flag for a type): the job holds and retries through the existing vendor/service outage hold-and-release path. It never ships untokenized PHI.
+  p. Token digest length: 16 hex characters.
+  q. Key version (item e): placement not yet ruled.
+  r. Build and ship order: each piece ships to staging and is tested as built. Tokens disagree across Worker, phone and ADI until the last piece lands; accepted in dev.
+  s. Shared value store: user-flow database, one table per environment. One row per shared token: token, phi_type, key version, the value as first spelled, first-seen and last-seen times. Written at mint, by the ingest job and by the mint endpoint.
+  t. Anonymous document rows: one row per ingested document, keyed by the document's content fingerprint (a re-ingest adds no second row). Holds the shared tokens that appeared in it, each date with its date role, each token with the section it sat in. No user id, no job id. Written by the ingest job at mint. Encounter rows and provider identity (NPI) build on this later: ROADMAP F-NEW-VA and F-NEW-UZ.
+- Open: OR-18 q (key version placement).
 
 ---
 
