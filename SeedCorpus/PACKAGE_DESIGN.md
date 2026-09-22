@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3
-Last verified: 2026-09-20
+Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3; OR-18 ruled 2026-09-22, unbuilt
+Last verified: 2026-09-22
 Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped); §3's derived-layers sentence narrowed to inferences in place, 2026-09-07 (R3 audit ruling 6)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
@@ -23,7 +23,7 @@ Absorbs F-NEW-MQ (app-side result package import) and F-NEW-QG (per-document pac
 - R12. ADI storage extends the existing structure (shape (b) below); nothing parallel.
 - R13. The package's server sprint precedes the vendor abstraction refactors.
 - R14. Size is watched, not ruled: the ADI records package size per package.
-- R16. Token minting (OR-16, 2026-09-04): the ingest Worker never mints a PHI token. The phone mints for its own records, walking the core's PHI flags (one tokenizer, one source). The ADI, a permanent admin-only surface that already holds PHI values (R11), mints tokens in its own namespace when a reviewer marks an atom PHI or authors a PHI discovery. The ADI never refuses a package for a missing token; it records the gap as a finding in the amendment log for the reviewer. A graded package returning to the phone carries ADI-minted tokens; the phone reconciles them like tokens from another device (find-or-create its own, mapping recorded as a system amendment, sprint 9), so the user's workflow uses phone tokens throughout.
+- R16. Token minting (OR-16, 2026-09-04): ~~the ingest Worker never mints a PHI token.~~ Superseded by OR-18 (§11): the Worker is the primary minter. The phone mints for its own records, walking the core's PHI flags (one tokenizer, one source). The ADI, a permanent admin-only surface that already holds PHI values (R11), ~~mints tokens in its own namespace~~ (superseded by OR-18b: a shared secret, not a namespace) when a reviewer marks an atom PHI or authors a PHI discovery. The ADI never refuses a package for a missing token; it records the gap as a finding in the amendment log for the reviewer. A graded package returning to the phone carries ADI-minted tokens; the phone reconciles them like tokens from another device (find-or-create its own, mapping recorded as a system amendment, sprint 9), so the user's workflow uses phone tokens throughout.
 - R15. Every package version carries a whole-package checksum (`package_hash` over manifest, core, tokens, and amendments as serialized for transit). Every door (phone export, ADI receive, ADI export, phone import) verifies it on receipt and records it. Every version is kept; nothing is overwritten. `core_hash` stays fixed for the life of the core; `package_hash` changes with every amendment.
 
 ---
@@ -68,7 +68,7 @@ core
   the Worker's GET /v1/ingest/result body, byte-exact as received, for a COMPLETE job only (R7)
 source
   reference to the original document bytes (originals/{recordId}, already stored)
-tokens                   (phone-authored; §2.3)
+tokens                   (Worker-authored, OR-18; §2.3)
   { atom_id -> phi_token_uid } plus the document-scoped reverse map
 amendments               (append-only log; §3)
 ```
@@ -109,7 +109,7 @@ Detail: `RecordHealth_App/docs/ARCHITECTURE.md` §3.12.
 
 ### 2.3 ADI submission
 
-The transit sends the package, not a projection. The tokens layer is not optional, but a gap in it is a finding, not a refusal (R16): the upload records every PHI atom without a token (`phi_token_missing`) and every token or PHI marking the core does not support (`phi_token_unexpected`) as a system-authored `flag` amendment, and accepts the package; the reviewer resolves it (ADI_GRADING_DESIGN §3). Only integrity refuses: `core_hash` and `package_hash` mismatches, and a package that cannot be parsed. R11 puts the PHI values and the token assignments inside the package; the ADI stores both.
+The transit sends the package, not a projection. The tokens layer is not optional, but a gap in it is a finding, not a refusal (R16): the upload records every PHI atom without a token (`phi_token_missing`) and every token or PHI marking the core does not support (`phi_token_unexpected`) as a system-authored `flag` amendment, and accepts the package; the reviewer resolves it (ADI_GRADING_DESIGN §3). Only integrity refuses: `core_hash` and `package_hash` mismatches, and a package that cannot be parsed. R11 puts the PHI values and the token assignments inside the package; the ADI stores both. Healed at receive since 2026-09-22, see WORKER_ARCHITECTURE; under OR-18 the gap no longer arises for Worker-ingested packages.
 
 The upload boundary must stop transforming the body before storing it: today `stripNullBytes` rewrites every string first, so a hash computed on the phone cannot match the stored bytes. Either the core is exempted from the strip and validated separately, or the hash is defined over the post-strip bytes and the manifest says so. The design takes the first: the core is stored as sent and sealed by the phone's hash.
 
@@ -238,8 +238,8 @@ The graded corpus is a set of packages with reviewer amendments. Ground truth is
 2. **Two sources of shape.** Compiled Swift types and the published schema both describe the result. Schema is authoritative for presence, Swift for rich handling; the same split the vocabulary lives with.
 3. **Same-target conflicts after a graded return.** R5 replaces; the returned log contains both the user's and the reviewer's amendments. The view shows the newest; both stay; the user can flip. This is the residual of the old OR-1.
 4. **PHI at rest on the ADI (R11).** PHI values and tokens are inside the package on the ADI. This is the current BAA posture for the ADI (staging project, development-only submission, R4). It is restated here so nobody reads "sealed package" as "tokenized package."
-5. **Token identity across devices.** Token ids are phone-minted and device-global. A package imported to a second phone carries the first phone's tokens; the importer reconciles them against its own vault (find-or-create by derivation, sacred rule) and records the mapping as a system amendment. Not designed further here; flagged for sprint 9.
-6. **Cross-device token map (OR-10).** The tokens layer (document-scoped reverse map) travels inside the package in the archive, per R3 and R11; it ships as-is. Reconciliation against a second phone's own vault remains the sprint 9 question (item 5 above).
+5. **Token identity across devices.** Token ids are phone-minted and device-global. A package imported to a second phone carries the first phone's tokens; the importer reconciles them against its own vault (find-or-create by derivation, sacred rule) and records the mapping as a system amendment. Not designed further here; flagged for sprint 9. Narrowed by OR-18g: for shared and per-user phi_types alike, the user's sign-in id travels with the package to the ADI, so the ADI computes the identical token every time — no reconciliation of ADI tokens at graded return.
+6. **Cross-device token map (OR-10).** The tokens layer (document-scoped reverse map) travels inside the package in the archive, per R3 and R11; it ships as-is. Reconciliation against a second phone's own vault remains the sprint 9 question (item 5 above). OR-18g removes the ADI side of this question: the ADI never mints an ADI-namespace token to reconcile.
 
 ---
 
@@ -277,7 +277,7 @@ Also: an unscheduled data-integrity fix shipped 2026-08-30 between sprints 1 and
 
 ## 10. What this design deliberately does not do
 
-No failure-record format for the ADI (exhausted jobs produce no package; a future failure package for edge-case study is separate scope). No server-side retention of packages. No change to PHI token derivation or namespaces. No vendor abstraction. No user-facing ADI submission UI. No merge semantics between two packages of the same document. No correction UI on the phone (the amendment log is designed; its first writer ships with that UI).
+No failure-record format for the ADI (exhausted jobs produce no package; a future failure package for edge-case study is separate scope). No server-side retention of packages. ~~No change to PHI token derivation or namespaces.~~ Superseded by OR-18 (§11): minting moves to the Worker. No vendor abstraction. No user-facing ADI submission UI. No merge semantics between two packages of the same document. No correction UI on the phone (the amendment log is designed; its first writer ships with that UI).
 
 ---
 
@@ -300,6 +300,16 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
 - OR-15 (patient optional, 2026-09-03): a package is submittable to the ADI with no patient. Part of the seed grading corpus is patient-agnostic so F1 deltas across bakeoffs are not confounded by patient identity. `patient_id` is an optional field on the manifest and a nullable relationship on the ADI, never a requirement; storage keys must not depend on it. Shipped 2026-09-03 (api `9f4ea3d`, migration baseline_003, keys `documents/{record_id}/...`). Residual: `knowledge_gaps.patient_id` stays required until the sprint 7 console rewrite touches that route.
 - OR-16 (token minting, 2026-09-04): ruled, R16. Supersedes the §2.3 refusal and the app-side "one-tokenizer-on-the-phone-only" reading of the sacred rule. The ADI is never user-facing (owner statement), which is why it may hold the value-to-token link. Sprint 6 receive becomes record-not-refuse; sprint 7 adds reviewer PHI marking with ADI minting; sprint 9 reconciliation covers ADI-minted tokens. Shipped 2026-09-04 on both sides of the wire: the ADI receive (api `5c3d0d6`, staging and production) and the phone's own gap recording at seal (app `819481d`, its first amendment writer); sprint 7 reviewer marking and sprint 9 reconciliation pending.
 - OR-17 (relationship model, 2026-09-05): relationship model ruled, RL-1..RL-9. `RELATIONSHIP_DESIGN.md`.
+- OR-18 (2026-09-22). Token minting (supersedes R16 / OR-16 and the "INGEST WORKER MINTS NOTHING" sacred rule):
+  a. The ingest Worker is the primary minter. It derives a PHI token inside the ingest job, stateless, retains no value, and returns the token in the result. The phone stops minting. A phone-side mint for user-added facts is parked with the trigger "offline use demands it".
+  b. Derivation: keyed HMAC over (phi_type, normalized value) with one Worker secret, ADI_TOKEN_SECRET, shared by the ingest mint, the mint endpoint and the ADI. For per-user types the user's Apple sign-in id is mixed in; for shared types it is not.
+  c. One token prefix per phi_type, no folding into token types. The prefix map and the shared/per-user flag are per-term attributes in the dictionary (OR-12 curation plus publish), not code.
+  d. Shared across users: providerName, providerPhone, providerFax, providerAddress, facilityName, facilityAddress, staffName, and the five date types. Every other phi_type is per-user.
+  e. The token carries a key version so the secret can be rotated; rotation is a global re-mint.
+  f. The phone obtains tokens for facts that never cross the Worker (FHIR/HealthKit imports) by sending (phi_type, value) pairs to a Worker mint endpoint and receiving tokens; the bundle never leaves the phone. The endpoint ships with rate limiting.
+  g. The user's sign-in id travels with the package to the ADI from this sprint, so the ADI computes the identical token for every type. No ADI-namespace tokens, no reconciliation of ADI tokens at graded return.
+  h. Existing tokens are not migrated: wipe and re-ingest (staging packages purged, dev devices re-ingested; saved dev chat history is lost).
+  i. The tokens layer is Worker-authored, not phone-authored. The ADI's edit rule stands as shipped 2026-09-22: a value edit moves the fact to the token for the new value; an unmark retires the token's use; a re-mark revives the same uid.
 - Open: none at v1.7.
 
 ---
