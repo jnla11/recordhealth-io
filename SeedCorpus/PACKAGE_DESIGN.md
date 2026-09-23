@@ -1,7 +1,7 @@
 # Document Package Design
 
-Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3; OR-18 ruled 2026-09-22, unbuilt; OR-18 j–t ruled 2026-09-22, unbuilt
-Last verified: 2026-09-22
+Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3; OR-18 ruled 2026-09-22, unbuilt; OR-18 j–ab ruled 2026-09-22/23; Worker mint, dictionary attributes and shared store shipped 2026-09-23, mint endpoint, phone and ADI re-key unbuilt
+Last verified: 2026-09-23
 Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped); §3's derived-layers sentence narrowed to inferences in place, 2026-09-07 (R3 audit ruling 6)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
@@ -317,10 +317,18 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   n. A fact marked PHI whose type was dropped (off-list) is minted as otherIdentifier (per-user). The dropped type is logged as a finding; false PHI positives are data, never discarded.
   o. Dictionary unavailable at ingest (snapshot missing, or missing the prefix or shared flag for a type): the job holds and retries through the existing vendor/service outage hold-and-release path. It never ships untokenized PHI.
   p. Token digest length: 16 hex characters.
-  q. Key version (item e) sits inside the token text itself, so a token copied anywhere says which key made it (owner ruling 2026-09-22). Exact format is set in the F-NEW-UL build.
+  q. Key version sits inside the token text (owner ruling 2026-09-22). Format: `{prefix}{keyVersion}_{16 hex}`, e.g. `prnm1_3fa9c0d1e2b4a5f6`; key version 1 is the current secret.
   r. Build and ship order: each piece ships to staging and is tested as built. Tokens disagree across Worker, phone and ADI until the last piece lands; accepted in dev.
   s. Shared value store: user-flow database, one table per environment. One row per shared token: token, phi_type, key version, the value as first spelled, first-seen and last-seen times. Written at mint, by the ingest job and by the mint endpoint.
   t. Anonymous document rows: one row per ingested document, keyed by the document's content fingerprint (a re-ingest adds no second row). Holds the shared tokens that appeared in it, each date with its date role, each token with the section it sat in. No user id, no job id. Written by the ingest job at mint. Encounter rows and provider identity (NPI) build on this later: ROADMAP F-NEW-VA and F-NEW-UZ.
+  u. Dictionary outage (item o) holds only when the job has something to mint: at least one PHI fact with text. A job with nothing to mint completes normally. The hold is released automatically once the published dictionary answers with every setting; while held, the phone sees processing, not failed.
+  v. The outage hold is labelled failure class service_fault (our own dependency unavailable, not a vendor) with discriminator dependency_unavailable. The vendor breaker ignores it.
+  w. Every PHI false positive is logged: a dropped off-list type (at ingest and at repair) as rh.phi.type drift; a fact marked PHI with no type at all as an rh.phi.type absent observation.
+  x. Shared value store and anonymous documents follow the HIPAA limited-data-set line. Kept: provider, facility and staff values; dates with their roles; which values appeared together in a document and in which section; normal timestamps. Never stored: any per-user type's value, the user id, the job id, the raw file fingerprint.
+  y. The anonymous document key is the file's content hash scrambled with the token secret (one-way). The same file always lands on the same row; the raw hash is never stored in these tables.
+  z. Writes to the shared store never block or fail an ingest. Every failed write goes to the error feed and pushes an NCC alert (phi_shared_store_failed).
+  aa. Newest ingest replaces a document's token rows. Ingests are ordered by their original start time (first dispatch, fixed for the job's life); an older ingest's assembly or repair writes no token rows. Shared values are always recorded.
+  ab. Token rows are keyed by document, token and section; a fact in no section has an empty section.
 - Open: none.
 
 ---
