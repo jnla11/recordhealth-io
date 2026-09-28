@@ -1,7 +1,7 @@
 # Date Rules Design
 
 Status: living (shape, not spec), owner rulings of 2026-09-26 applied (GR-84 through GR-107, recorded in `ADI_GRADING_DESIGN_v1.6.md`); the audit GR-77 called for is §2 here; the one conflict §11 opened is closed by GR-107. Repo home: `RecordHealth.IO/SeedCorpus/DATE_RULES_DESIGN.md`.
-Last verified: 2026-09-26
+Last verified: 2026-09-28
 
 Owns the date rules: how a date is read from text, what its normalized form is, how it is displayed, how the vendor's date is kept, raw and normalized, beside ours and nothing is overwritten, where the one rule set lives, and what the date role requires. `ADI_GRADING_DESIGN_v1.6.md` §7 points here for the date checks on the console and says nothing more about them; `DATA_MODEL.md` §4.7 and `ARCHITECTURE.md` §3.2 in `RecordHealth_App/docs` point here by name for the reading and normalization of a date fact and keep the role list and the edge mapping. Nothing here is built. Anything the owner did not rule is stated as open, never settled.
 
@@ -108,6 +108,8 @@ The rule set is: the reader of §4, the normalized form of §3 with its ordering
 **Option D. The backend computes, the phone reads.** The normalized date is a field on the core atom, written by the backend from the text at import and rewritten by the write route whenever the text is corrected. The console runs the same module the backend runs. The phone never reads a date fact's text: Layer 2 reads the stored normalized date. Cost: the phone still formats the normalized form for display (§7), a small piece of Swift; and the phone's own dates (profile date of birth, Apple Health, record dates) are outside the rule set until the owner brings them in. The phone's rebuild loses a parse and gains nothing to keep in sync for facts.
 
 **D, with C's fixture for the display piece (GR-100).** The rule set is one JavaScript module in `recordhealth-api`, used by the backend and served unchanged to the console. The normalized date and the vendor's date are fields on the core atom (§8), so the phone reads them and parses nothing for a date fact. The one thing the phone keeps in Swift is the display of a normalized string (GR-91), pinned to the module's display function by a shared vector fixture. The phone's `DateParser` stops being used for date facts; its other uses (profile date of birth, Apple Health, record dates, chat digests) are named in §10 as open. Not A, for now, because a JavaScript runtime on the phone is a larger change than the rules deserve; not B, because the interpreter is where the rules actually are.
+
+How the module reaches the console: served by the Worker it talks to, `ADI_GRADING_DESIGN_v1.6.md` GR-123.
 
 ## 6. The vendor's date and ours (GR-85, GR-92, GR-93, GR-94)
 
