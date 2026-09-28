@@ -1,7 +1,7 @@
 # Document Package Design
 
 Status: design v1.7 (shape, not spec), owner rulings applied, four audits folded, sprints 1-6 shipped (§9; sprint 6 closed from the phone 2026-09-05), grading surface ruled (ADI_GRADING_DESIGN v1.0); relationship model ruled (RELATIONSHIP_DESIGN.md v1.5), R2 shipped and R3's server step shipped, sprint 7 resumes at step 3, next after the Apple Health sprint (ROADMAP F-NEW-VL); OR-18 (a–ab) ruled 2026-09-22/23 and built 2026-09-22 through 2026-09-24, one line per piece with SHAs in §11
-Last verified: 2026-09-25
+Last verified: 2026-09-28
 Date: 2026-08-27 (v1 same day; v1.1 supersedes it in place); v1.2 supersedes v1.1 in place, 2026-09-02; v1.3 supersedes v1.2 in place, 2026-09-03; v1.4 supersedes v1.3 in place, 2026-09-03 (OR-12); v1.5 supersedes v1.4 in place, 2026-09-03 (OR-13); v1.6 supersedes v1.5 in place, 2026-09-04 (OR-16); §9 row 6 and §11 shipped-marks updated in place, 2026-09-05 (sprint 6 close); v1.7 supersedes v1.6 in place, 2026-09-05 (OR-17, relationship model); §9 rows R1–R3 replaced with R1a/R1b/R2–R5 in place, 2026-09-05 (RELATIONSHIP_DESIGN.md v1.1 doc pass); §4's section-id prose and §9's R2 row updated in place, 2026-09-06 (R2 shipped); §3's derived-layers sentence narrowed to inferences in place, 2026-09-07 (R3 audit ruling 6); §9 OR-18 row inserted and §11 OR-18 shipped-marks added in place, 2026-09-25 (OR-18 sprint close)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/PACKAGE_DESIGN.md`
 
@@ -328,7 +328,7 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   w. Every PHI false positive is logged: a dropped off-list type (at ingest and at repair) as rh.phi.type drift; a fact marked PHI with no type at all as an rh.phi.type absent observation.
   x. Shared value store and anonymous documents follow the HIPAA limited-data-set line. Kept: provider, facility and staff values; dates with their roles; which values appeared together in a document and in which section; normal timestamps. Never stored: any per-user type's value, the user id, the job id, the raw file fingerprint.
   y. The anonymous document key is the file's content hash scrambled with the token secret (one-way). The same file always lands on the same row; the raw hash is never stored in these tables.
-  z. Writes to the shared store never block or fail an ingest. Every failed write goes to the error feed and pushes an NCC alert (phi_shared_store_failed).
+  z. Writes to the shared store never block or fail an ingest. Every failed write goes to the error feed and pushes an NCC alert (phi_shared_store_failed). For a reviewer's mark, this never-awaited write is superseded by `ADI_GRADING_DESIGN_v1.6.md` GR-118 (2026-09-28): the write is awaited before the save answers, and a failure refuses the mark whole.
   aa. Newest ingest replaces a document's token rows. Ingests are ordered by their original start time (first dispatch, fixed for the job's life); an older ingest's assembly or repair writes no token rows. Shared values are always recorded.
   ab. Token rows are keyed by document, token and section; a fact in no section has an empty section.
 - OR-18 shipped (built 2026-09-22 through 2026-09-24; device proof in §9). One line per piece:
