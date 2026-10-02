@@ -3,6 +3,8 @@
 Status: living, DRAFT for owner approval. Nothing here has entered the dictionary; it goes to staging and then production only after approval (OR-28)
 Last verified: 2026-10-01
 
+**Owner rulings applied (2026-10-01):** the plain name of `provider` is "Provider"; the plain name of `labValue` is "Lab result"; the plain name of `encounter` is "Visit"; the plain names and descriptions for reliability are left blank until the reliability audit is ruled on. Everything else below is still a draft.
+
 This is the text drafted for INGEST_VOCABULARY_DESIGN v8 §12 step D1: a plain name, a one-line description, a one-line example and an order for each term. The owner approves it before anything is published. Nothing is built.
 
 **Sources drafted from (all read only, 2026-10-01):**
@@ -49,7 +51,7 @@ Namespace `rh.atom.kind`: all 31 live terms. The order within each group follows
 
 | Group | Order | Code | Plain name | Description | Example |
 |---|---|---|---|---|---|
-| Observations | 1 | `labValue` | Lab test | One lab test named in the document, such as a blood or urine test. | Sodium |
+| Observations | 1 | `labValue` | Lab result | One lab test named in the document, such as a blood or urine test. | Sodium |
 | Observations | 2 | `labPanel` | Lab panel | A heading that names a group of lab tests run together. It is not a single test result. | Basic Metabolic Panel |
 | Observations | 3 | `vitalSign` | Vital sign | A basic body measurement such as blood pressure, heart rate, temperature or oxygen level. | Blood pressure |
 | Observations | 4 | `finding` | Finding | Something a clinician observed in an exam, on an image or in reading a lab result. A normal finding is still a finding, not a condition. | Lungs clear on both sides |
@@ -65,12 +67,12 @@ Namespace `rh.atom.kind`: all 31 live terms. The order within each group follows
 | Patient history | 1 | `allergy` | Allergy | Something the patient is allergic to: a medicine, a food or something in the environment. "No known allergies" counts too. | No known drug allergies |
 | Patient history | 2 | `familyHistory` | Family history | A health problem of a family member, not of the patient. | Mother: high blood pressure |
 | Patient history | 3 | `socialHistory` | Social history | Lifestyle facts relevant to health, such as smoking or alcohol use. | Former smoker |
-| People & places | 1 | `provider` | Clinician | A treating, ordering, interpreting or signing clinician named in the document. Lab technicians and other staff are not included. | Dr. A. Sample, MD |
+| People & places | 1 | `provider` | Provider | A treating, ordering, interpreting or signing clinician named in the document. Lab technicians and other staff are not included. | Dr. A. Sample, MD |
 | People & places | 2 | `organization` | Organization | A hospital, clinic, lab, imaging centre or insurer named in the document. A brand-name medicine is never an organization. | Example County Hospital |
 | People & places | 3 | `providerContact` | Clinician or organization contact | A phone, fax, email or address for a clinician or an organization. | Clinic fax: 555-0199 |
 | Document dates | 1 | `dateAtom` | Date | A date in the document. Its date role says what the date is for (see section 4). A date of birth is a patient detail, not a date. | Collected: 03/15/2024 |
 | Administrative | 1 | `coverage` | Insurance coverage | Insurance plan details: the payer, the plan type and its dates. **Unsure, see below.** | Plan: Example Health PPO |
-| Administrative | 2 | `encounter` | Visit type | The type of visit the document records. | Office visit |
+| Administrative | 2 | `encounter` | Visit | The type of visit the document records. | Office visit |
 | Administrative | 3 | `documentReference` | Document number or type | A number or label that identifies the document or the order, such as an accession number, order number or document type. | Order #000000 |
 | Administrative | 4 | `recordSummary` | Record summary | A short summary of the whole record, written by the system, not read from the document. | Summary: routine lab panel, all results in range |
 | Patient details | 1 | `patientDemographic` | Patient demographic | A personal detail about the patient: name, date of birth, sex, age, race, ethnicity, pronouns or blood type. | Sex: female |
@@ -84,10 +86,10 @@ Namespace `rh.atom.kind`: all 31 live terms. The order within each group follows
 **Unsure or disagreeing:**
 
 - **`coverage`.** Neither the console nor any prompt describes it, and no section's guidance offers it to the extractor, so nothing produces it today. The description comes from the phone's `CoveragePayload` (payer name, plan type, group number, subscriber ID, start and end dates) and its PHI classifier comment ("plan-level metadata"). Whether this is the meaning the owner intends, and whether the kind should stay, is for the owner.
-- **`labValue`.** The name says "value", but the prompt hint is "lab test name spans (e.g. Glucose, Sodium)": the fact points at the test's name, and the result, units and range arrive as table columns (the column roles, section 4). This draft describes the test, not the number, and names it "Lab test". The owner should confirm. The phone's label "Lab Values" suggests the opposite.
+- **`labValue`.** The name says "value", but the prompt hint is "lab test name spans (e.g. Glucose, Sodium)": the fact points at the test's name, and the result, units and range arrive as table columns (the column roles, section 4). This draft described the test, not the number, and proposed "Lab test". **Owner ruling 2026-10-01: the plain name is "Lab result".** The description still describes the test, not the number, and may need rewording to match the name.
 - **`vitalSign`, `immunization`.** The same pattern: the hints say "vital type spans" and "vaccine name spans". The descriptions follow the hints (the type of measurement, the vaccine's name).
-- **`encounter`.** The hint says "visit type (Office Visit, ED Visit, Telehealth, etc.)", and that is drafted. The phone labels it "Encounters", which a reader may take to mean the visit itself, dates included. Marked so the owner can choose.
-- **`provider` plain name.** The code says provider. The section prompts say "clinician" and "physician". "Clinician" is proposed as the plain name because it covers nurse practitioners and physician assistants. The owner may prefer "Provider".
+- **`encounter`.** The hint says "visit type (Office Visit, ED Visit, Telehealth, etc.)", and the description says that. The draft proposed "Visit type". **Owner ruling 2026-10-01: the plain name is "Visit".** The description still says "the type of visit", which matches the hint.
+- **`provider` plain name.** The code says provider. The section prompts say "clinician" and "physician". The draft proposed "Clinician". **Owner ruling 2026-10-01: the plain name is "Provider".** The description still says "clinician", and `providerContact` is still named "Clinician or organization contact". Whether those follow is not ruled.
 - **`providerContact`.** The kind's own hint covers only phone, fax and email, but its subtype list also includes `address`, and in the organization section it is a contact "associated with the organization". The description and plain name cover both clinician and organization, and address. The phone's label "Provider Contacts" leaves organizations out.
 - **`recordSummary`.** Synthesized, not extracted (result-schema, `ATOM_SYNTHESIZED`). It sits under Administrative in the console and the phone. The example is invented.
 
@@ -253,7 +255,7 @@ Two already carry a plain name in the dictionary (`patientFax` "Patient fax", `p
 
 **Unsure or disagreeing:**
 
-- **"Provider" here, "Clinician" in section 2.** The PHI type names keep "Provider" to match the two plain names already in the dictionary (`providerEmail`). If the owner picks "Clinician" for the `provider` kind, these could follow. That needs a ruling either way.
+- **"Provider" here and in section 2.** The PHI type names keep "Provider" to match the two plain names already in the dictionary (`providerEmail`). With the 2026-10-01 ruling naming the `provider` kind "Provider", the two now agree.
 - **`otherIdentifier`.** Besides its plain meaning, the Worker also uses it as the slot for any PHI type it does not recognise (PACKAGE_DESIGN OR-18 n, per the phone's `PHIType.swift`). The plain name does not mention this.
 - **`biometric`, `photograph`, `ipAddress`, `urlOrHandle`, `licenseNumber`, `deviceIdentifier`.** These follow the HIPAA identifier list the phone's `PHIType` cites. No source in this sweep describes them further. The names are literal.
 
@@ -271,16 +273,16 @@ The sources agree. The Worker prompt says `specific` is "confident in kind+subty
 
 | Code | Plain name |
 |---|---|
-| `high` | High |
-| `medium` | Medium |
-| `low` | Low |
+| `high` | *(blank, pending the reliability audit)* |
+| `medium` | *(blank, pending the reliability audit)* |
+| `low` | *(blank, pending the reliability audit)* |
 
 **Unsure or disagreeing. The sources give two different meanings:**
 
 - **The Worker prompt** (`pipeline-shared.mjs`, cross-cutting rules) defines reliability as how exactly the pointed-at words capture the value. `high`: the word range captures exactly the value. `medium`: the range includes a label or punctuation that could not be left out. `low`: unsure which words carry the value.
 - **The phone** (`ReliabilityTier.swift`) defines it as confidence in the date attached to a fact. `high`: the date is in the same row or section. `medium`: the document's visit date was inherited. `low`: the date was inferred with real doubt. The phone also has a fourth value, `unverified`, that the dictionary does not carry.
 
-The extractor writes the field under the Worker's meaning today, so the phone's comment is probably stale. This draft gives only the neutral names High, Medium and Low, and **does not choose a meaning.** The owner should rule which meaning stands before descriptions are written. The phone's `unverified` is a P1 question: §12.10 already has `ReliabilityTier` stop silently dropping unknown values.
+The extractor writes the field under the Worker's meaning today, so the phone's comment is probably stale. **Owner ruling 2026-10-01: the plain names and descriptions are left blank until the reliability audit is ruled on.** (The draft had proposed the neutral names High, Medium and Low.) The phone's `unverified` is a P1 question: §12.10 already has `ReliabilityTier` stop silently dropping unknown values.
 
 ### 4f. Column roles (`rh.column-role`, 5)
 
