@@ -276,6 +276,7 @@ Three more the same day, after GR-123, on the kind reading, the deploy order and
 **Owner rulings (2026-10-02, later the same day), recorded in this doc pass. Owner's register, next free numbers.**
 
 - GR-176. A fact whose PHI type is "Unrecognized PHI type" needs attention, with its own reason: "PHI type not recognized: pick one". `INGEST_VOCABULARY_DESIGN.md` OR-43.
+  - *[2026-10-03: built, not deployed. `recordhealth-api` `2ecfb33` (the reason and its words, in the shared rule file), with `10e729b` (the Worker types such a fact). ROADMAP `F-NEW-XK`.]*
 
 **Recorded the same days, not owner rulings.**
 
