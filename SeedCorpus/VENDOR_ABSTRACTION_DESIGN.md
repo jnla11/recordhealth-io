@@ -1,7 +1,7 @@
 # Vendor Abstraction + Bakeoff Design
 
 Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass); v1.1's retired resolver language struck from §4.1, §5, §6 and §8 on 2026-09-18
-Last verified: 2026-09-20
+Last verified: 2026-10-03
 Date: 2026-08-21 (v1 same day; v1.1 supersedes it in place)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/VENDOR_ABSTRACTION_DESIGN.md`
 
@@ -156,3 +156,7 @@ No per-document *intelligent* routing (A/B is random split; smart routing needs 
 1. **Dead vendor code deletion (cleanup item).** Worker: the `/document/parse` sync relay (five bare fetches) and the `/document/analyze` Textract relay + its AwsClient — both caller-less, confirmed by the iOS audit; the inert `AWS_TEXTRACT_*` / `AWS_ANALYZEDOC_*` secrets and IAM users join the item as operator cleanup. iOS: `LlamaParseResponseAdapter` (orphaned, zero callers of `makeParsedPages`) + the stale comments in `FileTextExtractor.swift:161` and the adapter's own header. Deleting `/document/parse` also closes an untracked exposure: it shipped PHI to LlamaCloud with zero ledger/error capture while it lived.
 2. ~~**Grading metrics verdict-drift defect.**~~ **Retired 2026-09-18.** It described a stored grading summary being undercounted by `computeMetrics`; scores computed from the log are retired entirely (ADI_GRADING_DESIGN v1.4 §5, GR-27), so there is no summary left to fix or re-derive.
 3. **Doc staleness.** `WORKER_ARCHITECTURE.md`'s `/document/analyze` section describes a retired route as current — restamp at next sprint close alongside this design's adoption.
+
+## 9. 2026-10-03 audit (recorded, not ruled)
+
+A read-only audit of `recordhealth-api` at `910ae79` checked this design against the dictionary series. The record is `archive/VENDOR_AUDIT_2026-10-03.md`; it is not restated here. In short: V1 to V5 are mostly not built (ground truth is); the configuration identity holds no dictionary; five gaps and three conflicts with this design are named there. Its seven questions are open, none ruled: whether the dictionary belongs in the configuration; the tuple or `F-NEW-RY`'s opaque id; whether the prompt prints the dictionary version; whether the lock records the dictionary; whether `F-NEW-SV` is a scorer prerequisite; when the truth corpus locks; and XK's deploy order (settled in practice by the 2026-10-03 deploy, noted in the record). Follow-up work is ROADMAP `F-NEW-XQ` and `F-NEW-XR`.
