@@ -1,13 +1,13 @@
 # DICTIONARY_TEXT_DRAFT.md — Dictionary text (INGEST_VOCABULARY_DESIGN §12.8)
 
-Status: living, APPROVED by the owner (2026-10-02), except the reliability text, which stays blank. Nothing here has entered the dictionary yet; the build (D1) publishes it to staging and then production (OR-28)
+Status: historical. Published as dictionary version 7 (2026-10-02). From now on the dictionary is the text's one home; this file is not edited again. A later text change is a dictionary edit, approved by the owner, published as the next version (INGEST_VOCABULARY_DESIGN §12.8). Approved by the owner 2026-10-02, except the reliability text, which stayed blank.
 Last verified: 2026-10-02
 
 **Owner rulings applied (2026-10-01):** the plain name of `provider` is "Provider"; the plain name of `labValue` is "Lab result"; the plain name of `encounter` is "Visit"; the plain names and descriptions for reliability are left blank until the reliability audit is ruled on. The rulings of 2026-10-02 below approve the rest, with the changes they name.
 
 **Owner rulings applied (2026-10-02):** the text below is approved. The kind groups are ten, with the codes given, and `encounter` sits in a new Visits group; the owner rejected the console's grouping for Visit (INGEST_VOCABULARY_DESIGN OR-34). `provider` and `providerContact` and `labValue` have the descriptions below. Section kinds get three display groups (OR-35). Groups are display-only (OR-36). The subtype, PHI type, date role and column role rulings are in section 4 (OR-37 to OR-39). Reliability stays blank (OR-30). The matching "unsure" notes are removed; the ones left are about terms the rulings did not touch.
 
-This is the text drafted for INGEST_VOCABULARY_DESIGN v8 §12 step D1: a plain name, a one-line description, a one-line example and an order for each term. The owner has approved it (2026-10-02). Nothing is built.
+This is the text drafted for INGEST_VOCABULARY_DESIGN v8 §12 step D1: a plain name, a one-line description, a one-line example and an order for each term. The owner approved it (2026-10-02) and it was loaded as dictionary version 7 (D1, `83dbf4e`).
 
 **Sources drafted from (all read only, 2026-10-01):**
 
