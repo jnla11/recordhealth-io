@@ -159,6 +159,15 @@ No per-document *intelligent* routing (A/B is random split; smart routing needs 
 2. ~~**Grading metrics verdict-drift defect.**~~ **Retired 2026-09-18.** It described a stored grading summary being undercounted by `computeMetrics`; scores computed from the log are retired entirely (ADI_GRADING_DESIGN v1.4 §5, GR-27), so there is no summary left to fix or re-derive.
 3. **Doc staleness.** `WORKER_ARCHITECTURE.md`'s `/document/analyze` section describes a retired route as current — restamp at next sprint close alongside this design's adoption.
 
-## 9. 2026-10-03 audit (recorded, not ruled)
+## 9. 2026-10-03 audit (recorded; partly settled since)
 
 A read-only audit of `recordhealth-api` at `910ae79` checked this design against the dictionary series. The record is `archive/VENDOR_AUDIT_2026-10-03.md`; it is not restated here. In short: V1 to V5 are mostly not built (ground truth is); the configuration identity holds no dictionary; five gaps and three conflicts with this design are named there. Its seven questions are open, none ruled: whether the dictionary belongs in the configuration; the tuple or `F-NEW-RY`'s opaque id; whether the prompt prints the dictionary version; whether the lock records the dictionary; whether `F-NEW-SV` is a scorer prerequisite; when the truth corpus locks; and XK's deploy order (settled in practice by the 2026-10-03 deploy, noted in the record). Follow-up work is ROADMAP `F-NEW-XQ` and `F-NEW-XR`.
+
+Settled since (2026-10-03):
+
+- **Does the dictionary belong in the configuration?** Yes, per pass. Shipped as `configuration.dictionary_version_by_pass` (ROADMAP `F-NEW-XS`, `SCHEMA_VERSION` 32; contract in `recordhealth-api/docs/WORKER_ARCHITECTURE.md` § Result identity).
+- **Does the lock record the dictionary?** Yes. Shipped the same day: the lock's provenance names `dictionary_version`.
+- **Does the prompt print the dictionary version?** No. The printed "dictionary snapshot v{N}" is removed in `INGEST_VOCABULARY_DESIGN.md` §12.10 piece c, which also records the AI-facing fingerprint per pass (OR-54).
+- **XK's deploy order.** Settled in practice by the 2026-10-03 deploy, as the record notes.
+
+Still open: the tuple or `F-NEW-RY`'s opaque id; whether the response cache key includes the dictionary; whether `F-NEW-SV` is a scorer prerequisite; and when the truth corpus locks. These stay with `F-NEW-XQ`.
