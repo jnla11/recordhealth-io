@@ -32,13 +32,13 @@ Namespace `rh.atom.kind-group`. The ten groups of INGEST_VOCABULARY_DESIGN §12.
 |---|---|---|---|---|
 | 1 | `observations` | Observations | Things measured or seen: lab tests, vital signs and exam or imaging findings. | Glucose 95 mg/dL |
 | 2 | `visits` | Visits | What type of visit this was: an office visit, an ER visit, a hospital stay or a telehealth appointment. | Office visit |
-| 3 | `conditions` | Conditions | What the patient reports feeling, ongoing or past conditions, and diagnoses. | Diagnosis: seasonal allergies |
+| 3 | `conditions` | Conditions | Symptoms the patient reports, ongoing or past conditions, and diagnoses. | Diagnosis: seasonal allergies |
 | 4 | `treatment` | Treatments & care | What is done or planned for the patient: medicines, procedures, vaccines, plans, referrals and devices. | Amoxicillin 500 mg capsule |
 | 5 | `history` | Patient history | Background that shapes care: allergies, family health history and social history. | Allergy: penicillin |
-| 6 | `care_team` | People & places | The clinicians and organisations named in the document, and how to reach them. | Ordering physician: Dr. A. Sample |
+| 6 | `care_team` | People & places | The clinicians and organizations named in the document, and how to reach them. | Ordering physician: Dr. A. Sample |
 | 7 | `temporal` | Document dates | Dates in the document and what each date is for. | Date of service: 03/15/2024 |
 | 8 | `administrative` | Administrative | Paperwork facts: insurance, document numbers and the record summary. | Accession number: AB-000000 |
-| 9 | `patient_details` | Patient details | Who the document is about: identity, identifiers, contact details and the people to call for them. | Patient phone: 555-0100 |
+| 9 | `patient_details` | Patient details | The patient's identity, ID numbers and contact details, plus their guardian and emergency contact. | Patient phone: 555-0100 |
 | 10 | `other` | Other | Facts that fit no other group. | A line the reader could not place |
 
 **Recorded:** the owner rejected the console's grouping for Visit (`encounter` under Administrative) and ruled the Visits group above. The code-collision note (three group codes shared with kinds and section kinds) and the phone-grouping note are removed: the new codes settle the first, and the phone's `KindCategory` is retired.
@@ -54,7 +54,7 @@ Namespace `rh.atom.kind`: all 31 live terms. The order within each group follows
 | Observations | 1 | `labValue` | Lab result | One lab test and its result: value, units and normal range. | Sodium 140 mmol/L |
 | Observations | 2 | `labPanel` | Lab panel | A heading that names a group of lab tests run together. It is not a single test result. | Basic Metabolic Panel |
 | Observations | 3 | `vitalSign` | Vital sign | A basic body measurement such as blood pressure, heart rate, temperature or oxygen level. | Blood pressure |
-| Observations | 4 | `finding` | Finding | Something a clinician observed in an exam, on an image or in reading a lab result. A normal finding is still a finding, not a condition. | Lungs clear on both sides |
+| Observations | 4 | `finding` | Finding | Something a clinician observed during an exam, on an image or while reading a lab result. A normal finding is still a finding, not a condition. | Lungs clear on both sides |
 | Visits | 1 | `encounter` | Visit | The type of visit the document records. | Office visit |
 | Conditions | 1 | `symptom` | Symptom | Something the patient comes in with or describes feeling, such as the main complaint. A symptom the patient denies is not recorded. | Patient presents with a sore throat |
 | Conditions | 2 | `condition` | Condition | An ongoing or past health problem of this patient, often listed under medical history. | History of asthma |
@@ -68,8 +68,8 @@ Namespace `rh.atom.kind`: all 31 live terms. The order within each group follows
 | Patient history | 1 | `allergy` | Allergy | Something the patient is allergic to: a medicine, a food or something in the environment. "No known allergies" counts too. | No known drug allergies |
 | Patient history | 2 | `familyHistory` | Family history | A health problem of a family member, not of the patient. | Mother: high blood pressure |
 | Patient history | 3 | `socialHistory` | Social history | Lifestyle facts relevant to health, such as smoking or alcohol use. | Former smoker |
-| People & places | 1 | `provider` | Provider | A doctor, nurse practitioner or other provider who treats, orders, reads results for or signs for the patient. Not lab staff. | Dr. A. Sample, MD |
-| People & places | 2 | `organization` | Organization | A hospital, clinic, lab, imaging centre or insurer named in the document. A brand-name medicine is never an organization. | Example County Hospital |
+| People & places | 1 | `provider` | Provider | A doctor, nurse practitioner or other provider who treats the patient, orders tests, reads results or signs the document. Lab staff are not included. | Dr. A. Sample, MD |
+| People & places | 2 | `organization` | Organization | A hospital, clinic, lab, imaging center or insurer named in the document. A brand-name medicine is never an organization. | Example County Hospital |
 | People & places | 3 | `providerContact` | Provider or organization contact | A phone, fax, email or address for a provider or an organization. | Clinic fax: 555-0199 |
 | Document dates | 1 | `dateAtom` | Date | A date in the document. Its date role says what the date is for (see section 4). A date of birth is a patient detail, not a date. | Collected: 03/15/2024 |
 | Administrative | 1 | `coverage` | Insurance coverage | Insurance plan details: the payer, the plan type and its dates. | Plan: Example Health PPO |
@@ -98,29 +98,29 @@ Namespace `rh.section.kind`: all 15 values of `SECTION_KINDS`. The order is the 
 
 | Order | Code | Plain name | Description | Example of such a section in a document |
 |---|---|---|---|---|
-| 1 | `patient` | Patient block | The block that says who the document is about: name, date of birth, record number and address. | A box at the top labelled "Patient Information" |
-| 2 | `organization` | Organization block | A block about a hospital, clinic, lab or imaging centre: its name, address and phone. | "Performing lab: Example Labs, 1 Main Road, 555-0123" |
+| 1 | `patient` | Patient block | The block that says who the document is about: name, date of birth, record number and address. | A box at the top labeled "Patient Information" |
+| 2 | `organization` | Organization block | A block about a hospital, clinic, lab or imaging center: its name, address and phone. | "Performing lab: Example Labs, 1 Main Road, 555-0123" |
 | 3 | `practitioner_role` | Clinician block | A block about one clinician: name, role, specialty, credentials and, when stated, where they work. | "Ordering physician: Dr. A. Sample, Internal Medicine" |
 | 4 | `service_request` | Order or referral | An order or referral for a service not yet performed: who ordered it, when, and what was ordered. | "Order: chest X-ray, ordered by Dr. A. Sample on 03/15/2024" |
 | 5 | `diagnostic_report` | Diagnostic report | A complete test report, such as a lab panel, imaging study or pathology report, that holds its results together. | A "Complete Blood Count" report with its table of results |
 | 6 | `observation` | Single result | One measurement or finding, such as one lab result row, a vital-signs row or one imaging finding. Usually sits inside a diagnostic report. | The row "Glucose 95 mg/dL 70-99" |
 | 7 | `medication_request` | Prescription | A prescription or medication order: the medicine's name, dose, how it is taken and how often. | "Ibuprofen 200 mg, by mouth, every 6 hours as needed" |
-| 8 | `provenance` | Signature block | The signing block: who finalised the document, when, and on whose authority. | "Electronically signed by Dr. A. Sample on 03/18/2024" |
+| 8 | `provenance` | Signature block | The signing block: who finalized the document, when, and on whose authority. | "Electronically signed by Dr. A. Sample on 03/18/2024" |
 | 9 | `narrative` | Clinical notes | Free-text notes by a clinician, such as the history of the illness, exam, assessment or plan. | A paragraph under "History of Present Illness" |
 | 10 | `impression` | Impression or conclusion | A section headed Impression, Conclusion or Interpretation that states the clinician's summary. | "Impression: no acute findings" |
 | 11 | `table_headers` | Table header row | The row of column titles at the top of a table, apart from the data rows below it. | "Test   Result   Units   Reference" |
 | 12 | `header` | Page header | The banner at the top of a page. | A clinic logo and name across the top of each page |
 | 13 | `footer` | Page footer | The strip at the bottom of a page: page number, document stamp or legal text. | "Page 2 of 3 — Confidential" |
 | 14 | `whitespace` | Blank area | An area of the page with no text. | An empty band between two sections |
-| 15 | `unknown` | Unrecognised section | A part of the page that matches none of the other section kinds. | A block of scanner noise or an unreadable stamp |
+| 15 | `unknown` | Unrecognized section | A part of the page that matches none of the other section kinds. | A block of scanner noise or an unreadable stamp |
 
-**Section kind groups (approved 2026-10-02, OR-35).** Namespace `rh.section.kind-group`: three display groups, in this order. They are display-only (OR-36). Examples for the groups were not drafted.
+**Section kind groups (approved 2026-10-02, OR-35).** Namespace `rh.section.kind-group`: three display groups, in this order. They are display-only (OR-36). Each group has an example (owner-approved 2026-10-02).
 
-| Order | Code | Plain name | Description | Members |
-|---|---|---|---|---|
-| 1 | `information_blocks` | Information blocks | Sections that describe one thing, such as a person, a place, an order or a report. | `patient`, `organization`, `practitioner_role`, `service_request`, `diagnostic_report`, `observation`, `medication_request`, `provenance` |
-| 2 | `clinical_text` | Clinical text | Free-text notes and conclusions written by a clinician. | `narrative`, `impression` |
-| 3 | `page_layout` | Page layout | Parts of the page's layout with no clinical content. | `table_headers`, `header`, `footer`, `whitespace`, `unknown` |
+| Order | Code | Plain name | Description | Example of a section in this group | Members |
+|---|---|---|---|---|---|
+| 1 | `information_blocks` | Information blocks | Sections that describe one thing, such as a person, a place, an order or a report. | Patient Information box | `patient`, `organization`, `practitioner_role`, `service_request`, `diagnostic_report`, `observation`, `medication_request`, `provenance` |
+| 2 | `clinical_text` | Clinical text | Free-text notes and conclusions written by a clinician. | History of Present Illness | `narrative`, `impression` |
+| 3 | `page_layout` | Page layout | Parts of the page layout with no clinical content. | Page 2 of 3 | `table_headers`, `header`, `footer`, `whitespace`, `unknown` |
 
 **Unsure or disagreeing:**
 
@@ -131,7 +131,7 @@ Namespace `rh.section.kind`: all 15 values of `SECTION_KINDS`. The order is the 
 
 ## 4. Plain names for every other live term
 
-Code and plain name only, as the brief asks. Where a source gives a meaning that bears on the name, it is noted under the table.
+These sections now carry plain names, descriptions and examples where ruled. Where a source gives a meaning that bears on the name, it is noted under the table.
 
 ### 4a. Subtypes (`rh.atom.subtype`, 36)
 
@@ -193,9 +193,9 @@ Code and plain name; three also carry a description (owner ruling 2026-10-02, OR
 | `narrativeReference` | Date mentioned in notes | | |
 | `received` | Received date | A date the document labels as the day a specimen or document was received. | Received: 03/16/2024 |
 | `report` | Report date | | |
-| `service` | Date of service | A date the document labels as the date of service, such as 'DOS' or 'Service date'. | |
+| `service` | Date of service | A date the document labels as the date of service, such as 'DOS' or 'Service date'. | DOS: 03/15/2024 |
 | `study` | Imaging date | | |
-| `visit` | Visit date | A date the document labels as the visit or appointment date. | |
+| `visit` | Visit date | A date the document labels as the visit or appointment date. | Visit date: 03/15/2024 |
 
 **Ruled (2026-10-02, OR-39):** `service` and `visit` are both kept. A date role records the printed label (labeled dates classify by label), not what the date means downstream. `received` is new (ruled earlier as GR-105) and enters the dictionary with the date work.
 
