@@ -147,6 +147,8 @@ Model routing per project convention: V1/V2 refactors → Opus 5; V3 → Opus 5 
 
 Roughly 6–9 sprints through V4 + first bakeoff; V5 sized after MY.
 
+*[2026-10-03: the owner's order places the scorer's S1 and S2 (§4.1) before the ADI grading console steps, and the V1 and V2 refactors alongside them; the order is in `RecordHealth_App/docs/ROADMAP.md`, "Current series and its goals".]*
+
 ## 7. What this design deliberately does not do
 
 No per-document *intelligent* routing (A/B is random split; smart routing needs F-NEW-MX document metrics and real bakeoff data — filed, not designed). No auto-promotion of a bakeoff winner — vendor selection is an owner decision reading a report. No iOS-side changes. No new production wire shapes before V5. No Comprehend-style pass-replacement design — when real, it plugs into the bakeoff as a scored configuration and gets its own doc.
