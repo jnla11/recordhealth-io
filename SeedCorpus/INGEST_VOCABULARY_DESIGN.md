@@ -616,7 +616,6 @@ Each piece moves one set into the dictionary and deletes its copies in the same 
   - The console requires the new fields and never reads a missing one as not curated. Order: the migration on both ADI databases, then the Worker, then the publish, then the console. The current console reads the new version without trouble, so no interim tolerance is built.
   - Before the migration runs, its pre-flight check confirms no current example is an empty string.
   - Built 2026-10-03 (recordhealth-api 0db675e, 1bf085a, 20c43ab); a follow-up fix adds OR-63, the duplicate and whitespace refusals and the console change. Not yet applied, deployed or published.
-  - Order unchanged: migration on both ADI databases, Worker, console, publish.
   - The phone ignores unknown snapshot fields, confirmed by the 2026-10-03 audit, so this step needs no phone change.
   - The first publish is a new dictionary version even with no text changed, because every term gains keys. Piece b's version number is corrected when piece a closes.
   - A new dictionary version gets a new test fixture file, never a hand edit of the version 8 fixture.
