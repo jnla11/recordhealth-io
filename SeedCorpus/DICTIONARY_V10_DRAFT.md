@@ -24,12 +24,12 @@ Owner ruling (2026-10-05, OR-73): each term may carry three separate texts, one 
 
 | | Version 9 | Version 10 |
 |---|---|---|
-| Terms | 162 | 165 |
-| Live terms | 155 | 150 |
+| Terms | 162 | 162 |
+| Live terms | 155 | 147 |
 | Retired terms | 7 | 15 |
-| Namespaces | 12 | 13 |
+| Namespaces | 12 | 12 |
 
-Three terms are added (extraction confidence). Eight are retired (five subtypes, three reliability terms).
+No terms are added. Eight are retired (five subtypes, three reliability terms).
 
 ---
 
@@ -199,6 +199,8 @@ Every live subtype gains `belongs_to_kinds`, an order, a description (three alre
 ---
 
 ## 6. Extraction confidence (new, piece f)
+
+*Removed from version 10 by OR-78. Kept here as the record of what was approved and withdrawn.*
 
 **Approved (owner, 2026-10-04):** the namespace `rh.extraction-confidence`, the field name `extraction_confidence`, and the codes `high`, `medium` and `low` with the plain names below. The codes are the same three the reliability field uses today, so only the namespace and field name move.
 
