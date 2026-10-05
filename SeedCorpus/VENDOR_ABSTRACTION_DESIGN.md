@@ -1,7 +1,7 @@
 # Vendor Abstraction + Bakeoff Design
 
 Status: design v1.1 (shape, not spec) — V0 audit findings folded, owner rulings applied; §4.1 amended 2026-09-17 (owner rulings; Fable spec pass); v1.1's retired resolver language struck from §4.1, §5, §6 and §8 on 2026-09-18
-Last verified: 2026-10-03
+Last verified: 2026-10-05
 Date: 2026-08-21 (v1 same day; v1.1 supersedes it in place)
 Repo home when adopted: `RecordHealth.IO/SeedCorpus/VENDOR_ABSTRACTION_DESIGN.md`
 
@@ -138,7 +138,7 @@ Mechanics: percentage-split config consulted at the coordinator's dispatch path;
 
 - **V0 — audits. DONE 2026-08-21.** Worker-side 7-question audit + iOS caller check; findings folded into this v1.1.
 - **V1 — inference provider registry.** The `callBedrock` move + the three satellites (§2) + telemetry threading (§3.3: ledger vendor literal, phase-events column + migration, error_events column + migration). Zero behavior change; suite is the proof. ~1 sprint.
-- **V2 — parse adapter formalization + config carveout.** LlamaCloud code becomes adapter #1; Extract's prompt/schema move into the bundle and gain their first explicit version constant; capabilities declared; vendor id threaded. Zero behavior change. ~1–2 sprints (delicate file, big suite).
+- **V2 — parse adapter formalization + config carveout.** LlamaCloud code becomes adapter #1; Extract's prompt/schema move into the bundle and gain their first explicit version constant; capabilities declared; vendor id threaded. Zero behavior change. ~1–2 sprints (delicate file, big suite). Also in V2 (owner ruling OR-75, 2026-10-05): the versioned translation between each vendor's fields and dictionary terms, and LlamaExtract's field descriptions moved from code into the dictionary through it (ROADMAP F-NEW-XW; starting material in DICTIONARY_V10_DRAFT.md §15).
 - **V3 — bakeoff harness, offline mode.** The harness ctx `(input, init)` extension first; then corpus runner + response cache; ground-truth selection: the newest locked corrected core per `source_hash`, which does not exist as code yet; the scorer; report storage. Deliverable: the incumbent baseline score. ~3 sprints.
 - **V4 — second adapter + deploy-scoped routing.** Textract-family parse adapter per §1.2 obligations; deploy-scoped vendor selection config (staging-first, env-gated per the force-fresh precedent — needs NO stamp rework); first true bakeoff: incumbent vs. candidate, same corpus. ~1–2 sprints.
 - **V5 — live A/B routing.** In order: F-NEW-MY design + rate-card wiring of the ledger arithmetic (§3.2); the per-job stamp rework (§3.1, own pre-implementation review); coordinator percentage-split + BAA gate (§4.2). Sized after MY's design lands; the stamp rework alone is ~1 sprint plus review.
