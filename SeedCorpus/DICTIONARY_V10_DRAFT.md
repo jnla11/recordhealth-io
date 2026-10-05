@@ -385,6 +385,8 @@ The owner's answers of 2026-10-04 to the draft's open questions, by question num
 
 ## 14. Claude text (amendment awaiting approval, OR-73)
 
+Per OR-74, each term carries only the text Claude actually receives today; variants for sections Claude never receives are not published.
+
 What today's code sends to Claude about each term, copied word for word. Nothing here is new wording, except the one change OR-49 rules (`labValue`, marked).
 
 **How to read this section.**
@@ -404,6 +406,7 @@ What today's code sends to Claude about each term, copied word for word. Nothing
 | `labValue` | observation | `lab test name spans (e.g. Glucose, Sodium)` | P:273 |
 | `labValue` | diagnostic_report | `individual test name spans` | P:376 |
 | `labValue` | general list | `lab test name spans referenced in narrative` **Changed by OR-49:** a lab result in note text is recorded like a table row, test name, value and units. | P:405 |
+| `labValue` | general list | **Approved wording (OR-74, OR-49):** `A lab result mentioned in the notes: the test name, its value and its units, recorded like a lab table row.` | OR-74 |
 | `labPanel` | observation, diagnostic_report, general list | `panel or section headers that name a group of lab tests (e.g. "General Health Screen", "CBC With Differential/Platelet", "Urinalysis, Complete"). These are NOT individual test results.` | P:267 (sent at P:274, P:377, P:406) |
 | `labPanel` | diagnostic_report | `Section header labels ("LABORATORY REPORT", "BASIC METABOLIC PANEL" if it's the report banner) MAY be atoms with kind=labPanel when they name an analyte family, otherwise are NOT atoms.` | P:385 |
 | `vitalSign` | general list | `vital type spans (e.g. BP, HR, Temp, SpO2)` | P:404 |
@@ -621,6 +624,8 @@ Listed for the owner, not carried by any term.
 ---
 
 ## 15. LlamaExtract text (amendment awaiting approval, OR-73)
+
+Not in version 10 (OR-75). Starting material for the interface sprint's translation layer.
 
 Each field description LlamaExtract is given today, copied word for word from `DATA_SCHEMA` in `recordhealth-api/src/ingest-do.mjs` (written `D:`), with the dictionary term the adapter fills from it (`recordhealth-api/src/llama-extract-adapter.mjs`, written `A:`). Used from piece g. The adapter's own spellings `patientName` and `facility` are read as `name` and `facilityName` (OR-37).
 
