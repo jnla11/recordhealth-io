@@ -25,11 +25,11 @@ Owner ruling (2026-10-05, OR-73): each term may carry three separate texts, one 
 | | Version 9 | Version 10 |
 |---|---|---|
 | Terms | 162 | 162 |
-| Live terms | 155 | 147 |
-| Retired terms | 7 | 15 |
+| Live terms | 155 | 149 |
+| Retired terms | 7 | 13 |
 | Namespaces | 12 | 12 |
 
-No terms are added. Eight are retired (five subtypes, three reliability terms).
+No terms are added. Six are retired (three subtypes, three reliability terms).
 
 ---
 
@@ -104,7 +104,7 @@ No terms are added. Eight are retired (five subtypes, three reliability terms).
 
 ## 3. Subtypes (`rh.atom.subtype`)
 
-41 terms: 36 live after version 10, 5 retired by it.
+41 terms: 38 live after version 10, 3 retired by it.
 
 ### 3a. Retired in version 10 (piece e, OR-37)
 
@@ -113,10 +113,10 @@ No terms are added. Eight are retired (five subtypes, three reliability terms).
 | `patientName` | The vendor's spelling. The adapter translates it to `name`. |
 | `facility` | The vendor's spelling. The adapter translates it to `facilityName`. |
 | `address` | Every address is split into `street`, `city`, `state` and `zip` (OR-55). |
-| `formCode` | No such element in a FHIR document reference, and nothing ever produced it. |
-| `barcode` | The same. |
 
-None of the five has a plain name, a description or a list in version 9, and none gains one.
+None of the three has a plain name, a description or a list in version 9, and none gains one.
+
+`formCode` and `barcode` are no longer retired. Kept live by OR-80.
 
 ### 3b. The address parts (piece e, OR-55)
 
@@ -124,12 +124,13 @@ None of the five has a plain name, a description or a list in version 9, and non
 
 ### 3c. Every live subtype
 
-Every live subtype gains `belongs_to_kinds`, an order, a description (three already have one) and examples. Plain names are unchanged. Each list holds exactly the kinds today's prompt and vendor adapter offer the subtype on, in the prompt's order; the four address parts are the exception (3b). The order is the subtype's place in today's prompt lists.
+Every live subtype gains `belongs_to_kinds`, an order, a description (three already have one) and examples, except `formCode` and `barcode`, which keep their version 9 content unchanged: no plain name, description, examples, list or order (OR-80). Plain names are unchanged. Each list holds exactly the kinds today's prompt and vendor adapter offer the subtype on, in the prompt's order; the four address parts are the exception (3b). The order is the subtype's place in today's prompt lists.
 
 | Code | Plain name | Description | Examples | belongs_to_kinds | Order |
 |---|---|---|---|---|---|
 | `accessionNumber` | Accession number | The number a lab or imaging department gives a specimen or study to track it, in any length or format. | `AB-000000` `000123456` `S24-0001234` | `documentReference` | 34 |
 | `age` | Age | The patient's age, as printed. | `47` `47 years` `6 months` | `patientDemographic` | 8 |
+| `barcode` | No value | No value | No value | No value | No value |
 | `billingAccountNumber` | Billing account number | Unchanged: The patient's account number with the provider's billing office. | `0000123456` `ACCT-00-1234` `B000123` | `patientIdentifier` | 14 |
 | `bloodType` | Blood type | The patient's blood type. | `O positive` `A-` `AB+` | `patientDemographic` | 6 |
 | `city` | City | The city or town in a postal address. | `Fairhaven` `Port Example` `Mount Sample` | `patientAddress`, `providerContact`, `guardianInfo`, `emergencyContact` | 25 |
@@ -142,6 +143,7 @@ Every live subtype gains `belongs_to_kinds`, an order, a description (three alre
 | `ethnicity` | Ethnicity | The patient's ethnicity, as printed. | `Hispanic or Latino` `Not Hispanic or Latino` | `patientDemographic` | 10 |
 | `facilityName` | Facility name | The name of a hospital, clinic, lab, imaging center or other place of care. | `Example County Hospital` `Example Labs` `Fairhaven Family Clinic` | `organization` | 32 |
 | `fax` | Fax | A fax number. | `555-0199` `(555) 555-0188` | `patientContact`, `patientAddress`, `guardianInfo`, `emergencyContact`, `providerContact` | 21 |
+| `formCode` | No value | No value | No value | No value | No value |
 | `genderIdentity` | Gender identity | The patient's gender identity, as printed. | `woman` `nonbinary` `transgender man` | `patientDemographic` | 5 |
 | `memberNumber` | Member number | Unchanged: The patient's own ID on the insurance plan. | `000123456` `XEH000123456` `W0001-23456-01` | `patientIdentifier` | 15 |
 | `mrn` | Medical record number | The number or code a hospital or clinic uses to identify the patient in its own records, in any length or format. | `0000000` `MR-00-12-34` `E0012345` | `patientIdentifier` | 11 |
@@ -165,7 +167,7 @@ Every live subtype gains `belongs_to_kinds`, an order, a description (three alre
 | `unspecifiedIdentifier` | Other identifier | A number or code that identifies the patient and fits no other identifier subtype. | `PT-000123` `0001234` | `patientIdentifier` | 18 |
 | `zip` | ZIP code | The ZIP code in a postal address. | `97000` `97000-0001` | `patientAddress`, `providerContact`, `guardianInfo`, `emergencyContact` | 27 |
 
-**Checks.** The lists name exactly the ten kinds `ATOM_KIND_FIELDS` allows, and every one of the ten has at least one subtype. No list names a retired kind. Thirty-two lists match today's prompt and vendor adapter exactly; the four address parts follow OR-55 (S1, settled). The adapter's own spellings, `patientName` and `facility`, are read as `name` and `facilityName` (OR-37). The order keeps every one of today's prompt lists in its own order; the four address parts take the place `address` holds today.
+**Checks.** The lists name exactly the ten kinds `ATOM_KIND_FIELDS` allows, and every one of the ten has at least one subtype. No list names a retired kind. Thirty-two lists match today's prompt and vendor adapter exactly; the four address parts follow OR-55 (S1, settled); `formCode` and `barcode` carry no list, as in version 9 (OR-80). The adapter's own spellings, `patientName` and `facility`, are read as `name` and `facilityName` (OR-37). The order keeps every one of today's prompt lists in its own order; the four address parts take the place `address` holds today.
 
 ---
 
