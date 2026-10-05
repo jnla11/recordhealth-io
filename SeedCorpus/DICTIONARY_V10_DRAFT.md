@@ -1,10 +1,14 @@
 # DICTIONARY_V10_DRAFT.md — Dictionary version 10, drafted for approval
 
-Status: APPROVED by the owner 2026-10-04. Not yet published. Published once as dictionary version 10 with the §12.10 piece h deploy (OR-69).
+Status: APPROVED by the owner 2026-10-04, with an amendment awaiting approval (2026-10-05): Claude and LlamaExtract texts per term. Not yet published.
 
 This page holds the complete final content of every term that is new, changed or retired in dictionary version 10 (INGEST_VOCABULARY_DESIGN §12.10 pieces b, e and f, plus `phi_default`). Version 10 is published once, with the §12.10 piece h deploy (OR-69). The owner approved this page on 2026-10-04 (OR-28).
 
 **The governing rule (owner, 2026-10-04):** version 10 moves today's behaviour into the dictionary unchanged. Nothing in it may change what the AI is offered or extracts, beyond owner rulings already recorded in INGEST_VOCABULARY_DESIGN §12.10. Anything that would change ingest behaviour belongs to the ingest fidelity series, not here.
+
+## Three texts per term
+
+Owner ruling (2026-10-05, OR-73): each term may carry three separate texts, one per reader: the reviewer text (the description and examples on this page, shown in the console, unchanged), the Claude text (what the Atom Pass and PHI pass are told about the term, carrying today's prompt wording word for word, OR-68), and the LlamaExtract text (the field description LlamaExtract is given for the fields that fill the term, used from piece g). This revises OR-21 and OR-25 (one description per term) and supports the bakeoff's per-vendor wording (`VENDOR_ABSTRACTION_DESIGN.md` §1.1). Sections 14 and 15 hold the Claude and LlamaExtract texts; field names are the build's.
 
 **Sources (read only):** the published version 9 (`recordhealth-api/test/harness/fixtures/dictionary-v9.json`); `ATOM_PASS_GUIDANCE`, `PHI_ELIGIBLE_KINDS` and the two prompts in `src/pipeline-shared.mjs`; `ATOM_KIND_FIELDS` in `src/result-schema.mjs`; the vendor adapter (`src/llama-extract-adapter.mjs`); INGEST_VOCABULARY_DESIGN v8.9.
 
@@ -376,3 +380,291 @@ The owner's answers of 2026-10-04 to the draft's open questions, by question num
 - **S1. `street`, `city`, `state`, `zip`: which kinds. Settled.** They belong to `patientAddress`, `providerContact`, `guardianInfo` and `emergencyContact`, per OR-55. The check that raised the question compared against today's code, which predates OR-55. The parts' order (24 to 27, the place `address` holds today) stands.
 - **S2. `role`: what the examples show. Settled.** `role` has examples `[]` (curated, nothing in it). OR-46 and OR-65: no fact covers a role's words on its own today, so there is nothing to show.
 - **S3. When version 10 is published. Settled.** One publish, per OR-69 (INGEST_VOCABULARY_DESIGN §10). Version 10 is published once, with the §12.10 piece h deploy, staging then production. It replaces piece f's publish-before-the-deploy and retire-right-after steps.
+
+---
+
+## 14. Claude text (amendment awaiting approval, OR-73)
+
+What today's code sends to Claude about each term, copied word for word. Nothing here is new wording, except the one change OR-49 rules (`labValue`, marked).
+
+**How to read this section.**
+
+- The source column gives the line in `recordhealth-api/src/pipeline-shared.mjs`, written `P:` and the line number. Lines are as of the root commit this page was written at.
+- **Sent in** names the section kinds whose Atom Pass prompt carries the words. "General list" is the guidance every section kind without its own entry gets (narrative, impression, header, footer, unknown), as in section 10. "All" means the cross-cutting rules every Atom Pass prompt carries. "PHI pass" means the PHI pass prompt.
+- Identical words sent in several section kinds are one row.
+- A piece cut from a longer line is shown without the comma or full stop that separated it from the next piece. Nothing inside a piece is changed.
+- **(none today)**: today's prompts send this term's bare code at most (in the VOCABULARY block, a subtype list or the PHI TYPES block), and no words about it.
+- **(shared)**: today's words about this term also name another term in the same breath and cannot be split without rewording. They are listed under "Text that belongs to no single term" below, not copied here.
+- Retired terms carry no texts.
+
+### 14a. Kinds (`rh.atom.kind`)
+
+| Code | Sent in | Claude text, today's words | Source |
+|---|---|---|---|
+| `labValue` | observation | `lab test name spans (e.g. Glucose, Sodium)` | P:273 |
+| `labValue` | diagnostic_report | `individual test name spans` | P:376 |
+| `labValue` | general list | `lab test name spans referenced in narrative` **Changed by OR-49:** a lab result in note text is recorded like a table row, test name, value and units. | P:405 |
+| `labPanel` | observation, diagnostic_report, general list | `panel or section headers that name a group of lab tests (e.g. "General Health Screen", "CBC With Differential/Platelet", "Urinalysis, Complete"). These are NOT individual test results.` | P:267 (sent at P:274, P:377, P:406) |
+| `labPanel` | diagnostic_report | `Section header labels ("LABORATORY REPORT", "BASIC METABOLIC PANEL" if it's the report banner) MAY be atoms with kind=labPanel when they name an analyte family, otherwise are NOT atoms.` | P:385 |
+| `vitalSign` | general list | `vital type spans (e.g. BP, HR, Temp, SpO2)` | P:404 |
+| `finding` | observation, general list | `physical exam observations, imaging findings, lab interpretations stated as observations` | P:268 (sent at P:275, P:407) |
+| `finding` | general list | `finding: physical exam observations, imaging findings, lab interpretations. A normal finding is an observation, NEVER a condition or diagnosis.` | P:426 |
+| `encounter` | general list | `visit type (Office Visit, ED Visit, Telehealth, etc.)` | P:413 |
+| `symptom` | general list | `chief complaint / HPI items the patient presents WITH` | P:399 |
+| `symptom` | general list | `Negations are NOT symptoms. "No history of diabetes", "denies chest pain" — do NOT extract.` | P:419 |
+| `condition` | general list | `ongoing clinical conditions (e.g. hypertension, diabetes, asthma)` | P:397 |
+| `diagnosis` | general list | `formal Assessment/Impression conclusions from THIS visit` | P:398 |
+| `medication` | medication_request, general list | `drug names; brand names go here, never under organization` | P:285, P:401 |
+| `medication` | medication_request | `Dosage forms alone ("tablet", "capsule", "injection") are NOT medications. Only complete medication names.` | P:289 |
+| `medication` | general list | `Dosage forms alone ("tablet", "capsule") are NOT medications. Only complete medication names.` | P:421 |
+| `procedure` | general list | `surgical / interventional procedures performed` | P:402 |
+| `immunization` | general list | `vaccine name spans` | P:403 |
+| `carePlan` | general list | `plan items / goals (e.g. "Physical therapy 2x/week")` | P:410 |
+| `referral` | service_request | `the requested service (e.g. ENT consult, MRI lumbar spine)` | P:362 |
+| `referral` | general list | `service requests (e.g. ENT consult, MRI lumbar spine)` | P:409 |
+| `device` | general list | `medical device names (implant / external / etc.)` | P:408 |
+| `allergy` | general list | `allergens, including "No Known Allergies" / "NKA" / "NKDA"` | P:400 |
+| `allergy` | general list | `allergy: extract medication, environmental, and food allergies. "NKA" / "NKDA" is itself an atom — emit it.` | P:427 |
+| `familyHistory` | general list | `family member medical history (mother / father / sibling)` | P:411 |
+| `familyHistory` | general list | `Family history is NOT a patient condition. "Mother had breast cancer" → kind=familyHistory.` | P:420 |
+| `socialHistory` | general list | `social history categories (smoking, alcohol use, etc.)` | P:412 |
+| `provider` | practitioner_role | `treating physicians (NOT lab techs / phlebotomists / radiology techs)` | P:315 |
+| `provider` | practitioner_role | `Lab tech / phlebotomist / radiology tech is NOT a provider; treat staff names as out-of-scope.` | P:321 |
+| `provider` | provenance | `signing / attesting physician` | P:345 |
+| `provider` | service_request | `ordering / requesting physician` | P:359 |
+| `provider` | diagnostic_report | `interpreting / performing physician named on the report banner` | P:380 |
+| `organization` | practitioner_role | `healthcare facility, hospital, clinic, lab the practitioner acts for` | P:317 |
+| `organization` | organization | `healthcare facility, hospital, clinic, lab, insurance company` | P:331 |
+| `organization` | organization | `Brand-name drugs (FLONASE, TYLENOL, ADVIL, etc.) are NEVER organizations.` | P:336 |
+| `organization` | service_request | `requesting facility` | P:361 |
+| `providerContact` | practitioner_role | `phone / fax / email of a provider` | P:316 |
+| `providerContact` | organization | `phone / fax / email associated with the organization` | P:332 |
+| `providerContact` | service_request | `phone / fax / email of the requester` | P:360 |
+| `dateAtom` | every section kind that offers it | `any date mention` | P:250, P:346, P:363, P:379 |
+| `dateAtom` | patient | `Other labeled dates appearing here (e.g. Date of Service, Collection Date) follow the cross-cutting label rule.` | P:306 |
+| `dateAtom` | all | `Labeled dates classify by their label.` | P:564 |
+| `dateAtom` | all | `dateAtom emission is universal across all section kinds. When a date appears with a label naming what kind of date it is (e.g. "Date of Service: 03/15/2024", "Collection: 03/15/2024", "Reported: 03/18"), classify by the label. Use the role taxonomy: collection, report, visit, service, study, admission, discharge.` (The role list is rendered from the dictionary; this is how it renders today.) | P:580 |
+| `coverage` | | (none today) | |
+| `documentReference` | provenance | `accession number, order number, document type, etc.` | P:347 |
+| `documentReference` | service_request | `order number, accession number` | P:364 |
+| `documentReference` | diagnostic_report | `accession number, order number, document type` | P:378 |
+| `recordSummary` | | (none today). Not offered to the AI (OR-51). | |
+| `patientDemographic` | patient | `name, DOB, sex, blood type, pronouns, age, race, ethnicity` | P:295 |
+| `patientIdentifier` | patient | `MRN, SSN, member number, encounter number, etc.` | P:296 |
+| `patientIdentifier` | patient | `patientIdentifier subtypes: see the SUBTYPE list below.` | P:305 |
+| `patientContact` | patient | `phone, email, fax of the patient` | P:297 |
+| `patientAddress` | patient | `street/city/state/zip of the patient` | P:298 |
+| `guardianInfo` | patient | `guardian's name / relationship / contact` | P:299 |
+| `emergencyContact` | patient | `emergency contact name / relationship / contact` | P:300 |
+| `uncategorized` | observation, service_request, diagnostic_report, general list | `atom that doesn't fit any other kind` | P:277, P:365, P:381, P:415 |
+
+### 14b. Subtypes (`rh.atom.subtype`)
+
+| Code | Sent in | Claude text, today's words | Source |
+|---|---|---|---|
+| `accessionNumber` | | (none today) | |
+| `age` | | (none today) | |
+| `billingAccountNumber` | | (none today) | |
+| `bloodType` | | (none today) | |
+| `city` | | (none today) | |
+| `credentials` | | (none today) | |
+| `dateOfBirth` | patient | `DOB in this section is kind=patientDemographic subtype=dateOfBirth, NOT dateAtom.` | P:306 |
+| `dateOfBirth` | all | `DOB is the one exception (patientDemographic, not dateAtom).` | P:564 |
+| `dateOfBirth` | all | `Date of birth is the one exception to dateAtom: classify it as kind=patientDemographic with subtype=dateOfBirth, NOT as dateAtom — regardless of how it is labeled or which section it appears in.` | P:581 |
+| `departmentName` | | (none today) | |
+| `documentType` | | (none today) | |
+| `email` | | (none today) | |
+| `encounterNumber` | | (none today) | |
+| `ethnicity` | | (none today) | |
+| `facilityName` | | (none today) | |
+| `fax` | | (none today) | |
+| `genderIdentity` | | (none today) | |
+| `memberNumber` | | (none today) | |
+| `mrn` | | (none today) | |
+| `name` | | (none today) | |
+| `npi` | | (none today) | |
+| `orderNumber` | | (none today) | |
+| `phone` | | (none today) | |
+| `pronouns` | | (none today) | |
+| `race` | | (none today) | |
+| `relationship` | | (none today) | |
+| `role` | | (none today) | |
+| `sex` | | (none today) | |
+| `sexAssignedAtBirth` | | (none today) | |
+| `specialty` | | (none today) | |
+| `ssn` | | (none today) | |
+| `ssnLastFour` | | (none today) | |
+| `state` | | (none today) | |
+| `street` | | (none today) | |
+| `subscriberNumber` | | (none today) | |
+| `unspecifiedContact` | | (none today) | |
+| `unspecifiedIdentifier` | | (none today) | |
+| `zip` | | (none today) | |
+
+### 14c. Date roles (`rh.atom.date-role`)
+
+| Code | Sent in | Claude text, today's words | Source |
+|---|---|---|---|
+| `admission` | | (shared) | |
+| `collection` | every section kind that offers `dateAtom`, except provenance and service_request | `'collection' for specimen collection/lab draw dates` | P:250, P:379 |
+| `discharge` | | (shared) | |
+| `narrativeReference` | every section kind that offers `dateAtom`, except provenance | `'narrativeReference' for prose date mentions` | P:250, P:363, P:379 |
+| `narrativeReference` | provenance | `'narrativeReference' for dates mentioned in prose without being the date of a current event` | P:346 |
+| `narrativeReference` | all | `Unlabeled prose dates inside clinician notes are narrativeReference.` | P:564 |
+| `narrativeReference` | all | `narrativeReference is reserved for unlabeled dates inside running prose, such as dates mentioned in clinician notes describing past events ("similar elevation in 2019").` | P:580 |
+| `report` | every section kind that offers `dateAtom`, except provenance and service_request | `'report' for report generation dates` | P:250, P:379 |
+| `report` | provenance | `'report' for document generation dates` | P:346 |
+| `report` | service_request | `'report' for order document generation dates` | P:363 |
+| `service` | every section kind that offers `dateAtom`, except provenance | `'service' for billing-legal service dates` | P:250, P:363, P:379 |
+| `study` | every section kind that offers `dateAtom`, except provenance and service_request | `'study' for imaging study dates` | P:250, P:379 |
+| `visit` | every section kind that offers `dateAtom`, except provenance | `'visit' for clinical visit dates` | P:250, P:363, P:379 |
+
+### 14d. Classification certainty (`rh.certainty`)
+
+| Code | Sent in | Claude text, today's words | Source |
+|---|---|---|---|
+| `specific` | all | `"specific" = confident in kind+subtype` | P:579 |
+| `parent_only` | all | `"parent_only" = confident in kind, uncertain subtype` | P:579 |
+| `low_confidence` | all | `"low_confidence" = uncertain even at parent` | P:579 |
+
+### 14e. PHI types (`rh.phi.type`)
+
+| Code | Sent in | Claude text, today's words | Source |
+|---|---|---|---|
+| `accessionNumber` | | (shared) | |
+| `accountNumber` | | (shared) | |
+| `biometric` | | (none today) | |
+| `dateOfAdmission` | | (none today) | |
+| `dateOfDischarge` | | (none today) | |
+| `dateOfReport` | | (shared) | |
+| `dateOfService` | | (shared) | |
+| `dateSigned` | | (none today) | |
+| `deviceIdentifier` | | (none today) | |
+| `dob` | | (none today) | |
+| `emergencyContactName` | | (none today) | |
+| `facilityAddress` | | (none today) | |
+| `facilityName` | | (none today) | |
+| `guardianName` | | (none today) | |
+| `ipAddress` | | (none today) | |
+| `licenseNumber` | | (none today) | |
+| `memberNumber` | | (none today) | |
+| `mrn` | | (none today) | |
+| `otherIdentifier` | | (none today) | |
+| `patientAddress` | | (none today) | |
+| `patientEmail` | | (none today) | |
+| `patientFax` | | (none today) | |
+| `patientName` | | (none today) | |
+| `patientPhone` | | (none today) | |
+| `photograph` | | (none today) | |
+| `providerAddress` | | (none today) | |
+| `providerEmail` | | (none today) | |
+| `providerFax` | | (none today) | |
+| `providerName` | | (none today) | |
+| `providerPhone` | | (none today) | |
+| `ssn` | | (none today) | |
+| `ssnLastFour` | | (none today) | |
+| `staffName` | PHI pass | `Staff names (techs, nurses, signing physicians) are PHI under staffName when they don't fit providerName.` (two source lines, joined by one space) | P:1115-1116 |
+| `unrecognized` | | (none today). Not offered to the AI (OR-43). | |
+| `urlOrHandle` | | (none today) | |
+| `vehicleIdentifier` | | (none today) | |
+
+### 14f. Namespaces today's prompts do not describe
+
+- `rh.section.kind`: the Atom Pass prompt names section kinds by bare code only (the tentative classification at P:567 and the nine-kind routing list beside it; the PHI pass's section list at P:1127). No words about any section kind.
+- `rh.atom.kind-group`, `rh.section.kind-group`, `rh.column-role` and `rh.extraction-confidence`: not sent to Claude at all.
+- `rh.reliability`: retired in version 10 (section 7). Today's words are listed below so nothing is lost.
+
+### 14g. Text that belongs to no single term (not copied above)
+
+Listed for the owner, not carried by any term.
+
+**Two or more terms in one breath**
+
+| Today's words | Terms named | Source |
+|---|---|---|
+| `'admission'/'discharge' for inpatient encounter bounds` | `admission`, `discharge` | P:250, P:379 |
+| `ORG vs MEDICATION: a word in all-caps is NOT automatically an organization. Brand-name drugs are kind=medication, never organization.` | `organization`, `medication` | P:290 |
+| `"Electronically signed by X on date" → provider atom (the name) + dateAtom atom with date_role='report' (the date).` | `provider`, `dateAtom`, `report` | P:350 |
+| `(Date roles are NOT documentReference subtypes — emit kind=dateAtom with the appropriate date_role above.)` | `documentReference`, `dateAtom` | P:390 |
+| General list rule 5, condition vs diagnosis vs symptom, with its three cue lines | `condition`, `diagnosis`, `symptom` | P:422-425 |
+| General list rule 8, generic educational or boilerplate text | `condition`, `symptom`, `socialHistory`, `familyHistory` | P:428 |
+| General list rule 9, labPanel vs labValue | `labPanel`, `labValue` | P:429 |
+| The worked date example's three output lines | `patientDemographic`, `dateOfBirth`, `dateAtom`, `service`, `narrativeReference` | P:559-562 |
+| PHI pass rule 2, direct identifiers always PHI even when partial | several PHI types | P:1110-1111 |
+| PHI pass rule 3, clinical content not PHI on its own | several kinds | P:1112-1113 |
+| PHI pass rule 4, provider and facility names are PHI | `providerName`, `facilityName` by implication | P:1114 |
+| PHI pass rule 7, visit and report dates are PHI | `dateOfService`, `dateOfReport` | P:1119-1120 |
+| PHI pass rule 8, accession, order and billing account numbers | `accessionNumber`, `accountNumber` | P:1121-1122 |
+| The subtype lists per kind group, and the open-vocabulary line for provider | bare codes per kind | P:308-310, P:324-326, P:339-340, P:353-354, P:370-371, P:387-388, P:489 |
+
+**No term at all**
+
+| Today's words | Source |
+|---|---|
+| The prompt header, input format, how to point, one atom per clinical fact, and the four-atom example | P:510-550 |
+| The section classification preamble and the nine-kind routing list (OR-50) | P:566-569 |
+| `Emit atoms over distinct verbatim spans only. Tabular lab cells are emitted deterministically by the CELL walker before this pass — do not re-emit them.` (observation) | P:280 |
+| Section header labels are NOT atoms (patient, practitioner_role, organization, provenance, service_request, general list rule 1) | P:304, P:322, P:337, P:351, P:368, P:418 |
+| `Individual lab analyte rows are NOT extracted here — they belong to nested observation children. This section's atoms cover the report banner, collection date, accession number, etc.` (diagnostic_report) | P:384 |
+| The lead-ins `Set date_role:` and `Set date_role accordingly:` inside the `dateAtom` hints | P:250, P:346, P:363, P:379 |
+| The cross-cutting rules on one atom per fact, one line per pointer, and word_end; the `classification_certainty:` lead-in | P:575-577, P:579 |
+| The return format, including `date_role: required when kind="dateAtom", otherwise null.` | P:585-613 |
+| The PHI pass opening, return format, PHI TYPES heading, the rules heading, rules 1 and 6, section list and closing | P:1088-1106, P:1108-1109, P:1117-1118, P:1124-1135 |
+| Every field and tool description in `recordhealth-api/src/extractor-vocabulary.mjs` (field-level, never per term), and the VOCABULARY and PHI TYPES block headings | extractor-vocabulary.mjs:241-256, 299, 324, 340, 346, 401, 425 |
+
+**Words about terms version 10 retires**
+
+| Today's words | Terms | Source |
+|---|---|---|
+| `reliability: "high" = the word range captures exactly the value; "medium" = the range includes a label or punctuation you could not leave out; "low" = uncertain which words carry the value.` | `rh.reliability` `high`, `medium`, `low` (retired, section 7) | P:578 |
+
+---
+
+## 15. LlamaExtract text (amendment awaiting approval, OR-73)
+
+Each field description LlamaExtract is given today, copied word for word from `DATA_SCHEMA` in `recordhealth-api/src/ingest-do.mjs` (written `D:`), with the dictionary term the adapter fills from it (`recordhealth-api/src/llama-extract-adapter.mjs`, written `A:`). Used from piece g. The adapter's own spellings `patientName` and `facility` are read as `name` and `facilityName` (OR-37).
+
+### 15a. Fields that fill a dictionary term
+
+| Field | LlamaExtract text, today's words | Fills | Source |
+|---|---|---|---|
+| `patient.name` | `Patient full name` | kind `patientDemographic`, subtype `name` | D:489, A:1142 |
+| `patient.date_of_birth` | `Patient date of birth` | kind `patientDemographic`, subtype `dateOfBirth` | D:490, A:1143 |
+| `patient.sex` | `Patient sex/gender` | kind `patientDemographic`, subtype `sex` | D:491, A:1144 |
+| `patient.street_address` | `Patient street address, usually on the line labeled 'Address:' in the patient demographics section (e.g. 2676 S Redondo Blvd)` | kind `patientAddress`, subtype `street` | D:492, A:1145 |
+| `patient.city` | `Patient city, usually on the line labeled 'City, ST Zip' or 'City/State/Zip' in the patient demographics section (e.g. Los Angeles)` | kind `patientAddress`, subtype `city` | D:493, A:1146 |
+| `patient.state` | `Patient US state abbreviation, usually on the same line as city and zip code (e.g. CA)` | kind `patientAddress`, subtype `state` | D:494, A:1147 |
+| `patient.zip_code` | `Patient zip or postal code, usually on the same line as city and state (e.g. 90016)` | kind `patientAddress`, subtype `zip` | D:495, A:1148 |
+| `patient.phone` | `Patient phone number` | kind `patientContact`, subtype `phone` | D:496, A:1149 |
+| `patient.medical_record_number` | `MRN or patient identifier` | kind `patientIdentifier`, subtype `mrn` | D:497, A:1150 |
+| `providers[].name` | `Provider name` | kind `provider`; its subtype is the role's own words when a role is given, else none (open for `provider`) | D:506, A:1215-1220 |
+| `providers[].npi` | `NPI number` | kind `provider`, subtype `npi` | D:507, A:1225-1230 |
+| `providers[].organization` | `Organization or facility name` | kind `organization`, no subtype | D:508, A:1235-1240 |
+| `lab_results[].panel_name` | `The panel, section, or test group header this lab result belongs to. Look for bold or larger-font headers above groups of test rows (e.g. 'General Health Screen', 'CBC With Differential/Platelet', 'Urinalysis, Complete', 'Lipid Panel'). Every lab result that falls under a visible group header must have that header as its panel_name. Do not leave null if a group header is visible above the test.` | kind `labPanel` | D:519, A:1044-1047 |
+| `lab_results[].test_name` | `Analyte or test name` | kind `labValue` | D:520, A:1106-1109 |
+| `dates.collection_date` | `Specimen collection date` | kind `dateAtom`, date role `collection` | D:533, A:1263 |
+| `dates.report_date` | `Report or result date` | kind `dateAtom`, date role `report` | D:534, A:1264 |
+| `dates.received_date` | `Specimen received date` | kind `dateAtom`, date role `narrativeReference` | D:535, A:1265 |
+| `dates.service_date` | `Date of service or encounter date, as labeled on the document. Not the same as specimen collection date.` | kind `dateAtom`, date role `service` | D:536, A:1266 |
+| `facility` | `The facility, institution, hospital, clinic, or laboratory where the service was performed or the document originated` | kind `organization`, subtype `facilityName` | D:541, A:1248-1253 |
+
+When two date fields carry the same value, the adapter makes one fact, with the date role of the first field in the order above (A:1268-1277).
+
+### 15b. Fields that fill no dictionary term
+
+| Field | LlamaExtract text, today's words | What the adapter does with it | Source |
+|---|---|---|---|
+| `patient` | `Patient demographics` | Container for the patient fields | D:487 |
+| `providers` | `All healthcare providers mentioned` | Container for the provider fields | D:502 |
+| `providers[].role` | `Provider role (ordering, performing, etc.)` | No fact of its own: its words become the subtype of the provider name fact | D:509, A:1213-1220 |
+| `lab_results` | `Every lab test result in the document` | Container for the lab fields | D:515 |
+| `lab_results[].value` | `Result value` | No fact of its own: carried in the `labValue` fact's lab payload | D:521, A:619-633 |
+| `lab_results[].units` | `Unit of measurement` | The same | D:522, A:619-633 |
+| `lab_results[].reference_range` | `Normal reference range` | The same | D:523, A:619-633 |
+| `lab_results[].flag` | `Abnormal flag (high, low, critical, etc.)` | The same | D:524, A:619-633 |
+| `lab_results[].page` | `Page number where this result appears` | Location only, a fallback page for the row | D:525, A:1096-1097 |
+| `dates` | `Key dates in the document` | Container for the date fields | D:531 |
+
+The adapter also holds a table naming `test_name`, `value`, `units`, `reference_range` and `flag` as the column roles `analyte_name`, `value`, `units`, `reference_range` and `flag` (A:55-61), but nothing reads it: every lab fact it makes has no column role.
+
+`SYSTEM_PROMPT` (D:480) is one instruction for the whole document and belongs to no field or term.
