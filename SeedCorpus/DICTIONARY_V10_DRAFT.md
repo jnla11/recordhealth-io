@@ -1,8 +1,8 @@
 # DICTIONARY_V10_DRAFT.md — Dictionary version 10, drafted for approval
 
-Status: DRAFT, awaiting owner approval. Published once as dictionary version 10 with the §12.10 piece h deploy.
+Status: APPROVED by the owner 2026-10-04. Not yet published. Published once as dictionary version 10 with the §12.10 piece h deploy (OR-69).
 
-This page holds the complete final content of every term that is new, changed or retired in dictionary version 10 (INGEST_VOCABULARY_DESIGN §12.10 pieces b, e and f, plus `phi_default`). Version 10 is published once, with the §12.10 piece h deploy (OR-69). The owner approves this page before anything enters the dictionary (OR-28).
+This page holds the complete final content of every term that is new, changed or retired in dictionary version 10 (INGEST_VOCABULARY_DESIGN §12.10 pieces b, e and f, plus `phi_default`). Version 10 is published once, with the §12.10 piece h deploy (OR-69). The owner approved this page on 2026-10-04 (OR-28).
 
 **The governing rule (owner, 2026-10-04):** version 10 moves today's behaviour into the dictionary unchanged. Nothing in it may change what the AI is offered or extracts, beyond owner rulings already recorded in INGEST_VOCABULARY_DESIGN §12.10. Anything that would change ingest behaviour belongs to the ingest fidelity series, not here.
 
