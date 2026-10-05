@@ -1,6 +1,6 @@
 # DICTIONARY_V10_DRAFT.md — Dictionary version 10, drafted for approval
 
-Status: APPROVED by the owner 2026-10-04, with an amendment awaiting approval (2026-10-05): Claude and LlamaExtract texts per term. Not yet published.
+Status: APPROVED by the owner 2026-10-04; amendment (Claude and LlamaExtract texts) approved 2026-10-05. Not yet published. Published once as dictionary version 10 with the §12.10 piece h deploy (OR-69).
 
 This page holds the complete final content of every term that is new, changed or retired in dictionary version 10 (INGEST_VOCABULARY_DESIGN §12.10 pieces b, e and f, plus `phi_default`). Version 10 is published once, with the §12.10 piece h deploy (OR-69). The owner approved this page on 2026-10-04 (OR-28).
 
