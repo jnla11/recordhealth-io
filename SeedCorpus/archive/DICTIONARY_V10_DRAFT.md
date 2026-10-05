@@ -1,6 +1,7 @@
 # DICTIONARY_V10_DRAFT.md — Dictionary version 10, drafted for approval
 
-Status: APPROVED by the owner 2026-10-04; amendment (Claude and LlamaExtract texts) approved 2026-10-05. Not yet published. Published once as dictionary version 10 with the §12.10 piece h deploy (OR-69).
+Status: historical. Published as dictionary version 10, 2026-10-05. From now on the dictionary is the text's one home; this file is not edited again. Approved by the owner 2026-10-04; amendment (Claude and LlamaExtract texts) approved 2026-10-05. The LlamaExtract texts (§15) were not published: they are starting material for VENDOR_ABSTRACTION_DESIGN.md V2 (OR-75).
+Last verified: 2026-10-05
 
 This page holds the complete final content of every term that is new, changed or retired in dictionary version 10 (INGEST_VOCABULARY_DESIGN §12.10 pieces b, e and f, plus `phi_default`). Version 10 is published once, with the §12.10 piece h deploy (OR-69). The owner approved this page on 2026-10-04 (OR-28).
 
