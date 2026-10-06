@@ -101,6 +101,8 @@ Phase events: `vendor` id needs a `PHASE_EVENT_COLUMNS` entry, an INSERT column,
 
 **Scoring is a count over records, grouped by any set of dimensions (owner ruling 2026-09-17: axes are open; no instance may cite a list here to refuse an axis).** Per group: precision, recall, F1, with tier 1 a clean hit and tiers 2 to 4 hits carrying derived error labels (wrong value, wrong kind, wrong box, wrong home, wrong PHI mark) read off the record's fields, never stored as categories. Per-kind, per-page, per-document, per-error, per-configuration and any combination are the same call.
 
+**Owner direction (2026-10-05).** scoring never counts characters, which vary by vendor. It compares like facts with like facts and measures each fact's fidelity at a granular level. Sections are scored too: whether a candidate found the right sections and typed them right is part of the F1 delta. A design session on the matching rules (thought-experiment work) comes before any build.
+
 **Report** (unchanged in intent): one PHI-free report per run keyed by the configuration tuple: the group table requested, totals, cost and failure rows from the runner's ledger joined on the tuple, and the unmatched lists as ids (disputes must be findable; a candidate consistently missing truth artifacts is a re-grade trigger).
 
 **Build order (proposal):** S1 the scorer module, pure, with fixture and version pin (api, Opus 5; Fable reviews the matching rules first). S2 a scoring route taking two package ids and a group_by list, proven live on candidate zero of staging package 9e16cb41. S3 a re-ingest candidate on staging, same source, scored. S4 the V3 runner and response cache plug in above it. ROADMAP F-NEW-TT tracks it.
@@ -147,7 +149,7 @@ Model routing per project convention: V1/V2 refactors → Opus 5; V3 → Opus 5 
 
 Roughly 6–9 sprints through V4 + first bakeoff; V5 sized after MY.
 
-*[2026-10-03: the owner's order places the scorer's S1 and S2 (§4.1) before the ADI grading console steps, and the V1 and V2 refactors alongside them; the order is in `RecordHealth_App/docs/ROADMAP.md`, "Current series and its goals".]*
+*[2026-10-05: the owner's order places the ADI grading console steps before the scorer's S1 and S2, and the V1 and V2 refactors alongside them; the order is in `RecordHealth_App/docs/ROADMAP.md`, "Current series and its goals".]*
 
 ## 7. What this design deliberately does not do
 
