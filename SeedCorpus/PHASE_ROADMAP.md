@@ -36,7 +36,7 @@ Phase 1 blocks everything. After Phase 1, Phases 2/3/4 can proceed in any order 
 
 ### 3.1 Goal
 
-Wire the existing GT-1.6d ontology backend (`/v1/admin/lookup`, `ontology_traces` table) into the Phase 1 drill-down. The canonical_codes block becomes interactive: reviewer confirms/amends/rejects AI-suggested codes, reasoning and caveats are surfaced via the `i` button pattern (CLINICAL_SHAPE_DESIGN §7.3), verdicts accumulate as training signal.
+*(2026-10-06: `/v1/admin/lookup` is unused and kept for canonical codes, `F-NEW-XM`.)* Wire the existing GT-1.6d ontology backend (`/v1/admin/lookup`, `ontology_traces` table) into the Phase 1 drill-down. The canonical_codes block becomes interactive: reviewer confirms/amends/rejects AI-suggested codes, reasoning and caveats are surfaced via the `i` button pattern (CLINICAL_SHAPE_DESIGN §7.3), verdicts accumulate as training signal.
 
 Also lands the AI-assisted kind suggestion deferred from Phase 1 — a narrow classifier call returning ranked kind guesses that layer on top of Phase 1's rules-based ranking.
 

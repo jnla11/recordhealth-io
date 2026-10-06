@@ -459,7 +459,7 @@ Phases the rest of the ADI arc maps to, given this design:
 - **Phase 0** (this doc) — design, no code
 - **Phase 0.5** — write `ANNOTATION_GUIDELINES.md` v0.1 (covering the 8–10 most-graded kinds)
 - **Phase 1** — Atom detail drill-down shell (nav, metadata, PDF-pan-to-atom). Add `char_offset` columns, `rationale` field, `negative_space` JSONB, `sequence_index`, `ios_regex_output` column to schema.
-- **Phase 2** — AI ontology + code-level grading integration inside drill-down. Wire `/v1/admin/lookup`. Persist code verdicts.
+- **Phase 2** — AI ontology + code-level grading integration inside drill-down. Wire `/v1/admin/lookup` (2026-10-06: unused, kept for canonical codes, F-NEW-XM). Persist code verdicts.
 - **Phase 3** — Bounding-box edit (cancel/modify/add) with state history capture.
 - **Phase 4** — Patient profile tab + cold-start frequency detection. Populate `patient_context_confirmed`.
 - **Phase 5** — Negative-space annotation mode + reason capture. The UI surface for §6's `negative_space` array.
