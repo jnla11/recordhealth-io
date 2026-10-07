@@ -1,7 +1,7 @@
 # Date Rules Design
 
 Status: living (shape, not spec), owner rulings of 2026-09-26 applied (GR-84 through GR-107, recorded in `ADI_GRADING_DESIGN_v1.6.md`); the audit GR-77 called for is §2 here; the one conflict §11 opened is closed by GR-107; where the rule set lives reads as GR-141 and GR-146 rule (the one shared rule file, not a module of its own; `ADI_GRADING_DESIGN_v1.6.md`, 2026-09-29). Repo home: `RecordHealth.IO/SeedCorpus/DATE_RULES_DESIGN.md`.
-Last verified: 2026-09-29
+Last verified: 2026-10-06
 
 Owns the date rules: how a date is read from text, what its normalized form is, how it is displayed, how the vendor's date is kept, raw and normalized, beside ours and nothing is overwritten, where the one rule set lives, and what the date role requires. `ADI_GRADING_DESIGN_v1.6.md` §7 points here for the date checks on the console and says nothing more about them; `DATA_MODEL.md` §4.7 and `ARCHITECTURE.md` §3.2 in `RecordHealth_App/docs` point here by name for the reading and normalization of a date fact and keep the role list and the edge mapping. Nothing here is built. Anything the owner did not rule is stated as open, never settled.
 
@@ -167,6 +167,8 @@ The role is required of the pipeline's output (GR-82). The Atom Pass emits it on
 **The phone's silent default retires.** `ContextLayerBuilder` today reads a missing role as `report` with a print. Under GR-84 and GR-76 that is a second rule set and a silent fallback both. A date fact with no role produces no date edge and is not read as a report date; it stays a fact that needs attention, and the phone's build summary names it as it names an inert custom-kind fact. Nothing is substituted.
 
 **`received_date` (GR-105).** The import mapped it to `narrativeReference`, which `DATA_MODEL.md` §4.7 reserves for prose mentions. The closed list gains `received` (the day a specimen or document was received), walker-ignored like `study`, `admission` and `discharge`, and the import maps `received_date` to it. The role is not left off, which would mark a fact amber on most lab documents, and the field is not dropped, which discards a real date. This changes the list in `DATA_MODEL.md` §4.7 and `src/ingest-vocab.mjs` when it builds.
+
+**A signing date has no role (`F-NEW-YX`, 2026-10-06).** A signature date always needs attention because no role fits; the owner agreed to add one with the dates step (`ADI_GRADING_DESIGN_v1.6.md` §10 step 7a), alongside `received`.
 
 ## 10. Open, and where this builds
 
