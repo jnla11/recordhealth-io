@@ -381,7 +381,7 @@ Three more the same day, after GR-123, on the kind reading, the deploy order and
   (5) Staging documents are wiped and re-ingested. Anything in the old format is refused by name, never silently read. (Amended by GR-248: no refusal; the wipe clears everything old.)
   (6) The console keeps showing PDF pages in order for now; matching a moved page to its PDF page comes with GR-247.
   (7) The old pre-package grading tables that store page numbers are deleted.
-  Reason: page numbers are fixed today (audit of 2026-10-13), but adding or reordering pages later would point every saved position at the wrong page. Builds before §10 step 11b and before any truth is locked. The phone is in scope; its audit is owed.
+  Reason: page numbers are fixed today (audit of 2026-10-13), but adding or reordering pages later would point every saved position at the wrong page. Builds before §10 step 11b and before any truth is locked. The phone is in scope; its audit is owed. (Done 2026-10-13; rulings in GR-248.)
 - GR-247. Adding, reordering and splitting pages is ruled in as later work, not scheduled. The reviewer's grade is ground truth and every AI run is scored against it afterwards, so truth may hold pages no AI read. Example case: one PDF combining pages from several reports, split into separate documents.
 - GR-248. Page ids, after the phone audit of 2026-10-13. Amends GR-246.
   (1) Page ids are unique across all documents, not only within one, and lowercase only. GR-246's "short" is dropped.
