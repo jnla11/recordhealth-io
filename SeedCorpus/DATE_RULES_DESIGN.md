@@ -1,7 +1,7 @@
 # Date Rules Design
 
-Status: living (shape, not spec), owner rulings of 2026-09-26 applied (GR-84 through GR-107, recorded in `ADI_GRADING_DESIGN_v1.6.md`); the audit GR-77 called for is §2 here; the one conflict §11 opened is closed by GR-107; where the rule set lives reads as GR-141 and GR-146 rule (the one shared rule file, not a module of its own; `ADI_GRADING_DESIGN_v1.6.md`, 2026-09-29). Repo home: `RecordHealth.IO/SeedCorpus/DATE_RULES_DESIGN.md`.
-Last verified: 2026-10-06
+Status: living (shape, not spec), owner rulings of 2026-09-26 applied (GR-84 through GR-107) and of 2026-10-18 (GR-334 through GR-337), recorded in `ADI_GRADING_DESIGN_v1.6.md`; the 2026-10-18 re-audit is its §10 step 7a audit record); the audit GR-77 called for is §2 here; the one conflict §11 opened is closed by GR-107; where the rule set lives reads as GR-141 and GR-146 rule (the one shared rule file, not a module of its own; `ADI_GRADING_DESIGN_v1.6.md`, 2026-09-29). Repo home: `RecordHealth.IO/SeedCorpus/DATE_RULES_DESIGN.md`.
+Last verified: 2026-10-18
 
 Owns the date rules: how a date is read from text, what its normalized form is, how it is displayed, how the vendor's date is kept, raw and normalized, beside ours and nothing is overwritten, where the one rule set lives, and what the date role requires. `ADI_GRADING_DESIGN_v1.6.md` §7 points here for the date checks on the console and says nothing more about them; `DATA_MODEL.md` §4.7 and `ARCHITECTURE.md` §3.2 in `RecordHealth_App/docs` point here by name for the reading and normalization of a date fact and keep the role list and the edge mapping. Nothing here is built. Anything the owner did not rule is stated as open, never settled.
 
@@ -35,10 +35,16 @@ Recorded in the owner's register in `ADI_GRADING_DESIGN_v1.6.md`; listed here by
 - GR-105. The closed list of date roles gains `received`, and the import maps `received_date` to it (§9).
 - GR-106. The date work is a build step of its own, step 7a in `ADI_GRADING_DESIGN_v1.6.md` §10, after step 7 and before step 8 (§10).
 - GR-107. Storing `date_normalized`, `date_vendor` and `date_vendor_normalized` on the core atom does not break sacred rule 8, since none is used as the fact's text; the normalized date is a fixed-rule derivation of the printed text and the vendor's value is its graded answer (§8, §11).
+- GR-334. Every printed date keeps its own atom. Duplicate removal never merges two dates printed at different places; the same date text printed elsewhere is its own atom.
+- GR-335. The closed list of date roles gains `signed`, the day a document or result was signed. Settles ROADMAP F-NEW-YX (§9).
+- GR-336. Every date the phone reads goes through the one set of date rules (GR-84); the phone's own date reader retires; a date that does not read shows its printed text with a note; Apple Health never fills in the current date (§10).
+- GR-337. A record's service date and report date hold the same normalized form as every date, partials included; a month-and-year record shows as "March 2024" and a query treats it as a span (§10).
 
 Behind them: GR-69 (checks live on screen, the normalized value shown beside the original), GR-73 and GR-82 (an emptied detail saves and the fact needs attention; the date role is required of the pipeline), GR-74 and GR-80 (the backend refuses only what the console cannot make, and otherwise marks the same state the screen shows), GR-75 and GR-76 (the lock refuses while any fact needs attention; amber is the catch-all), GR-83 (the amber box).
 
 ## 2. What exists today (the 2026-09-26 date audit, GR-77)
+
+*Re-audited 2026-10-18; see ADI_GRADING_DESIGN_v1.6.md §10 step 7a audit record for what changed.*
 
 Read from the code to describe it, not to design around it. Named by file, never by line.
 
@@ -168,13 +174,13 @@ The role is required of the pipeline's output (GR-82). The Atom Pass emits it on
 
 **`received_date` (GR-105).** The import mapped it to `narrativeReference`, which `DATA_MODEL.md` §4.7 reserves for prose mentions. The closed list gains `received` (the day a specimen or document was received), walker-ignored like `study`, `admission` and `discharge`, and the import maps `received_date` to it. The role is not left off, which would mark a fact amber on most lab documents, and the field is not dropped, which discards a real date. This changes the list in `DATA_MODEL.md` §4.7 and `src/ingest-vocab.mjs` when it builds.
 
-**A signing date has no role (`F-NEW-YX`, 2026-10-06).** A signature date always needs attention because no role fits; the owner agreed to add one with the dates step (`ADI_GRADING_DESIGN_v1.6.md` §10 step 7a), alongside `received`.
+**A signing date has no role (`F-NEW-YX`, 2026-10-06).** A signature date always needs attention because no role fits; the owner agreed to add one with the dates step (`ADI_GRADING_DESIGN_v1.6.md` §10 step 7a), alongside `received`. *Settled by GR-335 (2026-10-18): the closed list gains `signed`, the day a document or result was signed.*
 
 ## 10. Open, and where this builds
 
 - **Placement (GR-106).** The build order of `ADI_GRADING_DESIGN_v1.6.md` §10 (GR-64) had no date step. The date work is one step of its own, step 7a, after step 7 (the amber box has to exist before a date can need attention) and before step 8, shipping whole (GR-41): the date rules, in the one shared rule file (GR-141, GR-146), and their fixture, the three wire fields with the schema bump, the import keeping the vendor's date raw and normalized, the write route adding the reviewer's normalized date to the log on a text correction and leaving the import-time one as it was, the console's live check with the normalized value beside the text, the role required on import, and the phone reading the stored fields with its default retired. Steps 8 through 12 keep their numbers.
-- **The phone's other dates.** `DateParser` is used by the chat digest, the dashboard, the record ingest pipeline, the exporter, the profile date of birth (`DOBNormalizer`, `DOBPartialDate`) and the emergency card. GR-84 says no side keeps its own copy; GR-100 leaves these outside the rule set until the owner says which of them are facts. Open.
-- **Record dates.** `RecordV2.serviceDate` and `reportDate`, and the chart fallback to them when a lab has no date edge (`ARCHITECTURE.md` §3.2), are system-held dates. Whether they become normalized strings under §3 or stay `Date` values is open; the display rule of §7 applies to them either way.
+- ~~**The phone's other dates.** `DateParser` is used by the chat digest, the dashboard, the record ingest pipeline, the exporter, the profile date of birth (`DOBNormalizer`, `DOBPartialDate`) and the emergency card. GR-84 says no side keeps its own copy; GR-100 leaves these outside the rule set until the owner says which of them are facts. Open.~~ **Settled by GR-336 (2026-10-18):** every date the phone reads goes through the one set of date rules; the phone's own date reader retires; a date that does not read shows its printed text with a note; Apple Health never fills in the current date.
+- ~~**Record dates.** `RecordV2.serviceDate` and `reportDate`, and the chart fallback to them when a lab has no date edge (`ARCHITECTURE.md` §3.2), are system-held dates. Whether they become normalized strings under §3 or stay `Date` values is open; the display rule of §7 applies to them either way.~~ **Settled by GR-337 (2026-10-18):** they hold the same normalized form as every date (§3), partials included; a month-and-year record shows as "March 2024", sorts by its normalized form, and a query treats it as a span.
 - ~~**Keeping the three values apart.** §8 recomputes `date_normalized` when a reviewer corrects the text, and GR-92 makes the vendor's value, our normalized value and the confirmed value the scoring signal. Where our import-time normalized value is held once a correction has overwritten it is not settled here.~~ **Ruled 2026-09-26** by GR-94 (with GR-93): nothing is overwritten. Our import-time normalized date stays on the fact; a reviewer's fix adds the reviewer's normalized date as a new value in the log; the vendor's value is kept raw and normalized. §6 and §8 (GR-104) say how.
 - **The eight roles' walker mapping** stays `DATA_MODEL.md` §4.7's and is not changed here.
 - **The fixture** is the contract between the date rules and the phone's display formatter, and between today's reader and any later one: every format of §4, every partial, every ambiguous case of GR-97, every unreadable case, and every display case of §7.
