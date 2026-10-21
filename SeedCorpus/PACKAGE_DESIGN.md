@@ -341,6 +341,7 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   - ADI re-key (g, i): api `248c761`, `c5cb0c8`, `43904e9`.
   - Staging ADI wipe (h): api `d598971`.
   - Docs: api `e4338a9`; app `f38aa90..f20c62a`.
+- OR-92 (self-contained package, 2026-10-21): A document package is self-contained. Beside the core it carries a sealed vendor record: for each outside call made during its ingest (the page reader, the lab extractor, every AI pass, the medical-code lookups), the full response byte for byte, the job details (vendor job ids, request and response times, vendor or model version, usage, cost) and the settings sent. Document text inside a request is not copied again; prompts are pinned by their versions. The page reader's formatted text and usage, the lab extractor's job details, and the form reading in both environments are fetched and kept. The phone and the grading server both carry the vendor record, and the package seal gains a line for it. Order: a measurement of real sizes on a staging ingest of the synthetic lab report, then a design session, then the build, before the one wipe and re-ingest. The build also fixes the page reader's job details being read from the wrong place (job id, status, creation time and tier are never captured) and the missing source PDF on the grading server. Supersedes the parked vendor-data capture item (ROADMAP_PARKED F-NEW-OT).
 - Open: none.
 
 ---
