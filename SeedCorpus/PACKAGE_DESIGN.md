@@ -351,11 +351,15 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   3. Every error fails loudly to the NCC.
   a. The vendor record travels inside the core: the result body carries it, one download, sealed by core_hash. The package seal stays four lines. Grading never edits the vendor part, and the lock carries it through unchanged. Compressing the download in transit is allowed, since it leaves the core bytes unchanged.
   b. One recording point: every outside call made during an ingest goes through it (the page reader, the lab extractor, every AI pass, the medical-code lookups). Each call's entry is written when it happens: send and receive times, status, the full answer, the vendor's job or request id, the version or model the answer reports, usage, and the settings sent. Every attempt is kept: failed tries, status checks and repair re-runs.
-  c. Every medical-code lookup is recorded, including one answered from our own code table. That entry is marked as ours, with what it answered and which version of the table answered it.
+  c. Every medical-code lookup is recorded, including one answered from our own code table. That entry is marked as ours, with the row that answered (item i).
   d. Every AI call reads the cut-off signal. A cut-off answer fails its section by name; repair re-runs it; if it is still cut off, the document fails visibly (R7). The record summary is included.
   e. The record belongs to its package. Each ingest records only its own calls; a re-ingest's package has its own record, and the earlier record stays with the earlier package.
   f. The source PDF is stored once per document, keyed by source_hash, so every package of that document has it.
   g. Full vendor answers are kept only in the user's package. Consent comes after ingest, so the server keeps nothing from a user's document for later use (owner ruling, 2026-10-22).
+  h. Each medical-code lookup's entry keeps the full answer and its headers. Nothing is cut down before it is recorded.
+  i. A lookup answered from our own code table records the row that answered, in full, with its own dates. Every row an ingest adds to our code table is recorded too.
+  j. Every code on an atom carries its code system's release version (the industry standard, FHIR Coding.version). RxNorm: the release from RxNav's version address, recorded on each ingest. NLM Clinical Tables (LOINC, ICD-10-CM, conditions) reports no version: those codes record "no version reported" and the lookup time.
+  k. Our own code table never changes its code content in place (name, code system, code, display name, confidence). A change adds a new row with its date and is reported to the NCC. Today a changed display name is dropped with no report; that is fixed. The two recorded exceptions stand: the "last checked" bookkeeping date and the one-time secondary-codes fill (recordhealth-api docs/KT_MASTER.md §5).
   Carried from OR-92: the page reader's version is recorded and the vendor is asked whether a fixed version can be requested; its job details are read from where they actually sit; a cached parse is recorded as cached; the form reading is kept in both environments; real per-call times replace the two zero timing fields.
 - Open: none.
 
