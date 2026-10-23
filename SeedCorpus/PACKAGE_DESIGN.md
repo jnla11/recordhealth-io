@@ -350,7 +350,7 @@ No failure-record format for the ADI (exhausted jobs produce no package; a futur
   e. The source PDF is stored once per document, keyed by source_hash, so every package of that document has it.
   f. A medical-code lookup answered from our own table is not an outside call and has no entry.
   g. Full vendor answers are kept only in the user's package. Consent comes after ingest, so the server keeps nothing from a user's document for later use (owner ruling, 2026-10-22).
-  h. The build's first step measures the real size, raw and compressed, on a fresh staging ingest of the synthetic lab report. The earlier figure of about 111 KB has no recorded measurement behind it.
+  h. Struck 2026-10-23: the size was measured on 2026-10-21 under OR-92, which ordered the measurement before the design session; no second measurement is owed. The build is next.
   Folded in from OR-92: the page reader's version is recorded and the vendor is asked whether a fixed version can be requested; its job details are read from where they actually sit; a cached parse is recorded as cached; the form reading is kept in both environments; real per-call times replace the two zero timing fields.
 - Open: none.
 
