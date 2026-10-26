@@ -386,7 +386,7 @@ Who moves a failed job back, by failure class:
 >
 > Companion changes: pointers at the 2026-10-25 (third set) points 3 and 5; "Contradictions requiring owner ruling" and "Open rulings" updated (item 10 closed). Nothing in this block rewrites prior prose.
 
-> **Owner rulings 2026-10-26 — a repair crash from our own code holds the repair line.** Issued the day after the four 2026-10-25 blocks above. Where this block and anything above disagree, this block governs; the refined items above carry a pointer here. Six points:
+> **Owner rulings 2026-10-26 — a repair crash from our own code holds the repair line.** Issued the day after the four 2026-10-25 blocks above. Where this block and anything above disagree, this block governs; the refined items above carry a pointer here. Seven points:
 >
 > 1. **A repair attempt that crashes from our own code is classed `our_fault` and follows its rule** (the 2026-10-24 second set, point 1; the 2026-10-25 block, point 1; the 2026-10-25 (second set), points 2 and 3): an `error_events` row on every occurrence; one re-entry after 15 seconds; on the second identical occurrence the REPAIR LINE is held, not the job. A vendor status or `our_timeout` keeps its own class. Refines the 2026-10-25 (second set) point 2, whose `signature_stop` ERROR hold is the job's, and applies the 2026-10-25 (third set) point 4.
 > 2. **A new `repair_state` value, `held`.** The job keeps serving its partial result and keeps its served state; the phone sees no change. `repair_state` stays the repair line's axis and `hold_kind` / `hold_reason` the job's; neither carries the other.
@@ -394,6 +394,7 @@ Who moves a failed job back, by failure class:
 > 4. **Released automatically by a version change, like every `our_fault` stop** (the third set 2026-10-23, point 3); the repair then runs again.
 > 5. **Exactly one owner alert when the line is held.**
 > 6. **No `ingest_hold_events` row: the job is not stopped.** The NCC console shows it as "Repair held: waiting on a fix", and the upcoming held/stuck jobs view (the 2026-10-25 (third set), point 7) will list it.
+> 7. **A held repair line keeps its job out of retention, up to 15 days.** A job whose repair line is held is not deleted by retention while the line is held, so the repair can run when a fix ships. Cap: 15 days from the moment the line was held. At the cap, retention proceeds as it would today, and the owner gets exactly one alert. A release before the cap clears the block exactly as today. (Added the same day.)
 >
 > Companion changes: pointers at the 2026-10-25 (second set) point 2 and (third set) point 4; "Contradictions requiring owner ruling" updated. Nothing in this block rewrites prior prose.
 
