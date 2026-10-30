@@ -670,6 +670,78 @@ def build_table(rows, col_w, config):
 
 
 # ─── Main ─────────────────────────────────────────────────
+# ─── Fillable (AcroForm) synthetic form ───────────────────
+# A one-page made-up intake form with real form fields: text fields with
+# values and checkbox fields in groups. Each group is (heading, [(label
+# lines, checked)]); a label with two lines is printed wrapped.
+FORM_TEXT_FIELDS = [
+    ("patient_name", "Patient name", "Jordan Testwell"),
+    ("date_of_birth", "Date of birth", "1980-02-14"),
+    ("phone", "Phone", "555-0142"),
+    ("visit_date", "Visit date", "2026-10-01"),
+]
+FORM_CHECKBOX_GROUPS = [
+    ("Symptoms reported", "symptom", [
+        (["Headache"], True),
+        (["Shortness of breath"], False),
+        (["Chest tightness when", "climbing stairs"], True),
+        (["Dizziness"], True),
+        (["Fatigue"], False),
+        (["Dry cough"], False),
+    ]),
+    ("Medical history", "history", [
+        (["Seasonal allergies"], False),
+        (["Asthma"], True),
+        (["High blood pressure"], False),
+        (["Migraine"], False),
+        (["Appendectomy"], False),
+        (["Sprained ankle"], True),
+    ]),
+]
+
+
+def render_fillable_form(out_path):
+    """Write a one-page fillable PDF form (AcroForm) to out_path."""
+    from reportlab.pdfgen import canvas
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    c = canvas.Canvas(str(out_path), pagesize=letter)
+    width, height = letter
+    left = 0.9 * inch
+    y = height - 1.0 * inch
+
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(left, y, "Patient Intake Form")
+    y -= 0.5 * inch
+
+    for name, label, value in FORM_TEXT_FIELDS:
+        c.setFont("Helvetica", 10)
+        c.drawString(left, y + 5, label)
+        c.acroForm.textfield(name=name, value=value, x=left + 1.4 * inch,
+                             y=y - 2, width=3.2 * inch, height=18,
+                             borderStyle="inset", fontName="Helvetica",
+                             fontSize=10, forceBorder=True)
+        y -= 0.36 * inch
+    y -= 0.2 * inch
+
+    box = 12
+    for heading, prefix, items in FORM_CHECKBOX_GROUPS:
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(left, y, heading)
+        y -= 0.3 * inch
+        for i, (lines, checked) in enumerate(items, start=1):
+            c.acroForm.checkbox(name=f"{prefix}_{i}", x=left, y=y - 2,
+                                size=box, checked=checked, buttonStyle="check",
+                                borderStyle="solid", forceBorder=True)
+            c.setFont("Helvetica", 10)
+            for j, line in enumerate(lines):
+                c.drawString(left + 0.3 * inch, y + 1 - j * 12, line)
+            y -= 0.3 * inch + (len(lines) - 1) * 12
+        y -= 0.2 * inch
+    c.save()
+    return out_path
+
+
 def main():
     count = COUNT
     if "--count" in sys.argv:
@@ -791,4 +863,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--fillable-form" in sys.argv:
+        print(render_fillable_form(RENDER_DIR / "synthetic_checkbox_form.pdf"))
+    else:
+        main()
