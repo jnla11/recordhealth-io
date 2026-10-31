@@ -742,6 +742,74 @@ def render_fillable_form(out_path):
     return out_path
 
 
+YES_NO_QUESTIONS = [
+    ("Smoker?", "Yes"),
+    ("Drinks alcohol?", "No"),
+    ("Takes daily medication?", "Yes"),
+    ("Has known allergies?", None),
+]
+
+
+def render_yes_no_form(out_path):
+    """Write a two-page synthetic PDF of yes/no checkbox lines.
+
+    Page 1 is fillable (AcroForm checkboxes); page 2 has the same questions
+    with boxes and check marks drawn on the page (no form layer). Answers:
+    Yes, No, Yes, and the last question left empty on both pages.
+    """
+    from reportlab.pdfgen import canvas
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    c = canvas.Canvas(str(out_path), pagesize=letter)
+    width, height = letter
+    left = 0.9 * inch
+    box = 12
+    yes_x = left + 2.6 * inch
+    no_x = left + 3.6 * inch
+
+    def header(title):
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(left, height - 1.0 * inch, title)
+
+    # Page 1: fillable.
+    header("Yes/No Questions (fillable)")
+    y = height - 1.7 * inch
+    for i, (question, answer) in enumerate(YES_NO_QUESTIONS, start=1):
+        c.setFont("Helvetica", 11)
+        c.drawString(left, y, question)
+        for x, word in ((yes_x, "Yes"), (no_x, "No")):
+            c.acroForm.checkbox(name=f"yn_{i}_{word.lower()}", x=x, y=y - 2,
+                                size=box, checked=(answer == word),
+                                buttonStyle="check", borderStyle="solid",
+                                forceBorder=True)
+            c.setFont("Helvetica", 11)
+            c.drawString(x + box + 5, y, word)
+        y -= 0.45 * inch
+    c.showPage()
+
+    # Page 2: drawn boxes and check marks, no form layer.
+    header("Yes/No Questions (printed)")
+    y = height - 1.7 * inch
+    for question, answer in YES_NO_QUESTIONS:
+        c.setFont("Helvetica", 11)
+        c.drawString(left, y, question)
+        for x, word in ((yes_x, "Yes"), (no_x, "No")):
+            c.setLineWidth(1)
+            c.rect(x, y - 2, box, box, stroke=1, fill=0)
+            if answer == word:
+                c.setLineWidth(1.6)
+                p = c.beginPath()
+                p.moveTo(x + 2, y + 4)
+                p.lineTo(x + 5, y + 1)
+                p.lineTo(x + 10, y + 8)
+                c.drawPath(p, stroke=1, fill=0)
+            c.setFont("Helvetica", 11)
+            c.drawString(x + box + 5, y, word)
+        y -= 0.45 * inch
+    c.save()
+    return out_path
+
+
 def main():
     count = COUNT
     if "--count" in sys.argv:
@@ -863,7 +931,9 @@ def main():
 
 
 if __name__ == "__main__":
-    if "--fillable-form" in sys.argv:
+    if "--yes-no-form" in sys.argv:
+        print(render_yes_no_form(RENDER_DIR / "synthetic_checkbox_yes_no.pdf"))
+    elif "--fillable-form" in sys.argv:
         print(render_fillable_form(RENDER_DIR / "synthetic_checkbox_form.pdf"))
     else:
         main()
