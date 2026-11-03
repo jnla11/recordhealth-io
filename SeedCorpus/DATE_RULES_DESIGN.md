@@ -51,6 +51,7 @@ Recorded in the owner's register in `ADI_GRADING_DESIGN_v1.6.md`; listed here by
 - GR-433. An atom made from extractor dates alone takes the role that comes first on the ladder (collection, service, report, signed); every extractor date stays on it with its role.
 - GR-434. Two date reasons for needs attention: "Not a date" (the text does not read as a date) and "Read day-first" (the date reads only day-first).
 - GR-435. Every reviewer action that changes a date fact's text or makes a fact a date logs that fact's reading: a text correction, moving the fact onto other words, creating a date fact, and changing a fact's kind to date. Nothing is overwritten.
+- GR-436. The phone's date links (each lab result to its dates) are built with the phone date work, following RELATIONSHIP_DESIGN, landing whole.
 
 Behind them: GR-69 (checks live on screen, the normalized value shown beside the original), GR-73 and GR-82 (an emptied detail saves and the fact needs attention; the date role is required of the pipeline), GR-74 and GR-80 (the backend refuses only what the console cannot make, and otherwise marks the same state the screen shows), GR-75 and GR-76 (the lock refuses while any fact needs attention; amber is the catch-all), GR-83 (the amber box).
 
