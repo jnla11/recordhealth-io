@@ -714,7 +714,7 @@ Audit record (2026-10-30), facts only: piece 1 shipped to staging (api e491986, 
 - GR-442. Our own word matching on the server is fixed first, so most "Can't locate text on the page" facts clear with no reviewer work. Stored documents pick up the fix when rebuilt.
 - GR-443. When a word has no box on the page, the reviewer can draw one around it. The warning for that word goes away, and the box is kept in the graded document. The original page reading stays as it was.
 - GR-444. Outlines follow the fact's own words, one shape per printed row, worked out when drawn and never stored. For a lab row, the outline comes from its own words, not the vendor's table row.
-- GR-445. A row that wraps onto a second line counts as one row. A fact never points at two lines.
+- GR-445. A row that wraps onto a second line counts as one row.
 - GR-446. A lab row a reviewer adds starts with every word on its line selected; the reviewer trims from there.
 - GR-447. Medical codes are shown and checked: the fact panel shows each fact's code, its official name, what the code covers, and an example. The reviewer accepts or fixes it.
 - GR-448. When a lab report prints which sample was tested or how the lab measured it, the reviewer can add both to the lab result, and they are stored adequately.
