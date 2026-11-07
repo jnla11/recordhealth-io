@@ -720,6 +720,7 @@ Audit record (2026-10-30), facts only: piece 1 shipped to staging (api e491986, 
 **Owner rulings (2026-11-06), UI sprint design session (box overhaul). Owner's register, next free numbers.**
 
 - GR-442. Our own word matching on the server is fixed first, so most "Can't locate text on the page" facts clear with no reviewer work. Stored documents pick up the fix when rebuilt.
+  *Annotated 2026-11-07: the piece 1 audit finds stored cores keep their word layer, so only a new ingest picks up a matching change (ROADMAP F-NEW-ABN). Owner told, not ruled.*
 - GR-443. When a word has no box on the page, the reviewer can draw one around it. The warning for that word goes away, and the box is kept in the graded document. The original page reading stays as it was.
 - GR-444. Outlines follow the fact's own words, one shape per printed row, worked out when drawn and never stored. For a lab row, the outline comes from its own words, not the vendor's table row.
 - GR-445. A row that wraps onto a second line counts as one row.
