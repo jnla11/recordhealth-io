@@ -2,7 +2,7 @@
 
 Status: design v1.5 (shape, not spec), owner rulings applied, R2 shipped, R3 rulings folded and R3's server step shipped
 Date: 2026-09-07 (v1.0 2026-09-05; v1.1 after the phone-side inventory R1a; v1.2 after the identity audit R1b; v1.3 after the R2 spec pass; v1.4 after R2 shipped, §2's table regenerated and §12 marked done; v1.5 after R3's owner rulings R3-1..R3-11 and the R3 server step)
-Last verified: 2026-11-21
+Last verified: 2026-11-24
 Repo home: `RecordHealth.IO/SeedCorpus/RELATIONSHIP_DESIGN.md`
 
 Owns the relationship model for Record Health: how a relationship between two things is recorded, declared, authored, inferred, graded, indexed, and exported. One home for the definition; every other doc points here and restates nothing. Supersedes the edge mechanics in `RecordHealth_App/docs/DATA_MODEL.md` §3.3.1 (AtomEdge becomes a display projection, §8), the relationships list in `PACKAGE_DESIGN.md` §6, the edge addressing sentence in `ADI_GRADING_DESIGN.md` §3, and the link-authoring proposal audited 2026-09-05 (F-NEW-RM). `EVENTS_INTERACTIONS_DESIGN.md` keeps the semantics of events and keystone confirmation; its membership edges register here (§3). Grounded in two inventories of 2026-09-05: Worker side (43 sites, 13 test pins, 7 doc statements, no two of which agreed on shape; recordhealth-api SESSION_LOG 2026-09-05) and phone side (R1a: 92 production lines across 11 files, 19 pinning tests, 24 doc statements of which 6 are stale, and eleven relationship shapes beside AtomEdge; RecordHealth_App SESSION_LOG 2026-09-05; the disposition of each shape is §8.1).
@@ -209,7 +209,7 @@ The inventory found eleven relationship shapes on the phone beside AtomEdge. Eac
 
 | Shape today | What it encodes | Disposition | Sprint |
 |---|---|---|---|
-| `SegmentedFact.sectionId` | atom → section, scalar on the child | registered as `member_of_section`; field stays as the pipeline carrier until hard question 1 is ruled *2026-11-21 (ADI GR-573): a scalar holds one section; a fact whose words sit in several sections carries one `member_of_section` entry per section, and the scalar is the first. The phone reads neither shape yet (ROADMAP F-NEW-AEF, the phone build).* | R2, R3 |
+| `SegmentedFact.sectionId` | atom → section, scalar on the child | registered as `member_of_section`; field stays as the pipeline carrier until hard question 1 is ruled *2026-11-21 (ADI GR-573): a scalar holds one section; a fact whose words sit in several sections carries one `member_of_section` entry per section, and the scalar is the first. The phone reads neither shape yet (ROADMAP F-NEW-AEF, the phone build).* *2026-11-24 (code-read audit): the phone reads the scalar and stores the member_of_section entries, which nothing draws. Ruled to read the entries (ADI GR-580); not built.* | R2, R3 |
 | `DocumentSection.parentId` | section → section, scalar on the child | registered as `section_in_section`; field stays as carrier | R2 |
 | `SectionRef` (`references[]` on the parent, open string kinds, zero consumers, no live emitter) | section → section typed references | retired, not absorbed (R2 ruling I-1): nothing emits it, nothing reads it; the phone type goes at R3 with no registered replacement | R3 |
 | `TableCellRef` (composite key; what actually groups lab rows) | cell → row → table | stays as the containment carrier until sprint 10 registers `row_in_table` and `table_in_section`; the panel edge that duplicates it is judged for retirement at R2 (hard question 6) | sprint 10 |

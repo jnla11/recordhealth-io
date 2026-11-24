@@ -939,6 +939,8 @@ The owner's words, verbatim: "The 'remove' button does nothing" "Need to make pl
 - GR-578. "Some words on this page have no box." and "Some parser boxes on this page match no word." carry no number. Applied by chat from GR-567. *Built 2026-11-21 in `recordhealth-api` (the sixteen commits listed in §11's GR-573 to GR-578 entry), committed locally, then deployed (staging Worker `afa0f567`, production Worker `76dc4b7f`, console `7b47768c`) and pushed 2026-11-24.*
 - GR-579. In list mode, one click on a fact's card always opens it, even if it is still highlighted from before Back; while its panel is open, a click on its own card closes it. An unsaved group pick clears on Back (GR-171). Proposed by chat, owner ruled yes, 2026-11-22. *Built 4dca116, 3ccb885 (api).*
 
+- GR-580. The phone does not keep a section's coverage. A section's words stay in the stored package core and are the grading console's concern. The phone reads which sections a fact is in from the member_of_section relationship entries, one entry per section, so a fact whose words sit in two sections is in both on the phone. The phone's line-run reading of a section and its stored line runs are removed. A document fact's own pointer to its words on the page is unchanged. Whether any stored record needs a rebuild is not ruled; it is settled by the phone audit before the build. No wipe is ruled. Owner ruling, 2026-11-24. *Ruled, not built (ROADMAP F-NEW-AEF).*
+
 **Open, not ruled (2026-11-17). Nothing here is decided.**
 
 Nothing open.
